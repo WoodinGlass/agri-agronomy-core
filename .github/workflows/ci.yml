@@ -31,7 +31,7 @@ jobs:
     # 3.14 non-blocking sampai semua dependensi punya wheel resmi.
     continue-on-error: ${{ matrix.python-version == '3.14' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -61,7 +61,7 @@ jobs:
     timeout-minutes: 15
     needs: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
