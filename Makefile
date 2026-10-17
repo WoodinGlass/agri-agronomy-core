@@ -7,6 +7,9 @@ install-dev:
 	pip install -e ".[dev]"
 	pre-commit install
 
+lock:
+	pip-compile --generate-hashes --extra dev pyproject.toml -o requirements.lock
+
 lint:
 	ruff check .
 	ruff format --check .
