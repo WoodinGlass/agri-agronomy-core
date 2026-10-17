@@ -2,7 +2,7 @@
 
 > Offline, deterministic crop profiles and agronomy calculators. Every number carries a source, a unit and a review status.
 
-[![CI](https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml/badge.svg)](https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml)![Status](https://img.shields.io/badge/status-pre--release-orange)![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)![Code license](https://img.shields.io/badge/code-Apache--2.0-blue)![Profiles license](https://img.shields.io/badge/profiles-CC%20BY%204.0-lightgrey)
+[![CI](https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml/badge.svg)](https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml)![Status](https://img.shields.io/badge/status-pre--release-orange)![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)![Code license](https://img.shields.io/badge/code-Apache--2.0-blue)![Profiles license](https://img.shields.io/badge/profiles-CC%20BY%204.0-lightgrey)
 
 > **Pre-release.** Interfaces, the profile schema and values may change until `v0.1.0` is tagged. This project provides reference data and calculations only. It is not professional agronomic advice. Read [Safety and limitations](#safety-and-limitations) before relying on any output.
 
@@ -22,7 +22,7 @@ Every result states what was computed, with which method, from which sources and
 ## What this is not
 
 - **Not a substitute for an agronomist, extension service, product label or local law.** It supports decisions; it does not make them.
-- **Not a pesticide tool.** It never calculates pesticide, herbicide or fungicide doses. Such requests return `REFER_TO_LABEL`.
+- **Not a pesticide tool.** It never calculates pesticide, herbicide or fungicide doses. Such requests return the `refer_to_label` outcome.
 - **Not a controller.** It does not operate pumps, valves, dosing units or any other actuator. It returns values and plans for people or systems that have their own safeguards.
 - **Not a server, database or user interface.** There is no HTTP API, storage or web editor, only a Python package and a command-line tool.
 - **Not a sensor pipeline.** It does not read, clean or store sensor streams. Callers pass values in, with explicit units.
@@ -34,7 +34,7 @@ Every result states what was computed, with which method, from which sources and
 ## Design principles
 
 1. **Numbers come from data and tested code, never from a language model.** Downstream systems may explain a result, but they should not invent one.
-2. **Refuse rather than guess.** Missing input raises `InsufficientInput` and names what is missing. Missing data gives `unknown`. An inapplicable question gives `NotApplicable` with a reason. There are no silent defaults.
+2. **Refuse rather than guess.** Every calculation returns an `Outcome`. Missing input gives `insufficient_input` and names what is missing. Missing data gives `unknown`. An inapplicable question gives `not_applicable` with a reason. There are no silent defaults, and expected "cannot answer" cases are never exceptions.
 3. **Provenance on every value.** Each profile value cites a source in `profiles/sources.csv` and carries an evidence grade.
 4. **Status gates.** Values move from `draft` to `reviewed` to `approved`, and calculators only use values at or above the minimum status the caller accepts.
 5. **Pure and repeatable.** No I/O and no hidden clock: dates are arguments. The same input always gives the same output.
@@ -48,10 +48,10 @@ Every result states what was computed, with which method, from which sources and
 | 1 | Registry | Loads and validates profiles. Resolves crop names and aliases in several languages (`resolve_crop("tomato")`). `meta()` reports the library version and a content hash of all profiles. | v0.1.0 |
 | 2 | Climate | Vapor pressure deficit (VPD), growing degree days (GDD), daily light integral (DLI) and reference evapotranspiration (ET0: FAO-56 Penman–Monteith, with a Hargreaves–Samani fallback). Temperature estimate from elevation. | v0.1.0 |
 | 3 | Thresholds and stages | Four-point trapezoid checks that return `optimal`, `suboptimal` or `critical`. Stage resolver from planting age and GDD (perennials from dated events supplied by the caller). | v0.1.0 |
-| 4 | Irrigation | Three modes: `field_etc` (ET0 × Kc), `paddy_awd` (alternate wetting and drying for rice) and `container_band` (moisture band for containerized media). With no standard Kc the answer is `NotApplicable`; a Kc is never invented. | v0.1.0 |
+| 4 | Irrigation | Three modes: `field_etc` (ET0 × Kc), `paddy_awd` (alternate wetting and drying for rice) and `container_band` (moisture band for containerized media). With no standard Kc the answer is the `not_applicable` outcome; a Kc is never invented. | v0.1.0 |
 | 5 | Fertilizer | Nutrient to product to kg/ha, g/plant, g/m² and ppm/EC, with per-stage splits, soil-test adjustment and per-application caps. Interpretation tables are tagged with the region and method they apply to. | v0.1.0 |
 | 6 | Media and water | Volume ratios to liters per component, plus water-quality limits (for example a TDS limit for carnivorous plants) taken from cited sources. | v0.1.0 |
-| 7 | Suitability | `suitable`, `marginal`, `unsuitable` or `unknown`, with a reason per factor and what would have to change. | v0.2.0 |
+| 7 | Suitability | `suitable`, `marginal` or `unsuitable`, with a reason per factor and what would have to change. A factor without data is reported as `unknown`; if a deciding factor has no data, the answer is the `unknown` outcome. | v0.2.0 |
 | 8 | Propagation planner | Dated plans: steps, materials, durations, success indicators and when to separate. | v0.2.0 |
 | 9 | Exports | `bundle.json`, `tool_schemas.json`, `edge_thresholds.json`, `review_sheet.csv`. | v0.2.0 |
 | 10 | Command line | `validate`, `lint-sources`, `show`, `calc`, `diff` and `export`, added milestone by milestone. | v0.1.0+ |
@@ -70,7 +70,7 @@ pip install "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.0"
 
 `v0.1.0` is not tagged yet. Until it is, replace `@v0.1.0` with `@main` in this and the Colab snippet, for development use only.
 
-Requires Python 3.10 or newer (tested on 3.10, 3.11 and 3.12). Runtime dependencies: Pydantic v2, jsonschema, PyYAML, pint and Typer. Pure Python, CPU only.
+Requires Python 3.11 or newer (tested on 3.11, 3.12, 3.13 and 3.14). Runtime dependencies: Pydantic v2, jsonschema, PyYAML, pint and Typer. Pure Python, CPU only.
 
 ### Google Colab
 
@@ -94,9 +94,12 @@ crop = registry.resolve_crop("tomato")    # also "tomat" or "Solanum lycopersicu
 print(crop.id)
 print(registry.meta())                    # library version + profile content hash
 
-r = vpd(temp_c=28.0, rh_pct=65.0)
-print(r.value, r.unit)                    # about 1.32 kPa
-print(r.method, r.assumptions, r.warnings)
+r = vpd(temp_c=28.0, rh_pct=65.0)         # returns an Outcome
+if r.status == "ok":
+    print(r.value, r.unit)                # about 1.32 kPa
+    print(r.method, r.assumptions, r.warnings)
+else:
+    print(r.status)                       # for example "insufficient_input"
 ```
 
 ### Command line
@@ -110,28 +113,31 @@ agri-core show tomato     # print a profile
 
 ## Output contract
 
-Every calculation returns a `Result`:
+Every calculation returns an `Outcome`, a discriminated union whose `status` field says what happened. Expected "cannot answer" cases are outcomes, not exceptions, and every outcome is JSON-serializable. Exceptions are reserved for programmer errors, such as a wrong argument type or an unparseable unit string.
+
+| `status` | Type | When |
+|---|---|---|
+| `ok` | `Result` | The calculation succeeded |
+| `insufficient_input` | `InsufficientInput` | A required input is missing, or a conversion needs an explicit factor (EC to ppm: 0.5, 0.64 or 0.7). Lists what is missing |
+| `unknown` | `Unknown` | The answer needs a value the profile marks as unknown, or no value covers the requested conditions. Gives a reason |
+| `not_applicable` | `NotApplicable` | The question does not apply (for example no standard Kc, or a propagation method the crop does not use). Gives a reason |
+| `refer_to_label` | `ReferToLabel` | Pesticides: follow the product label and local regulations |
+
+A successful `Result` has `status` plus eight payload fields:
 
 | Field | Meaning |
 |---|---|
-| `value` | The computed value |
+| `status` | Always `ok` |
+| `value` | The computed value. Always finite: NaN and infinity are rejected because they are not valid JSON |
 | `unit` | Explicit unit. The library never guesses units |
 | `method` | How it was computed (for example which ET0 method) |
 | `provenance` | Where the numbers came from: profile, version and source IDs |
 | `evidence` | Evidence grade(s) of the profile values used |
-| `assumptions` | Every assumed or defaulted condition, stated explicitly |
-| `warnings` | Fallback methods, out-of-range inputs, near-threshold results |
+| `assumptions` | Every assumed or defaulted condition, stated explicitly. Each has a stable `code` and a message |
+| `warnings` | Fallback methods, out-of-range inputs, near-threshold results. Each has a stable `code` and a message |
 | `capped` | `true` if a safety cap limited the result |
 
-When the library cannot produce a result, it says why:
-
-| Situation | Response |
-|---|---|
-| A required input is missing | `InsufficientInput(missing=[...])` |
-| The profile has no value for the requested conditions | `unknown`, with a reason |
-| The question does not apply (for example no standard Kc, or a propagation method the crop does not use) | `NotApplicable`, with a reason |
-| Pesticides | `REFER_TO_LABEL` |
-| A unit conversion needs an explicit factor (EC to ppm: 0.5, 0.64 or 0.7) | Rejected until the factor is given |
+The word `unknown` appears at three levels: a profile value marked `unknown: true`, a factor without data inside a suitability breakdown, and the `unknown` outcome returned when an answer would need such a value.
 
 ## Profile format
 
@@ -220,7 +226,7 @@ First release line (six profiles):
 | Nepenthes | perennial | `container_band` irrigation; propagation: cuttings, seed |
 | Black truffle | perennial | Suitability profile. Expected `unsuitable` at warm, low-elevation tropical sites, so it tests that the library can say no |
 
-The propagation planner returns `NotApplicable` for rice, tomato and black truffle.
+The propagation planner returns the `not_applicable` outcome for rice, tomato and black truffle.
 
 Planned next: maize, chili pepper, broccoli, potato, lettuce, grape, apple, watermelon, melon, blueberry, lychee, wasabi and bonsai (per species, with a technique module for pruning, wiring and repotting). Carnivorous plants are split by genus: Nepenthes first, then Dionaea, Drosera and Sarracenia.
 
@@ -242,7 +248,7 @@ Planned next: maize, chili pepper, broccoli, potato, lettuce, grape, apple, wate
 - **Status matters.** Use `approved` values for decisions affecting real crops. Use `reviewed` values only in development and pilots with human oversight. Never use `draft` values.
 - **Inputs decide quality.** The library checks types and units, but it cannot detect a faulty sensor or a wrong measurement.
 - **No automatic actuation.** Do not connect outputs directly to pumps, valves or dosing units without independent interlocks (limits, timeouts, manual override) and human approval.
-- **`unknown`, `NotApplicable` and `unsuitable` are real answers.** Do not work around them.
+- **`unknown`, `not_applicable` and `unsuitable` are real answers.** Do not work around them.
 - **No warranty.** See [License](#license).
 
 ## Data sources and provenance
@@ -270,9 +276,10 @@ agri-agronomy-core/
 │  ├─ media/            # growing-media recipes
 │  ├─ fertilizers.yaml  # nutrient content of fertilizer products
 │  └─ sources.csv       # ID, URL, license, commercial_use, access date
-├─ schema/              # JSON Schemas: profile, source, result
+├─ schema/              # JSON Schemas: profile, source, outcome
 ├─ src/agri_core/
-│  ├─ models/           # Result and error types
+│  ├─ py.typed          # type-checking marker (PEP 561)
+│  ├─ models/           # Outcome, Result and refusal types
 │  ├─ registry/         # load, resolve_crop, content hash
 │  ├─ climate/          # VPD, GDD, DLI, ET0
 │  ├─ thresholds/       # four-point trapezoid checks
@@ -318,11 +325,13 @@ agri-core validate && agri-core lint-sources
 
 Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout, pre-commit and pip-audit.
 
+The wheel bundles `profiles/` and `schema/` (hatchling `force-include`), and CI installs it in a clean virtual environment and runs `agri-core validate`. From a source checkout the library reads `profiles/` in place; when installed it reads the bundled copy. The location never depends on the current working directory, and `meta()` reports which one is in use.
+
 **Test kinds**
 
 - `unit`: functions in isolation.
 - `property`: Hypothesis checks such as unit round-trips, no negative amounts, and monotonic behavior with area.
-- `contract`: `Result` and exported tool schemas stay stable.
+- `contract`: `Outcome` and exported tool schemas stay stable, and every serialized outcome carries `status`.
 - `scenario`: end-to-end expectations, for example black truffle at a warm lowland tropical site must be `unsuitable`.
 - `golden`: results validated against published worked examples.
 
@@ -330,7 +339,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 
 - ruff and mypy (strict) are clean.
 - Coverage is at least 90%, and 100% for `safety/`.
-- CI is green on Python 3.10, 3.11 and 3.12, and `pip-audit` runs in CI.
+- CI is green on Python 3.11, 3.12, 3.13 and 3.14, and `pip-audit` runs in CI.
 - Notebooks execute (nbmake) and are committed without outputs (nbstripout).
 - Profile checks pass (see [Profile format](#profile-format)).
 - The GitHub Release contains the wheel, the bundle and hashes, and `CHANGELOG.md` is updated.
@@ -366,7 +375,7 @@ Domain experts can review through `review_sheet.csv` without a GitHub account, a
 
 ## Versioning and releases
 
-- Semantic Versioning applies to code and public contracts: `Result`, the JSON Schemas and the exported tool schemas.
+- Semantic Versioning applies to code and public contracts: `Outcome` and its members, the JSON Schemas and the exported tool schemas.
 - Every change to a profile value is listed in `CHANGELOG.md` and changes the content hash returned by `meta()`. Downstream systems should re-run their own checks when that hash changes.
 - Pin a tag. `main` may change without notice.
 - Releases are git tags and GitHub Releases (wheel, bundle, hashes). They are not published on PyPI.
@@ -379,7 +388,7 @@ If you use the profiles in research or in a product, cite this repository with t
 
 | Milestone | Scope | Done when |
 |---|---|---|
-| **M0** Foundation | Repository, `pyproject.toml`, CI, pre-commit, `Result` model, JSON Schemas, `sources.csv` linter | CI is green on the empty but valid package |
+| **M0** Foundation | Repository, `pyproject.toml`, CI, pre-commit, `Outcome` and `Result` models, JSON Schemas, `sources.csv` linter, wheel smoke test | CI is green on the empty but valid package, and a clean-venv install of the wheel passes `agri-core validate` |
 | **M1** Schema and first profiles | `profile.schema.json`, tomato and rice as `draft` with full sources, registry, `agri-core validate` | Both profiles validate in CI |
 | **M2** Climate and thresholds | VPD, GDD, DLI, ET0 with fallback, temperature from elevation, threshold checks, stage resolver | FAO-56 golden tests pass |
 | **M3** Water, nutrients and media | Irrigation modes, fertilizer with safety caps, media and water, property tests, maintainer review of tomato and rice | Tag `v0.1.0` |
