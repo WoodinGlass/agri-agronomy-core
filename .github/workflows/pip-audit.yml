@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - "pyproject.toml"
+      - "requirements.lock"
 
 permissions:
   contents: read
@@ -24,7 +25,5 @@ jobs:
           cache: pip
       - name: Upgrade pip and install pip-audit
         run: python -m pip install --upgrade pip pip-audit
-      - name: Install project
-        run: pip install -e ".[dev]"
-      - name: pip-audit
-        run: pip-audit --skip-editable
+      - name: Audit lockfile
+        run: pip-audit -r requirements.lock --no-deps --disable-pip
