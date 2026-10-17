@@ -1,0 +1,50 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.venv/
+venv/
+ENV/
+env/
+
+# --- Test & cache ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# --- Build smoke ---
+.smoke-venv/
+*.whl
+
+# --- Editors ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+
+# --- Notebooks ---
+.ipynb_checkpoints/
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Local data ---
+data/
+*.sqlite
+*.parquet
