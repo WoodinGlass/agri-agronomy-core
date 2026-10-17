@@ -8,7 +8,7 @@ install-dev:
 	pre-commit install
 
 lock:
-	pip-compile --generate-hashes --extra dev pyproject.toml -o requirements.lock
+	pip-compile --generate-hashes --allow-unsafe --extra dev pyproject.toml -o requirements.lock
 
 lint:
 	ruff check .
