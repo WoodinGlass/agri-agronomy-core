@@ -2,7 +2,7 @@
 
 > Offline, deterministic crop profiles and agronomy calculators. Every number carries a source, a unit and a review status.
 
-[![CI](https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml/badge.svg)](https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml)![Status](https://img.shields.io/badge/status-pre--release-orange)![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)![Code license](https://img.shields.io/badge/code-Apache--2.0-blue)![Profiles license](https://img.shields.io/badge/profiles-CC%20BY%204.0-lightgrey)[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)!](https://colab.research.google.com/github/WoodinGlass/agri-agronomy-core/blob/main/notebooks/01_quickstart.ipynb)
+[![CI](https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml/badge.svg)](https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml)![Status](https://img.shields.io/badge/status-pre--release-orange)![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)![Code license](https://img.shields.io/badge/code-Apache--2.0-blue)![Profiles license](https://img.shields.io/badge/profiles-CC%20BY%204.0-lightgrey)
 
 > **Pre-release.** Interfaces, the profile schema and values may change until `v0.1.0` is tagged. This project provides reference data and calculations only. It is not professional agronomic advice. Read [Safety and limitations](#safety-and-limitations) before relying on any output.
 
