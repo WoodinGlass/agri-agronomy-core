@@ -1,0 +1,248 @@
+{
+  "$defs": {
+    "InsufficientInput": {
+      "additionalProperties": false,
+      "description": "A required input is missing.\n\n``missing`` names each missing input in the caller's vocabulary (for\nexample ``\"temp_c\"`` or ``\"ec_to_ppm_factor (choose 0.5, 0.64 or 0.7)\"``).\nEach entry must be a non-empty string.",
+      "properties": {
+        "missing": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing",
+          "type": "array"
+        },
+        "status": {
+          "const": "insufficient_input",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "missing"
+      ],
+      "title": "InsufficientInput",
+      "type": "object"
+    },
+    "NotApplicable": {
+      "additionalProperties": false,
+      "description": "The question does not apply (no standard Kc, propagation method not used, etc.).",
+      "properties": {
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "status": {
+          "const": "not_applicable",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "reason"
+      ],
+      "title": "NotApplicable",
+      "type": "object"
+    },
+    "Notice": {
+      "additionalProperties": false,
+      "description": "A structured warning or assumption attached to a result.\n\n``code`` is a stable snake_case identifier and part of the contract.\n``message`` is human-readable and may change between releases.",
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "Notice",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "description": "Where a calculation's numbers came from.\n\n``profile_ids`` names the crop profiles that contributed values.\n``profile_version`` is the content hash of those profiles at computation\ntime; it is ``None`` when the calculation does not read a profile (for\nexample, raw VPD from weather inputs).\n``source_ids`` lists the ``src`` IDs in ``profiles/sources.csv`` behind\nthe values used.",
+      "properties": {
+        "profile_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Profile Ids",
+          "type": "array"
+        },
+        "profile_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Profile Version"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "title": "Provenance",
+      "type": "object"
+    },
+    "ReferToLabel": {
+      "additionalProperties": false,
+      "description": "Pesticides are out of scope; the caller follows the label and local regulations.",
+      "properties": {
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "status": {
+          "const": "refer_to_label",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "reason"
+      ],
+      "title": "ReferToLabel",
+      "type": "object"
+    },
+    "Result": {
+      "additionalProperties": false,
+      "description": "A successful calculation.\n\n``status`` is always ``\"ok\"``. ``value`` is always finite: NaN and\ninfinity are rejected because they are not valid JSON. ``capped`` is\n``True`` when a safety cap limited ``value``.\n\nConstruct through the :func:`ok` factory rather than directly, so that\nthe ``status`` literal cannot be forgotten.",
+      "properties": {
+        "assumptions": {
+          "items": {
+            "$ref": "#/$defs/Notice"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "capped": {
+          "title": "Capped",
+          "type": "boolean"
+        },
+        "evidence": {
+          "items": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "status": {
+          "const": "ok",
+          "title": "Status",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/Notice"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "value",
+        "unit",
+        "method",
+        "provenance",
+        "evidence",
+        "assumptions",
+        "warnings",
+        "capped"
+      ],
+      "title": "Result",
+      "type": "object"
+    },
+    "Unknown": {
+      "additionalProperties": false,
+      "description": "The answer needs a value the profile marks as unknown.\n\nThis includes the case where no value covers the requested scope.",
+      "properties": {
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "status": {
+          "const": "unknown",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "reason"
+      ],
+      "title": "Unknown",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "insufficient_input": "#/$defs/InsufficientInput",
+      "not_applicable": "#/$defs/NotApplicable",
+      "ok": "#/$defs/Result",
+      "refer_to_label": "#/$defs/ReferToLabel",
+      "unknown": "#/$defs/Unknown"
+    },
+    "propertyName": "status"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Result"
+    },
+    {
+      "$ref": "#/$defs/InsufficientInput"
+    },
+    {
+      "$ref": "#/$defs/Unknown"
+    },
+    {
+      "$ref": "#/$defs/NotApplicable"
+    },
+    {
+      "$ref": "#/$defs/ReferToLabel"
+    }
+  ]
+}
