@@ -46,6 +46,7 @@ dev = [
     "twine>=5,<7",
     "pip-tools>=7.4,<8",
     "hatchling>=1.25,<2",
+    "editables>=0.5,<1",
 ]
 
 [project.urls]
