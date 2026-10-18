@@ -20,6 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and strict URL/date/citation validation.
 - `lint_csv_text()` and `lint_csv_file()` returning stable `SRC###` findings.
 - `profiles/sources.csv` (header only) and `schema/source.schema.json`.
+- CLI (`agri-core`) with `validate`, `lint-sources`, and `--version`.
+  `--data-dir` accepts an explicit data root. Output includes a `data: <kind>` line
+  (`override`, `source_tree`, or `packaged`).
+  Exit codes: `0` ok, `1` validation error, `2` usage error (Typer), `3` data not found.
+- `[project.scripts]` entry point `agri-core = agri_core.cli:app`.
+- Wheel `force-include` bundles `profiles/` and `schema/` into `agri_core/_data/`.
+- sdist `include` list now ships `profiles/`, `schema/`, and `Makefile` so the wheel
+  can be built from the sdist without a source checkout.
 
 ### Changed
 
