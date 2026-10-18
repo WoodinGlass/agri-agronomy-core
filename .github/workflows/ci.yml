@@ -215,10 +215,12 @@ jobs:
     timeout-minutes: 15
     needs: build-wheel
     steps:
+      # No actions/checkout: this job must stay independent of the source tree.
+      # setup-python has no cache here because cache: pip needs a cache-key file
+      # (pyproject.toml / requirements.txt), which would require a checkout.
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-          cache: pip
       - name: Download wheel artifact
         uses: actions/download-artifact@v4
         with:
