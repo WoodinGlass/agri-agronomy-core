@@ -52,6 +52,7 @@ dev = [
     # 0.12/0.15 break against it. Pin below 8.2 until typer lower bound is
     # raised to a version that supports click 8.2 (0.16+).
     "click>=8.1,<8.2",
+    "types-PyYAML>=6.0,<7",
 ]
 
 [project.urls]

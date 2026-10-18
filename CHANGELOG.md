@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wheel `force-include` bundles `profiles/` and `schema/` into `agri_core/_data/`.
 - sdist `include` list now ships `profiles/`, `schema/`, and `Makefile` so the wheel
   can be built from the sdist without a source checkout.
+- pre-commit local hook `agri-core-validate` runs `agri-core validate --data-dir .`
+  when files under `profiles/` or `schema/` change.
+- CI job `pre-commit` runs all hooks on all files.
 
 ### Changed
 

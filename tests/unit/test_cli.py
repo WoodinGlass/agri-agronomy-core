@@ -69,7 +69,8 @@ def test_validate_empty_ok(tmp_path: Path) -> None:
     )
     result = CliRunner().invoke(app, ["validate", "--data-dir", str(root)])
     assert result.exit_code == 0, result.stdout
-    assert "data: override" in result.stdout
+    assert "agri-core" in result.stdout
+    assert "| data: override" in result.stdout
     assert "schemas: 1" in result.stdout
     assert "errors: 0" in result.stdout
 
