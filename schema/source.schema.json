@@ -1,0 +1,48 @@
+{
+  "additionalProperties": false,
+  "description": "One row of ``profiles/sources.csv``.",
+  "properties": {
+    "access_date": {
+      "format": "date",
+      "title": "Access Date",
+      "type": "string"
+    },
+    "citation": {
+      "minLength": 1,
+      "title": "Citation",
+      "type": "string"
+    },
+    "commercial_use": {
+      "enum": [
+        "yes",
+        "no",
+        "unclear"
+      ],
+      "title": "Commercial Use",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^S\\d{3,}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "license": {
+      "title": "License",
+      "type": "string"
+    },
+    "url": {
+      "title": "Url",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "url",
+    "license",
+    "commercial_use",
+    "access_date",
+    "citation"
+  ],
+  "title": "SourceRow",
+  "type": "object"
+}

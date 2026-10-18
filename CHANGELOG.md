@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development tooling: ruff, mypy (strict), pytest, hypothesis, pytest-cov, pre-commit, pip-audit.
 - GitHub Actions: CI matrix (Python 3.11–3.14, latest and lowest-direct dependencies), wheel build and clean-venv smoke test, weekly `pip-audit`.
 - Dependabot for `pip` and `github-actions`.
+- `registry` module with `resolve_data_root()` (source-tree and packaged detection,
+  explicit override, no cwd or env-var input) and `DataRoot`.
+- `SourceRow` model with SPDX-shaped license vocabulary, token-based NC detection,
+  and strict URL/date/citation validation.
+- `lint_csv_text()` and `lint_csv_file()` returning stable `SRC###` findings.
+- `profiles/sources.csv` (header only) and `schema/source.schema.json`.
 
 ### Changed
 
