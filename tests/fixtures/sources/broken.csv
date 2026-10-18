@@ -1,0 +1,7 @@
+id,url,license,commercial_use,access_date,citation
+S001,https://example.org/one,MIT,no,2026-01-15,First
+S001,https://example.org/dup,MIT,no,2026-01-15,Duplicate id
+S002,ftp://wrong-scheme,CC-BY-4.0,no,2026-01-15,Bad scheme
+S003,https://example.org/nc,CC-BY-NC-4.0,yes,2026-01-15,NC with yes
+S004,https://example.org/unclear,unclear,yes,2026-01-15,Unclear with yes
+S005,https://example.org/future,MIT,no,2099-01-01,Future date
