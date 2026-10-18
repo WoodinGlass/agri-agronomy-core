@@ -109,7 +109,12 @@ filterwarnings = [
     # entry wins for matching warnings. Keep "error" first so the ignore below
     # takes precedence for the typer 0.12.0 deprecation only.
     "error",
-    "ignore:.*get_binary_stream.*:DeprecationWarning",
+    # Typer 0.12.0 (lower bound) imports several names from click.utils that
+    # click 8.1.x deprecates on access: get_binary_stream, get_text_stream, and
+    # possibly more. Message pattern covers every click 9.0 deprecation without
+    # suppressing unrelated warnings. Remove this once the typer lower bound is
+    # raised to a version that no longer imports deprecated click.utils names.
+    "ignore:.*is deprecated and will be removed in Click 9\\.0.*:DeprecationWarning",
 ]
 xfail_strict = true
 markers = [
