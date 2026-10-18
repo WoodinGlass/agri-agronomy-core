@@ -6,7 +6,7 @@ import csv
 import json
 from datetime import date
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Optional
 
 import typer
 from jsonschema import Draft202012Validator
@@ -93,7 +93,7 @@ def _emit_findings(findings: list[Finding]) -> tuple[int, int]:
 @app.command(name="lint-sources")
 def lint_sources(
     data_dir: Annotated[
-        Path | None,
+        Optional[Path],
         typer.Option(
             "--data-dir",
             help="Explicit data root (must contain profiles/sources.csv and schema/).",
@@ -118,7 +118,7 @@ def lint_sources(
 @app.command(name="validate")
 def validate(
     data_dir: Annotated[
-        Path | None,
+        Optional[Path],
         typer.Option(
             "--data-dir",
             help="Explicit data root (must contain profiles/sources.csv and schema/).",
