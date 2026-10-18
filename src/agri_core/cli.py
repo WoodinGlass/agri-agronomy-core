@@ -52,14 +52,13 @@ def _main(
     """agri-core command line."""
 
 
-def _open_data_root(data_dir: Path | None) -> Path:
+def _open_data_root(data_dir: Path | None) -> tuple[Path, str]:
     try:
         root = resolve_data_root(override=data_dir)
     except DataNotFoundError as exc:
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(EXIT_DATA_NOT_FOUND) from exc
-    typer.echo(f"data: {root.kind}")
-    return root.path
+    return root.path, root.kind
 
 
 def _count_commercial_use(sources_csv: Path) -> dict[str, int]:
@@ -101,7 +100,8 @@ def lint_sources(
     ] = None,
 ) -> None:
     """Check profiles/sources.csv for schema and consistency errors."""
-    root = _open_data_root(data_dir)
+    root, kind = _open_data_root(data_dir)
+    typer.echo(f"data: {kind}")
     sources_csv = root / "profiles" / "sources.csv"
     findings = lint_csv_file(sources_csv, today=date.today())
     errors, warnings = _emit_findings(findings)
@@ -126,7 +126,8 @@ def validate(
     ] = None,
 ) -> None:
     """Lint sources and verify every schema under schema/ is a valid JSON Schema."""
-    root = _open_data_root(data_dir)
+    root, kind = _open_data_root(data_dir)
+    typer.echo(f"agri-core {__version__} | data: {kind}")
 
     findings = lint_csv_file(root / "profiles" / "sources.csv", today=date.today())
     errors, warnings = _emit_findings(findings)

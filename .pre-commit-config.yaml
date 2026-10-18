@@ -19,7 +19,7 @@ repos:
       - id: check-case-conflict
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
+    rev: v0.14.14
     hooks:
       - id: ruff
         args: [--fix]
@@ -29,3 +29,14 @@ repos:
     rev: 0.7.1
     hooks:
       - id: nbstripout
+
+  # Requires: pip install -e ".[dev]" in the active environment.
+  - repo: local
+    hooks:
+      - id: agri-core-validate
+        name: agri-core validate
+        entry: agri-core validate --data-dir .
+        language: system
+        files: '^(profiles|schema)/.*\.(csv|ya?ml|json)$'
+        pass_filenames: false
+        verbose: true
