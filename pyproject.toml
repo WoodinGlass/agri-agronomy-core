@@ -104,7 +104,13 @@ ignore_missing_imports = true
 minversion = "8.0"
 addopts = "-ra --strict-markers --strict-config --cov=agri_core --cov-report=term-missing --cov-fail-under=90"
 testpaths = ["tests"]
-filterwarnings = ["error"]
+filterwarnings = [
+    # pytest inserts each entry at the front of the filter list, so the LAST
+    # entry wins for matching warnings. Keep "error" first so the ignore below
+    # takes precedence for the typer 0.12.0 deprecation only.
+    "error",
+    "ignore:.*get_binary_stream.*:DeprecationWarning",
+]
 xfail_strict = true
 markers = [
     "unit: fast, no external dependencies",
