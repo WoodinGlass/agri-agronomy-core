@@ -29,8 +29,6 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
       - name: Install from lock
         run: |
           pip install -r requirements.lock
@@ -43,6 +41,10 @@ jobs:
         run: mypy
       - name: pytest
         run: pytest
+      - name: agri-core validate
+        run: agri-core validate
+      - name: agri-core lint-sources
+        run: agri-core lint-sources
 
   latest:
     name: Latest (py${{ matrix.python-version }})
@@ -59,8 +61,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
       - name: Install project
         run: pip install -e ".[dev]"
       - name: ruff check
@@ -99,8 +99,8 @@ jobs:
       - name: pytest
         run: pytest
 
-  wheel:
-    name: Build wheel and smoke test
+  build-wheel:
+    name: Build wheel and sdist
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [locked, latest, lowest-direct]
@@ -111,19 +111,148 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install build and twine
-        run: python -m pip install --upgrade pip build twine
-      - name: Build wheel
-        run: python -m build --wheel
+        run: python -m pip install build twine
+      - name: Build wheel and sdist
+        run: python -m build
       - name: twine check
         run: twine check dist/*
-      - name: Install wheel in clean venv
+      - name: Verify wheel contents
+        shell: bash
         run: |
-          python -m venv /tmp/venv
-          /tmp/venv/bin/pip install --upgrade pip
-          /tmp/venv/bin/pip install dist/*.whl
-          /tmp/venv/bin/python -c "import agri_core; print('version:', agri_core.__version__)"
-      - name: Upload wheel artifact
+          set -euo pipefail
+          WHL=$(ls dist/*.whl)
+          python - "$WHL" <<'PY'
+          import sys
+          import zipfile
+          from pathlib import Path
+          whl = Path(sys.argv[1])
+          with zipfile.ZipFile(whl) as zf:
+              names = zf.namelist()
+          required = [
+              "agri_core/py.typed",
+              "agri_core/_data/profiles/sources.csv",
+              "agri_core/_data/schema/outcome.schema.json",
+              "agri_core/_data/schema/source.schema.json",
+          ]
+          missing = [r for r in required if r not in names]
+          if missing:
+              print("missing from wheel:", missing)
+              sys.exit(1)
+          licenses = [n for n in names if ".dist-info/licenses/" in n]
+          if not any(n.endswith("LICENSE") for n in licenses):
+              print("LICENSE missing under .dist-info/licenses/")
+              sys.exit(1)
+          if not any(n.endswith("LICENSE-DATA") for n in licenses):
+              print("LICENSE-DATA missing under .dist-info/licenses/")
+              sys.exit(1)
+          print("wheel contents OK:", len(names), "members")
+          PY
+      - name: Upload wheel
         uses: actions/upload-artifact@v7
         with:
           name: wheel
           path: dist/*.whl
+          if-no-files-found: error
+      - name: Upload sdist
+        uses: actions/upload-artifact@v7
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  wheel-smoke:
+    name: Wheel smoke (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build-wheel
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    continue-on-error: ${{ matrix.python-version == '3.14' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Download wheel artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: ${{ runner.temp }}/wheel-dist
+      - name: Smoke test wheel artifact
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          WHL=$(ls "${{ runner.temp }}/wheel-dist/"*.whl | head -n1)
+          python -m venv venv-wheel
+          ./venv-wheel/bin/pip install "$WHL"
+          ./venv-wheel/bin/python -c "import agri_core; print('version:', agri_core.__version__)"
+          ./venv-wheel/bin/agri-core --version
+          OUT=$(./venv-wheel/bin/agri-core validate)
+          echo "$OUT"
+          echo "$OUT" | grep -q "data: packaged"
+          ./venv-wheel/bin/agri-core lint-sources
+      - name: Smoke test source install
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv venv-src
+          ./venv-src/bin/pip install "${{ github.workspace }}"
+          ./venv-src/bin/python -c "import agri_core; print('version:', agri_core.__version__)"
+          ./venv-src/bin/agri-core --version
+          OUT=$(./venv-src/bin/agri-core validate)
+          echo "$OUT"
+          echo "$OUT" | grep -q "data: packaged"
+          ./venv-src/bin/agri-core lint-sources
+
+  sdist-roundtrip:
+    name: Sdist round-trip
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build-wheel
+    steps:
+      # No actions/checkout: this job must stay independent of the source tree.
+      # setup-python has no cache here because cache: pip needs a cache-key file
+      # (pyproject.toml / requirements.txt), which would require a checkout.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Download wheel artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: ${{ runner.temp }}/wheel-dist
+      - name: Download sdist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: ${{ runner.temp }}/sdist-dist
+      - name: Install build
+        run: python -m pip install build
+      - name: Build wheel from sdist and compare member lists
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDIST=$(ls "${{ runner.temp }}/sdist-dist/"*.tar.gz | head -n1)
+          mkdir from-sdist
+          python -m build --wheel --outdir from-sdist "$SDIST"
+          WHL_A=$(ls "${{ runner.temp }}/wheel-dist/"*.whl | head -n1)
+          WHL_B=$(ls from-sdist/*.whl | head -n1)
+          python - "$WHL_A" "$WHL_B" <<'PY'
+          import sys
+          import zipfile
+          with zipfile.ZipFile(sys.argv[1]) as a, zipfile.ZipFile(sys.argv[2]) as b:
+              members_a = sorted(a.namelist())
+              members_b = sorted(b.namelist())
+          if members_a != members_b:
+              print("wheel member lists differ")
+              print("only in direct:", sorted(set(members_a) - set(members_b)))
+              print("only in sdist :", sorted(set(members_b) - set(members_a)))
+              sys.exit(1)
+          print("wheel members match:", len(members_a), "files")
+          PY
