@@ -51,7 +51,7 @@ dev = [
     # click 8.2 (May 2025) changes Parameter.make_metavar signature; typer
     # 0.12/0.15 break against it. Pin below 8.2 until typer lower bound is
     # raised to a version that supports click 8.2 (0.16+).
-    "click>=8.1,<8.2",
+    "click>=8.1,<8.6",
     "types-PyYAML>=6.0,<7",
 ]
 
