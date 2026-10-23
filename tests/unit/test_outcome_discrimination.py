@@ -63,3 +63,27 @@ def test_provenance_default_constructible() -> None:
     assert p.profile_ids == []
     assert p.profile_version is None
     assert p.source_ids == []
+
+
+def test_parse_ambiguous() -> None:
+    from agri_core.models import Ambiguous
+
+    obj = OutcomeAdapter.validate_python(
+        {
+            "status": "ambiguous",
+            "candidates": [
+                {"taxon_id": "t1", "name": "Foo"},
+                {"taxon_id": "t2", "name": "Bar"},
+            ],
+        }
+    )
+    assert isinstance(obj, Ambiguous)
+
+
+def test_parse_refer_to_authority() -> None:
+    from agri_core.models import ReferToAuthority
+
+    obj = OutcomeAdapter.validate_python(
+        {"status": "refer_to_authority", "reason": "r", "flags": ["LEGAL"]}
+    )
+    assert isinstance(obj, ReferToAuthority)
