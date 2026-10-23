@@ -35,8 +35,8 @@ repos:
     hooks:
       - id: agri-core-validate
         name: agri-core validate
-        entry: agri-core validate --data-dir .
+        entry: agri-core validate --pack src/agri_core/_samples/sample_pack
         language: system
-        files: '^(profiles|schema)/.*\.(csv|ya?ml|json)$'
+        files: '^(src/agri_core/_samples|schema)/.*\.(csv|ya?ml|json|toml)$'
         pass_filenames: false
         verbose: true

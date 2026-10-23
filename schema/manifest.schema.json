@@ -1,0 +1,31 @@
+{
+  "additionalProperties": false,
+  "description": "Parsed ``pack.toml``.",
+  "properties": {
+    "engine_min": {
+      "title": "Engine Min",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "minimum": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "schema_version",
+    "engine_min"
+  ],
+  "title": "PackManifest",
+  "type": "object"
+}

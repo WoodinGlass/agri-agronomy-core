@@ -29,6 +29,7 @@ dependencies = [
     "pyyaml>=6.0.2,<7",
     "pint>=0.23,<0.25",
     "typer>=0.12,<0.16",
+    "packaging>=24,<27",
 ]
 
 [project.optional-dependencies]
@@ -62,13 +63,12 @@ Issues = "https://github.com/WoodinGlass/agri-agronomy-core/issues"
 Changelog = "https://github.com/WoodinGlass/agri-agronomy-core/blob/main/CHANGELOG.md"
 
 [project.scripts]
-agri-core = "agri_core.cli:app"
+agri-core = "agri_core.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agri_core"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"profiles" = "agri_core/_data/profiles"
 "schema" = "agri_core/_data/schema"
 
 [tool.hatch.build.targets.sdist]

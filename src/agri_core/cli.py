@@ -3,25 +3,26 @@
 from __future__ import annotations
 
 import csv
-import json
 from datetime import date
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, NoReturn
 
 import typer
-from jsonschema import Draft202012Validator
 
 from agri_core import __version__
-from agri_core.registry import (
-    DataNotFoundError,
-    Finding,
-    lint_csv_file,
-    resolve_data_root,
+from agri_core.pack import (
+    Pack,
+    PackError,
+    load_pack,
+    load_sample_pack,
 )
+from agri_core.registry import Finding, lint_csv_file
 
 EXIT_OK = 0
 EXIT_ERROR = 1
-EXIT_DATA_NOT_FOUND = 3
+EXIT_USAGE = 2
+EXIT_PACK = 3
+EXIT_UNEXPECTED = 70
 
 app = typer.Typer(
     name="agri-core",
@@ -52,13 +53,32 @@ def _main(
     """agri-core command line."""
 
 
-def _open_data_root(data_dir: Path | None) -> tuple[Path, str]:
+def _resolve_pack(spec: str) -> Pack:
     try:
-        root = resolve_data_root(override=data_dir)
-    except DataNotFoundError as exc:
-        typer.echo(f"error: {exc}", err=True)
-        raise typer.Exit(EXIT_DATA_NOT_FOUND) from exc
-    return root.path, root.kind
+        if spec == "sample":
+            return load_sample_pack()
+        return load_pack(spec)
+    except PackError as exc:
+        typer.echo(f"error: {exc.code}: {exc}", err=True)
+        raise typer.Exit(EXIT_PACK) from exc
+
+
+def _print_pack_line(pack: Pack) -> None:
+    kind = "sample" if pack.kind == "sample" else str(pack.root.resolve())
+    typer.echo(f"pack: {pack.manifest.name} {pack.manifest.version} ({kind})")
+
+
+def _emit_findings(findings: list[Finding]) -> tuple[int, int]:
+    errors = 0
+    warnings = 0
+    for f in findings:
+        loc = f"{f.file}:{f.line}" if f.line else f.file
+        typer.echo(f"{f.severity}: {f.code} {loc}: {f.message}")
+        if f.severity == "error":
+            errors += 1
+        elif f.severity == "warning":
+            warnings += 1
+    return errors, warnings
 
 
 def _count_commercial_use(sources_csv: Path) -> dict[str, int]:
@@ -76,36 +96,19 @@ def _count_commercial_use(sources_csv: Path) -> dict[str, int]:
     return counts
 
 
-def _emit_findings(findings: list[Finding]) -> tuple[int, int]:
-    errors = 0
-    warnings = 0
-    for f in findings:
-        loc = f"{f.file}:{f.line}" if f.line else f.file
-        typer.echo(f"{f.severity}: {f.code} {loc}: {f.message}")
-        if f.severity == "error":
-            errors += 1
-        elif f.severity == "warning":
-            warnings += 1
-    return errors, warnings
-
-
 @app.command(name="lint-sources")
 def lint_sources(
-    data_dir: Annotated[
-        Optional[Path],
-        typer.Option(
-            "--data-dir",
-            help="Explicit data root (must contain profiles/sources.csv and schema/).",
-        ),
-    ] = None,
+    pack: Annotated[
+        str,
+        typer.Option("--pack", help="Path to a pack directory, or 'sample'."),
+    ],
 ) -> None:
-    """Check profiles/sources.csv for schema and consistency errors."""
-    root, kind = _open_data_root(data_dir)
-    typer.echo(f"data: {kind}")
-    sources_csv = root / "profiles" / "sources.csv"
-    findings = lint_csv_file(sources_csv, today=date.today())
+    """Check a pack's sources.csv for schema and consistency errors."""
+    p = _resolve_pack(pack)
+    _print_pack_line(p)
+    findings = lint_csv_file(p.sources_csv, today=date.today())
     errors, warnings = _emit_findings(findings)
-    counts = _count_commercial_use(sources_csv)
+    counts = _count_commercial_use(p.sources_csv)
     typer.echo(
         f"sources: {sum(counts.values())} "
         f"(yes: {counts['yes']}, no: {counts['no']}, unclear: {counts['unclear']})"
@@ -117,43 +120,37 @@ def lint_sources(
 
 @app.command(name="validate")
 def validate(
-    data_dir: Annotated[
-        Optional[Path],
-        typer.Option(
-            "--data-dir",
-            help="Explicit data root (must contain profiles/sources.csv and schema/).",
-        ),
-    ] = None,
+    pack: Annotated[
+        str,
+        typer.Option("--pack", help="Path to a pack directory, or 'sample'."),
+    ],
 ) -> None:
-    """Lint sources and verify every schema under schema/ is a valid JSON Schema."""
-    root, kind = _open_data_root(data_dir)
-    typer.echo(f"agri-core {__version__} | data: {kind}")
-
-    findings = lint_csv_file(root / "profiles" / "sources.csv", today=date.today())
+    """Validate a pack: manifest and sources.csv."""
+    p = _resolve_pack(pack)
+    _print_pack_line(p)
+    findings = lint_csv_file(p.sources_csv, today=date.today())
     errors, warnings = _emit_findings(findings)
-
-    schema_dir = root / "schema"
-    schema_files = sorted(schema_dir.glob("*.schema.json"))
-    for schema_path in schema_files:
-        try:
-            doc = json.loads(schema_path.read_text(encoding="utf-8"))
-            Draft202012Validator.check_schema(doc)
-        except Exception as exc:
-            typer.echo(f"error: SCHEMA {schema_path.name}: {exc}")
-            errors += 1
-
-    counts = _count_commercial_use(root / "profiles" / "sources.csv")
+    counts = _count_commercial_use(p.sources_csv)
     typer.echo("profiles: 0")
     typer.echo(
         f"sources: {sum(counts.values())} "
         f"(yes: {counts['yes']}, no: {counts['no']}, unclear: {counts['unclear']})"
     )
-    typer.echo(f"schemas: {len(schema_files)}")
     typer.echo(f"errors: {errors}, warnings: {warnings}")
-
     if errors:
         raise typer.Exit(EXIT_ERROR)
 
 
+def main() -> NoReturn:
+    try:
+        app()
+    except SystemExit:
+        raise
+    except Exception as exc:
+        typer.echo(f"error: {type(exc).__name__}: {exc}", err=True)
+        raise SystemExit(EXIT_UNEXPECTED) from exc
+    raise SystemExit(EXIT_OK)
+
+
 if __name__ == "__main__":
-    app()
+    main()

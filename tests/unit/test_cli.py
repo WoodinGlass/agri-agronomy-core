@@ -19,11 +19,25 @@ def _header_bytes() -> bytes:
     return b"id,url,license,commercial_use,access_date,citation\n"
 
 
-def _make_data_root(tmp_path: Path, sources_content: bytes) -> Path:
-    root = tmp_path / "data"
-    (root / "profiles").mkdir(parents=True)
-    (root / "profiles" / "sources.csv").write_bytes(sources_content)
-    (root / "schema").mkdir()
+def _make_pack(
+    tmp_path: Path,
+    sources_content: bytes,
+    *,
+    name: str = "pack1",
+    version: str = "1.0.0",
+    schema_version: int = 1,
+    engine_min: str = "0.0.0",
+) -> Path:
+    root = tmp_path / "pack"
+    root.mkdir()
+    (root / "pack.toml").write_text(
+        f'name = "{name}"\n'
+        f'version = "{version}"\n'
+        f"schema_version = {schema_version}\n"
+        f'engine_min = "{engine_min}"\n',
+        encoding="utf-8",
+    )
+    (root / "sources.csv").write_bytes(sources_content)
     return root
 
 
@@ -40,62 +54,56 @@ def test_help_exits_zero() -> None:
     assert "validate" in result.stdout
 
 
-def test_lint_sources_empty_data_ok(tmp_path: Path) -> None:
-    root = _make_data_root(tmp_path, _header_bytes())
-    result = CliRunner().invoke(app, ["lint-sources", "--data-dir", str(root)])
+def test_lint_sources_sample_ok() -> None:
+    result = CliRunner().invoke(app, ["lint-sources", "--pack", "sample"])
     assert result.exit_code == 0, result.stdout
-    assert "data: override" in result.stdout
-    assert "sources: 0" in result.stdout
-    assert "errors: 0" in result.stdout
+    assert "pack: sample 0.1.0 (sample)" in result.stdout
 
 
-def test_lint_sources_broken_returns_one(tmp_path: Path) -> None:
-    root = _make_data_root(tmp_path, (FIXTURES / "broken.csv").read_bytes())
-    result = CliRunner().invoke(app, ["lint-sources", "--data-dir", str(root)])
-    assert result.exit_code == 1, result.stdout
-
-
-def test_lint_sources_data_not_found_returns_three(tmp_path: Path) -> None:
-    missing = tmp_path / "nope"
-    result = CliRunner().invoke(app, ["lint-sources", "--data-dir", str(missing)])
-    assert result.exit_code == 3, result.stdout
-
-
-def test_validate_empty_ok(tmp_path: Path) -> None:
-    root = _make_data_root(tmp_path, _header_bytes())
-    (root / "schema" / "empty.schema.json").write_text(
-        '{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}',
-        encoding="utf-8",
-    )
-    result = CliRunner().invoke(app, ["validate", "--data-dir", str(root)])
+def test_validate_sample_ok() -> None:
+    result = CliRunner().invoke(app, ["validate", "--pack", "sample"])
     assert result.exit_code == 0, result.stdout
-    assert "agri-core" in result.stdout
-    assert "| data: override" in result.stdout
-    assert "schemas: 1" in result.stdout
-    assert "errors: 0" in result.stdout
+    assert "pack: sample 0.1.0 (sample)" in result.stdout
 
 
-def test_validate_invalid_schema_returns_one(tmp_path: Path) -> None:
-    root = _make_data_root(tmp_path, _header_bytes())
-    (root / "schema" / "bad.schema.json").write_text(
-        '{"type": "not-a-real-type"}', encoding="utf-8"
-    )
-    result = CliRunner().invoke(app, ["validate", "--data-dir", str(root)])
-    assert result.exit_code == 1, result.stdout
-    assert "SCHEMA bad.schema.json" in result.stdout
+def test_validate_directory_pack(tmp_path: Path) -> None:
+    root = _make_pack(tmp_path, _header_bytes())
+    result = CliRunner().invoke(app, ["validate", "--pack", str(root)])
+    assert result.exit_code == 0, result.stdout
+    assert "pack: pack1 1.0.0 (" in result.stdout
 
 
-def test_validate_data_not_found_returns_three(tmp_path: Path) -> None:
-    result = CliRunner().invoke(app, ["validate", "--data-dir", str(tmp_path / "nope")])
-    assert result.exit_code == 3, result.stdout
+def test_pack_not_found_exit_3(tmp_path: Path) -> None:
+    result = CliRunner().invoke(app, ["validate", "--pack", str(tmp_path / "nope")])
+    assert result.exit_code == 3
 
 
-def test_validate_also_lints_sources(tmp_path: Path) -> None:
-    root = _make_data_root(tmp_path, (FIXTURES / "broken.csv").read_bytes())
-    (root / "schema" / "ok.schema.json").write_text(
-        '{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}',
-        encoding="utf-8",
-    )
-    result = CliRunner().invoke(app, ["validate", "--data-dir", str(root)])
-    assert result.exit_code == 1, result.stdout
-    assert "SRC0" in result.stdout or "SRC1" in result.stdout
+def test_invalid_manifest_exit_3(tmp_path: Path) -> None:
+    root = tmp_path / "pack"
+    root.mkdir()
+    (root / "pack.toml").write_text("garbage = true\n", encoding="utf-8")
+    (root / "sources.csv").write_bytes(_header_bytes())
+    result = CliRunner().invoke(app, ["validate", "--pack", str(root)])
+    assert result.exit_code == 3
+
+
+def test_unsupported_schema_version_exit_3(tmp_path: Path) -> None:
+    root = _make_pack(tmp_path, _header_bytes(), schema_version=999)
+    result = CliRunner().invoke(app, ["validate", "--pack", str(root)])
+    assert result.exit_code == 3
+
+
+def test_data_dir_option_rejected_exit_2() -> None:
+    result = CliRunner().invoke(app, ["validate", "--data-dir", "."])
+    assert result.exit_code == 2
+
+
+def test_pack_option_required() -> None:
+    result = CliRunner().invoke(app, ["validate"])
+    assert result.exit_code == 2
+
+
+def test_lint_sources_broken_exit_1(tmp_path: Path) -> None:
+    root = _make_pack(tmp_path, (FIXTURES / "broken.csv").read_bytes())
+    result = CliRunner().invoke(app, ["lint-sources", "--pack", str(root)])
+    assert result.exit_code == 1
