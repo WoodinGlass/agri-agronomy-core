@@ -1,5 +1,65 @@
 {
   "$defs": {
+    "Ambiguous": {
+      "additionalProperties": false,
+      "description": "A name matched more than one taxon; the caller must choose one.",
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/AmbiguousCandidate"
+          },
+          "maxItems": 20,
+          "minItems": 2,
+          "title": "Candidates",
+          "type": "array"
+        },
+        "status": {
+          "const": "ambiguous",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "candidates"
+      ],
+      "title": "Ambiguous",
+      "type": "object"
+    },
+    "AmbiguousCandidate": {
+      "additionalProperties": false,
+      "description": "One possible taxon when a name resolves to more than one.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "taxon_id": {
+          "minLength": 1,
+          "title": "Taxon Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxon_id",
+        "name"
+      ],
+      "title": "AmbiguousCandidate",
+      "type": "object"
+    },
     "InsufficientInput": {
       "additionalProperties": false,
       "description": "A required input is missing.\n\n``missing`` names each missing input in the caller's vocabulary (for\nexample ``\"temp_c\"`` or ``\"ec_to_ppm_factor (choose 0.5, 0.64 or 0.7)\"``).\nEach entry must be a non-empty string.",
@@ -101,6 +161,36 @@
         }
       },
       "title": "Provenance",
+      "type": "object"
+    },
+    "ReferToAuthority": {
+      "additionalProperties": false,
+      "description": "The answer depends on a legal or regulatory authority; the caller must consult it.",
+      "properties": {
+        "flags": {
+          "items": {
+            "pattern": "^[A-Z][A-Z0-9_]{1,63}$",
+            "type": "string"
+          },
+          "title": "Flags",
+          "type": "array"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "status": {
+          "const": "refer_to_authority",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "reason"
+      ],
+      "title": "ReferToAuthority",
       "type": "object"
     },
     "ReferToLabel": {
@@ -220,9 +310,11 @@
   },
   "discriminator": {
     "mapping": {
+      "ambiguous": "#/$defs/Ambiguous",
       "insufficient_input": "#/$defs/InsufficientInput",
       "not_applicable": "#/$defs/NotApplicable",
       "ok": "#/$defs/Result",
+      "refer_to_authority": "#/$defs/ReferToAuthority",
       "refer_to_label": "#/$defs/ReferToLabel",
       "unknown": "#/$defs/Unknown"
     },
@@ -243,6 +335,12 @@
     },
     {
       "$ref": "#/$defs/ReferToLabel"
+    },
+    {
+      "$ref": "#/$defs/Ambiguous"
+    },
+    {
+      "$ref": "#/$defs/ReferToAuthority"
     }
   ]
 }

@@ -33,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI job `pre-commit` runs all hooks on all files.
 
 ### Changed
+- `Outcome` union widened: added `ambiguous` (with `candidates`) and
+  `refer_to_authority` (with `reason` and `flags`). Contract change for
+  consumers that exhaustively handle every status.
 
 - Python requirement raised to 3.11 or newer.
 - Public output contract clarified as an `Outcome` discriminated union; `result.schema.json` renamed to `outcome.schema.json`.

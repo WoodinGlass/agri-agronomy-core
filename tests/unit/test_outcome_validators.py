@@ -86,3 +86,57 @@ def test_not_applicable_rejects_empty_reason() -> None:
 def test_refer_to_label_rejects_empty_reason() -> None:
     with pytest.raises(ValidationError):
         ReferToLabel(status="refer_to_label", reason="")
+
+
+def test_ambiguous_rejects_single_candidate() -> None:
+    from agri_core.models import Ambiguous, AmbiguousCandidate
+
+    with pytest.raises(ValidationError):
+        Ambiguous(
+            status="ambiguous",
+            candidates=[AmbiguousCandidate(taxon_id="t1", name="Foo")],
+        )
+
+
+def test_ambiguous_rejects_too_many() -> None:
+    from agri_core.models import Ambiguous, AmbiguousCandidate
+
+    with pytest.raises(ValidationError):
+        Ambiguous(
+            status="ambiguous",
+            candidates=[AmbiguousCandidate(taxon_id=f"t{i}", name=f"N{i}") for i in range(21)],
+        )
+
+
+def test_ambiguous_rejects_duplicate_taxon_id() -> None:
+    from agri_core.models import Ambiguous, AmbiguousCandidate
+
+    with pytest.raises(ValidationError):
+        Ambiguous(
+            status="ambiguous",
+            candidates=[
+                AmbiguousCandidate(taxon_id="t1", name="A"),
+                AmbiguousCandidate(taxon_id="t1", name="B"),
+            ],
+        )
+
+
+def test_refer_to_authority_rejects_lowercase_flag() -> None:
+    from agri_core.models import ReferToAuthority
+
+    with pytest.raises(ValidationError):
+        ReferToAuthority(status="refer_to_authority", reason="r", flags=["legal"])
+
+
+def test_refer_to_authority_rejects_duplicate_flags() -> None:
+    from agri_core.models import ReferToAuthority
+
+    with pytest.raises(ValidationError):
+        ReferToAuthority(status="refer_to_authority", reason="r", flags=["LEGAL", "LEGAL"])
+
+
+def test_refer_to_authority_sorts_flags() -> None:
+    from agri_core.models import ReferToAuthority
+
+    o = ReferToAuthority(status="refer_to_authority", reason="r", flags=["LEGAL", "ENV", "PEST"])
+    assert o.flags == ["ENV", "LEGAL", "PEST"]

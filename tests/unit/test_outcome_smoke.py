@@ -120,3 +120,46 @@ def test_roundtrip_not_applicable() -> None:
 
 def test_roundtrip_refer_to_label() -> None:
     _assert_roundtrip(refer_to_label("r"), "refer_to_label")
+
+
+def test_ambiguous_factory() -> None:
+    from agri_core.models import Ambiguous, AmbiguousCandidate, ambiguous
+
+    o = ambiguous(
+        [
+            AmbiguousCandidate(taxon_id="t1", name="Foo"),
+            AmbiguousCandidate(taxon_id="t2", name="Bar", note="different"),
+        ]
+    )
+    assert isinstance(o, Ambiguous)
+    assert o.status == "ambiguous"
+    assert len(o.candidates) == 2
+
+
+def test_refer_to_authority_factory() -> None:
+    from agri_core.models import ReferToAuthority, refer_to_authority
+
+    o = refer_to_authority("consult local regulator", flags=["LEGAL", "PESTICIDE"])
+    assert isinstance(o, ReferToAuthority)
+    assert o.status == "refer_to_authority"
+    assert o.flags == ["LEGAL", "PESTICIDE"]
+
+
+def test_roundtrip_ambiguous() -> None:
+    from agri_core.models import AmbiguousCandidate, ambiguous
+
+    _assert_roundtrip(
+        ambiguous(
+            [
+                AmbiguousCandidate(taxon_id="t1", name="Foo"),
+                AmbiguousCandidate(taxon_id="t2", name="Bar"),
+            ]
+        ),
+        "ambiguous",
+    )
+
+
+def test_roundtrip_refer_to_authority() -> None:
+    from agri_core.models import refer_to_authority
+
+    _assert_roundtrip(refer_to_authority("r", flags=["LEGAL"]), "refer_to_authority")
