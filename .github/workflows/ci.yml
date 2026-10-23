@@ -41,10 +41,15 @@ jobs:
         run: mypy
       - name: pytest
         run: pytest
-      - name: agri-core validate
-        run: agri-core validate
+      - name: agri-core validate (explicit path)
+        run: agri-core validate --pack src/agri_core/_samples/sample_pack
+      - name: agri-core validate (sample keyword)
+        run: |
+          out=$(agri-core validate --pack sample)
+          echo "$out"
+          echo "$out" | grep -E '^pack: sample [0-9]+\.[0-9]+\.[0-9]+ \(sample\)$'
       - name: agri-core lint-sources
-        run: agri-core lint-sources
+        run: agri-core lint-sources --pack sample
 
   latest:
     name: Latest (py${{ matrix.python-version }})
@@ -150,9 +155,12 @@ jobs:
               names = zf.namelist()
           required = [
               "agri_core/py.typed",
-              "agri_core/_data/profiles/sources.csv",
               "agri_core/_data/schema/outcome.schema.json",
               "agri_core/_data/schema/source.schema.json",
+              "agri_core/_data/schema/manifest.schema.json",
+              "agri_core/_samples/sample_pack/pack.toml",
+              "agri_core/_samples/sample_pack/sources.csv",
+              "agri_core/_samples/sample_pack/README.md",
           ]
           missing = [r for r in required if r not in names]
           if missing:
@@ -211,10 +219,10 @@ jobs:
           ./venv-wheel/bin/pip install "$WHL"
           ./venv-wheel/bin/python -c "import agri_core; print('version:', agri_core.__version__)"
           ./venv-wheel/bin/agri-core --version
-          OUT=$(./venv-wheel/bin/agri-core validate)
+          OUT=$(./venv-wheel/bin/agri-core validate --pack sample)
           echo "$OUT"
-          echo "$OUT" | grep -q "data: packaged"
-          ./venv-wheel/bin/agri-core lint-sources
+          echo "$OUT" | grep -E '^pack: sample [0-9]+\.[0-9]+\.[0-9]+ \(sample\)$'
+          ./venv-wheel/bin/agri-core lint-sources --pack sample
       - name: Smoke test source install
         working-directory: ${{ runner.temp }}
         shell: bash
@@ -224,10 +232,10 @@ jobs:
           ./venv-src/bin/pip install "${{ github.workspace }}"
           ./venv-src/bin/python -c "import agri_core; print('version:', agri_core.__version__)"
           ./venv-src/bin/agri-core --version
-          OUT=$(./venv-src/bin/agri-core validate)
+          OUT=$(./venv-src/bin/agri-core validate --pack sample)
           echo "$OUT"
-          echo "$OUT" | grep -q "data: packaged"
-          ./venv-src/bin/agri-core lint-sources
+          echo "$OUT" | grep -E '^pack: sample [0-9]+\.[0-9]+\.[0-9]+ \(sample\)$'
+          ./venv-src/bin/agri-core lint-sources --pack sample
 
   sdist-roundtrip:
     name: Sdist round-trip

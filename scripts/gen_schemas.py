@@ -8,12 +8,12 @@ from pathlib import Path
 
 from pydantic import TypeAdapter
 
-from agri_core.models.outcome import Outcome
+from agri_core.models.outcome import OutcomeAdapter
+from agri_core.pack.manifest import PackManifest
 from agri_core.registry.sources import SourceRow
 
 
-def _write(name: str, model: object, schema_dir: Path) -> Path:
-    schema = TypeAdapter(model).json_schema(mode="serialization")
+def _write(name: str, schema: dict[str, object], schema_dir: Path) -> Path:
     target = schema_dir / name
     target.write_text(
         json.dumps(schema, indent=2, sort_keys=True) + "\n",
@@ -26,8 +26,21 @@ def _write(name: str, model: object, schema_dir: Path) -> Path:
 def main() -> int:
     schema_dir = Path(__file__).resolve().parent.parent / "schema"
     schema_dir.mkdir(parents=True, exist_ok=True)
-    _write("outcome.schema.json", Outcome, schema_dir)
-    _write("source.schema.json", SourceRow, schema_dir)
+    _write(
+        "outcome.schema.json",
+        OutcomeAdapter.json_schema(mode="serialization"),
+        schema_dir,
+    )
+    _write(
+        "source.schema.json",
+        TypeAdapter(SourceRow).json_schema(mode="serialization"),
+        schema_dir,
+    )
+    _write(
+        "manifest.schema.json",
+        TypeAdapter(PackManifest).json_schema(mode="serialization"),
+        schema_dir,
+    )
     return 0
 
 

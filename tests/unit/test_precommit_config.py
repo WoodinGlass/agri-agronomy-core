@@ -29,43 +29,36 @@ def hook(config: dict[str, Any]) -> dict[str, Any]:
             for h in repo.get("hooks", []):
                 if h.get("id") == "agri-core-validate":
                     return cast(dict[str, Any], h)
-    raise AssertionError("agri-core-validate hook not found in .pre-commit-config.yaml")
+    raise AssertionError("agri-core-validate hook not found")
 
 
 def test_local_repo_is_last(config: dict[str, Any]) -> None:
-    repos = config["repos"]
-    assert repos[-1]["repo"] == "local", "local repo must be the last entry"
+    assert config["repos"][-1]["repo"] == "local"
 
 
 @pytest.mark.parametrize(
     "path",
     [
-        "profiles/sources.csv",
-        "profiles/crops/tomato.yaml",
-        "profiles/fertilizers.yaml",
-        "profiles/media/cocopeat.yaml",
-        "schema/source.schema.json",
+        "src/agri_core/_samples/sample_pack/pack.toml",
+        "src/agri_core/_samples/sample_pack/sources.csv",
+        "schema/outcome.schema.json",
+        "schema/manifest.schema.json",
     ],
 )
 def test_hook_files_regex_matches(hook: dict[str, Any], path: str) -> None:
-    assert re.match(hook["files"], path), f"{path!r} should match hook regex"
+    assert re.match(hook["files"], path)
 
 
 @pytest.mark.parametrize(
     "path",
-    [
-        "README.md",
-        "src/agri_core/cli.py",
-        "docs/REVIEW_GUIDE.md",
-        "tests/fixtures/sources_invalid.csv",
-    ],
+    ["README.md", "src/agri_core/cli.py", "tests/fixtures/sources/valid.csv"],
 )
 def test_hook_files_regex_rejects(hook: dict[str, Any], path: str) -> None:
-    assert not re.match(hook["files"], path), f"{path!r} should not match"
+    assert not re.match(hook["files"], path)
 
 
 def test_hook_attributes(hook: dict[str, Any]) -> None:
     assert hook["pass_filenames"] is False
     assert hook["verbose"] is True
-    assert "--data-dir ." in hook["entry"]
+    assert "src/agri_core/_samples/sample_pack" in hook["entry"]
     assert hook["language"] == "system"

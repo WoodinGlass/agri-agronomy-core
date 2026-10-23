@@ -40,6 +40,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python requirement raised to 3.11 or newer.
 - Public output contract clarified as an `Outcome` discriminated union; `result.schema.json` renamed to `outcome.schema.json`.
 
+### Removed
+
+- `resolve_data_root()` and its tests. Replaced by explicit pack loading
+  (`load_pack`, `load_sample_pack`). No released API depended on it.
+- CLI option `--data-dir` (both `validate` and `lint-sources`). Use `--pack`.
+
+### Deprecated
+
+- `profiles/` and `LICENSE-DATA` are no longer read by the CLI. They stay in
+  the repository for now and will move to the `agri-knowledge` repo (M1-0).
+
 ## [0.0.0] - 2026-10-17
 
 - Repository created.
