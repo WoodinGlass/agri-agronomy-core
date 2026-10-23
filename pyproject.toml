@@ -8,8 +8,8 @@ version = "0.0.0"
 description = "Offline, deterministic crop profiles and agronomy calculators."
 readme = "README.md"
 requires-python = ">=3.11"
-license = "Apache-2.0 AND CC-BY-4.0"
-license-files = ["LICENSE", "LICENSE-DATA"]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "WoodinGlass and the agri-agronomy-core contributors" }]
 keywords = ["agronomy", "crop-profiles", "offline", "deterministic", "agriculture"]
 classifiers = [
@@ -74,13 +74,11 @@ packages = ["src/agri_core"]
 [tool.hatch.build.targets.sdist]
 include = [
     "src/agri_core",
-    "profiles",
     "schema",
     "tests",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
-    "LICENSE-DATA",
     "pyproject.toml",
     "Makefile",
 ]

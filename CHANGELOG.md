@@ -33,6 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI job `pre-commit` runs all hooks on all files.
 
 ### Changed
+
+- Package license is now `Apache-2.0` only. Previously
+  `Apache-2.0 AND CC-BY-4.0`; the CC-BY-4.0 half applied to `profiles/`,
+  which no longer exists in this repository.
+
 - `Outcome` union widened: added `ambiguous` (with `candidates`) and
   `refer_to_authority` (with `reason` and `flags`). Contract change for
   consumers that exhaustively handle every status.

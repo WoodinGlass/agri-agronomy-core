@@ -170,9 +170,6 @@ jobs:
           if not any(n.endswith("LICENSE") for n in licenses):
               print("LICENSE missing under .dist-info/licenses/")
               sys.exit(1)
-          if not any(n.endswith("LICENSE-DATA") for n in licenses):
-              print("LICENSE-DATA missing under .dist-info/licenses/")
-              sys.exit(1)
           print("wheel contents OK:", len(names), "members")
           PY
       - name: Upload wheel
