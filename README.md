@@ -240,9 +240,9 @@ agri-agronomy-core/
 ├─ dictionary/           # parameters.core.yaml; vocab: archetypes, phases_by_archetype, stages, systems, uses
 ├─ docs/                 # ADDING_A_TAXON, DICTIONARY, PACK_FORMAT, RESOLUTION_POLICY, REVIEW_GUIDE, SAFETY, ADR
 ├─ notebooks/            # Colab quickstart, executed in CI
-├─ samples/sample_pack/  # synthetic Apache-2.0 pack used by tests and CI
 ├─ schema/               # JSON Schemas: outcome, result, source, taxon, name, fact, hazard, parameter, dataset, manifest
 ├─ src/agri_core/
+│  ├─ _samples/          # synthetic Apache-2.0 sample pack
 │  ├─ climate/           # VPD, GDD, DLI, ET0
 │  ├─ export/            # bundle, tool schemas, edge thresholds, review sheet
 │  ├─ fertilizer/        # nutrient to product, unit conversion
@@ -411,7 +411,7 @@ If you use the engine in research or in a product, cite this repository with the
 | Part | License | File |
 |---|---|---|
 | Code, tests, schemas, dictionary and documentation | Apache License 2.0 | `LICENSE` |
-| Sample pack in `samples/sample_pack/` (synthetic data, no third-party facts) | Apache License 2.0 | `samples/sample_pack/` |
+| Sample pack in `src/agri_core/_samples/sample_pack/` (synthetic data, no third-party facts) | Apache License 2.0 | `src/agri_core/_samples/sample_pack/` |
 | Third-party sources cited by a pack | Their own licenses, which this project does not change | `<pack>/sources.csv` |
 
 - **No third-party data in this repository.** The sample pack is synthetic. Real facts, including their licenses, live in `agri-knowledge` and each pack carries its own `sources.csv`.
