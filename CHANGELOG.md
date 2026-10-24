@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- 12 parameters in c-2b: irrigation (`kc`, `kc_stage_length`, `root_depth`, `depletion_fraction`, `awd_reflood_depth`, `ponding_depth`, `percolation_rate`, `predrain_days`, `must_flood_phases`, `moisture_band`) and media/air (`water_ec_max`, `water_temp_max`). `modules.reads` updated for irrigation, media, thresholds.
 - Initial repository scaffold: package layout (`src/agri_core`), `py.typed` marker, packaging via hatchling.
 - Dual licensing: Apache-2.0 for code, CC BY 4.0 for profiles (`LICENSE`, `LICENSE-DATA`).
 - Development tooling: ruff, mypy (strict), pytest, hypothesis, pytest-cov, pre-commit, pip-audit.
