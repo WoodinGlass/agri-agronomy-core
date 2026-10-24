@@ -58,9 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed (dictionary 1.0.0-dev, pre-release)
 
-- Added `enum_set` shape to the fact value union (8th shape). Needed by
-  `must_flood_phases` in c-2 to avoid FACT_CONFLICT from multiple
-  facts with identical scope. This is a change to the W2 shape list.
+- `enum_set` added to `ParameterShape` in c-1 and `EnumSetValue` added to
+  the `FactValue` union in c-2a. Needed by `must_flood_phases` (c-2b) to
+  avoid FACT_CONFLICT from multiple facts with identical scope. This is a
+  change to the W2 shape list.
 - `ParameterDef` fields renamed / added: `name` -> `key`,
   `safety_critical` -> `safety_class` (with `safety_critical` derived),
   `physical_range` required for numeric shapes, `applies_to.organism_groups`

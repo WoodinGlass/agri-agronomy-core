@@ -76,6 +76,31 @@ class EnumValue(BaseModel):
     value: str = Field(min_length=1)
 
 
+class EnumSetValue(BaseModel):
+    """Set of enum values.
+
+    One fact represents the whole set, avoiding FACT_CONFLICT from multiple
+    facts with identical scope. ``values`` must be non-empty and unique.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    shape: Literal["enum_set"]
+    values: tuple[str, ...]
+
+    @field_validator("values")
+    @classmethod
+    def _non_empty_unique(cls, v: tuple[str, ...]) -> tuple[str, ...]:
+        if len(v) == 0:
+            raise ValueError("values must not be empty")
+        for item in v:
+            if not item:
+                raise ValueError("values must not contain empty strings")
+        if len(set(v)) != len(v):
+            raise ValueError("values must be unique")
+        return v
+
+
 class BoolValue(BaseModel):
     """Boolean value."""
 
@@ -105,10 +130,17 @@ class UnknownValue(BaseModel):
 
 
 FactValue = Annotated[
-    TrapezoidValue | RangeValue | ScalarValue | EnumValue | BoolValue | RuleValue | UnknownValue,
+    TrapezoidValue
+    | RangeValue
+    | ScalarValue
+    | EnumValue
+    | EnumSetValue
+    | BoolValue
+    | RuleValue
+    | UnknownValue,
     Field(discriminator="shape"),
 ]
-"""Union of all seven fact-value shapes, discriminated by ``shape``."""
+"""Union of all eight fact-value shapes, discriminated by ``shape``."""
 
 
 class FactRow(BaseModel):
@@ -192,6 +224,7 @@ class FactRow(BaseModel):
 
 __all__ = [
     "BoolValue",
+    "EnumSetValue",
     "EnumValue",
     "FactRow",
     "FactStatus",

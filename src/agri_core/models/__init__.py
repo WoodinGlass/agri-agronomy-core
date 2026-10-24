@@ -7,6 +7,7 @@ from agri_core.models.dataset import DatasetRow
 from agri_core.models.dictionary import Dictionary
 from agri_core.models.fact import (
     BoolValue,
+    EnumSetValue,
     EnumValue,
     FactRow,
     FactStatus,
@@ -76,6 +77,7 @@ __all__ = [
     "DatasetId",
     "DatasetRow",
     "Dictionary",
+    "EnumSetValue",
     "EnumValue",
     "EvidenceGrade",
     "FactId",

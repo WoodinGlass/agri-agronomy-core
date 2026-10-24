@@ -21,6 +21,30 @@
       "title": "BoolValue",
       "type": "object"
     },
+    "EnumSetValue": {
+      "additionalProperties": false,
+      "description": "Set of enum values.\n\nOne fact represents the whole set, avoiding FACT_CONFLICT from multiple\nfacts with identical scope. ``values`` must be non-empty and unique.",
+      "properties": {
+        "shape": {
+          "const": "enum_set",
+          "title": "Shape",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "shape",
+        "values"
+      ],
+      "title": "EnumSetValue",
+      "type": "object"
+    },
     "EnumValue": {
       "additionalProperties": false,
       "description": "One value from a closed set. Membership validated at M1-2 against\nthe parameter's ``enum_values``.",
@@ -338,6 +362,7 @@
         "mapping": {
           "bool": "#/$defs/BoolValue",
           "enum": "#/$defs/EnumValue",
+          "enum_set": "#/$defs/EnumSetValue",
           "range": "#/$defs/RangeValue",
           "rule": "#/$defs/RuleValue",
           "scalar": "#/$defs/ScalarValue",
@@ -358,6 +383,9 @@
         },
         {
           "$ref": "#/$defs/EnumValue"
+        },
+        {
+          "$ref": "#/$defs/EnumSetValue"
         },
         {
           "$ref": "#/$defs/BoolValue"

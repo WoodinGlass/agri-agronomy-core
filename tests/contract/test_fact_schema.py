@@ -37,6 +37,7 @@ def test_schema_defs_has_all_seven_shapes() -> None:
         "RangeValue",
         "ScalarValue",
         "EnumValue",
+        "EnumSetValue",
         "BoolValue",
         "RuleValue",
         "UnknownValue",
