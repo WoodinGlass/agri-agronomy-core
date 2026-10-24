@@ -1,0 +1,14 @@
+schema_version: 1
+systems:
+  field:
+    description: "Open ground, no controlled shelter."
+  flooded:
+    description: "Paddy or flooded bed; standing water."
+  container:
+    description: "Pot, planter, raised bed, or organic medium in a container."
+  soilless:
+    description: "Hydroponic, aeroponic, or inert medium (rockwool, perlite, pure coco)."
+  fungal_bed:
+    description: "Log, bag, or bed for cultivated fungi."
+  marine:
+    description: "Seawater medium with salinity and tidal conditions."

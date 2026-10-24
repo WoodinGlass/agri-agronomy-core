@@ -1,0 +1,23 @@
+schema_version: 1
+uses:
+  vegetable:
+    status: stable
+    description: "Vegetable for household or market consumption."
+  fruit:
+    status: stable
+    description: "Fresh or processed fruit."
+  staple:
+    status: stable
+    description: "Primary carbohydrate or protein staple."
+  forage:
+    status: stable
+    description: "Forage crop for livestock (green or conserved), not rations."
+  ornamental:
+    status: stable
+    description: "Ornamental or cut flower."
+  spice:
+    status: proposed
+    description: "Culinary spice, herb, or aromatic."
+  edible_fungus:
+    status: proposed
+    description: "Cultivated edible fungus or lichen (functional category)."
