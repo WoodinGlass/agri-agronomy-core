@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from agri_core.models.dataset import DatasetRow
+from agri_core.models.hazard import HazardRow, HazardSeverity
 from agri_core.models.ids import (
     CROCKFORD_ALPHABET,
     CROCKFORD_CHARS,
@@ -46,9 +48,12 @@ __all__ = [
     "AmbiguousCandidate",
     "AppliesTo",
     "DatasetId",
+    "DatasetRow",
     "EvidenceGrade",
     "FactId",
     "FlagCode",
+    "HazardRow",
+    "HazardSeverity",
     "InsufficientInput",
     "NotApplicable",
     "Notice",

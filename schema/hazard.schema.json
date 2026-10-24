@@ -1,0 +1,79 @@
+{
+  "additionalProperties": false,
+  "description": "One row of ``hazard.csv``: a specific hazard recorded for a taxon.\n\nLegal status decays; ``as_of`` and ``authority`` are required so a stale\nentry can be identified and re-verified.\n\n``hazard_code`` is a stable lowercase snake_case identifier. It is not\na ``FlagCode`` (uppercase) because it names the hazard itself, not the\noutcome reason. Codes are validated at validate time against whatever\nhazard vocabulary the pack declares.",
+  "properties": {
+    "as_of": {
+      "format": "date",
+      "title": "As Of",
+      "type": "string"
+    },
+    "authority": {
+      "minLength": 1,
+      "title": "Authority",
+      "type": "string"
+    },
+    "dataset_id": {
+      "anyOf": [
+        {
+          "pattern": "^D[0-9A-HJKMNP-TV-Z]{9}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Dataset Id"
+    },
+    "hazard_code": {
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Hazard Code",
+      "type": "string"
+    },
+    "reason": {
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    },
+    "severity": {
+      "enum": [
+        "info",
+        "warning",
+        "critical"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "src": {
+      "anyOf": [
+        {
+          "items": {
+            "pattern": "^S\\d{3,}$",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Src"
+    },
+    "taxon_id": {
+      "pattern": "^T[0-9A-HJKMNP-TV-Z]{9}$",
+      "title": "Taxon Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "taxon_id",
+    "hazard_code",
+    "severity",
+    "reason",
+    "as_of",
+    "authority"
+  ],
+  "title": "HazardRow",
+  "type": "object"
+}
