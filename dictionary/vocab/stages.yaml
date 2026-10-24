@@ -1,0 +1,30 @@
+schema_version: 1
+stages:
+  cycle:
+    description: "Cross-stage grouping for cycle-level parameters."
+    runtime: false
+    order: 0
+  site_media:
+    description: "Site and growing-medium selection."
+    runtime: true
+    order: 1
+  seeding:
+    description: "Seeding and nursery."
+    runtime: true
+    order: 2
+  planting:
+    description: "Planting and transplanting."
+    runtime: true
+    order: 3
+  care:
+    description: "Irrigation, fertilizer, protection."
+    runtime: true
+    order: 4
+  harvest:
+    description: "Harvest."
+    runtime: true
+    order: 5
+  propagation:
+    description: "Propagation (optional per taxon)."
+    runtime: true
+    order: 6

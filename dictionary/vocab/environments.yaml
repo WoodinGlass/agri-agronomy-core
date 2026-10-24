@@ -1,0 +1,8 @@
+schema_version: 1
+environments:
+  open:
+    description: "Open air, ambient climate."
+  protected:
+    description: "Greenhouse, tunnel, shade house."
+  indoor:
+    description: "Indoor, fully artificial climate."

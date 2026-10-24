@@ -1,0 +1,45 @@
+schema_version: 1
+# Single spelling across all files: snake_case, English.
+# `has_default_phases` is true only for the eight initial archetypes.
+# Additional archetypes are added to phases_by_archetype when the first
+# taxon and calculator that need them arrive.
+archetypes:
+  annual:
+    description: "Life cycle completes within one year; dies after harvest."
+    has_default_phases: true
+  biennial:
+    description: "Year 1 vegetative, year 2 flowering then dies."
+    has_default_phases: true
+  herbaceous_perennial:
+    description: "Multi-year, non-woody."
+    has_default_phases: true
+  woody_perennial:
+    description: "Multi-year, woody."
+    has_default_phases: true
+  geophyte:
+    description: "Underground storage organ (bulb, corm, tuber, rhizome)."
+    has_default_phases: true
+  aquatic:
+    description: "Grows in or on water (vascular aquatic)."
+    has_default_phases: true
+  epiphyte:
+    description: "Grows on another plant or non-soil medium (not parasitic)."
+    has_default_phases: true
+  fungal:
+    description: "Cultivated fungus."
+    has_default_phases: true
+  pteridophyte:
+    description: "Fern, horsetail, or lycophyte; spore reproduction."
+    has_default_phases: false
+  gymnosperm:
+    description: "Conifer, cycad, or ginkgo; cone reproduction."
+    has_default_phases: false
+  algae:
+    description: "Alga (marine or freshwater)."
+    has_default_phases: false
+  lichen:
+    description: "Lichen (fungus + alga/cyanobacterium symbiosis)."
+    has_default_phases: false
+  bryophyte:
+    description: "Moss or liverwort (non-vascular plant)."
+    has_default_phases: false
