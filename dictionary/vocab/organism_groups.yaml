@@ -1,0 +1,38 @@
+schema_version: 1
+# Functional classification, not taxonomy. A taxon belongs to exactly one group.
+# Rules:
+#   - each group's allowed_archetypes is a subset of the archetypes in archetypes.yaml
+#   - fungal only allows fungal; algae only allows algae;
+#     lichen only allows lichen; bryophyte only allows bryophyte
+#   - no phase, parameter, or calculator exists for bryophyte/alga/lichen
+#     until a taxon and calculator that use them arrive
+#   - photobiont and desiccation_tolerance are extension parameters, not core
+organism_groups:
+  vascular_plant:
+    description: "Vascular plant (fern, gymnosperm, angiosperm)."
+    allowed_archetypes:
+      - annual
+      - biennial
+      - herbaceous_perennial
+      - woody_perennial
+      - geophyte
+      - aquatic
+      - epiphyte
+      - pteridophyte
+      - gymnosperm
+  bryophyte:
+    description: "Moss or liverwort (non-vascular plant)."
+    allowed_archetypes:
+      - bryophyte
+  alga:
+    description: "Alga (marine or freshwater)."
+    allowed_archetypes:
+      - algae
+  fungus:
+    description: "Fungus."
+    allowed_archetypes:
+      - fungal
+  lichen:
+    description: "Lichen (symbiosis of fungus and alga/cyanobacterium)."
+    allowed_archetypes:
+      - lichen
