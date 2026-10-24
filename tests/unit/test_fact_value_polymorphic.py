@@ -149,3 +149,29 @@ def test_invalid_shape_name_rejected() -> None:
 def test_missing_shape_rejected() -> None:
     with pytest.raises(ValidationError):
         FactRow(**_base(value={"unit": "pH", "value": 1.0}))
+
+
+# --- enum_set ---
+
+
+def test_enum_set_valid() -> None:
+    FactRow(**_base(value={"shape": "enum_set", "values": ["a", "b", "c"]}))
+
+
+def test_enum_set_single_valid() -> None:
+    FactRow(**_base(value={"shape": "enum_set", "values": ["a"]}))
+
+
+def test_enum_set_empty_rejected() -> None:
+    with pytest.raises(ValidationError, match="must not be empty"):
+        FactRow(**_base(value={"shape": "enum_set", "values": []}))
+
+
+def test_enum_set_duplicates_rejected() -> None:
+    with pytest.raises(ValidationError, match="must be unique"):
+        FactRow(**_base(value={"shape": "enum_set", "values": ["a", "a"]}))
+
+
+def test_enum_set_empty_string_rejected() -> None:
+    with pytest.raises(ValidationError, match="must not contain empty"):
+        FactRow(**_base(value={"shape": "enum_set", "values": ["", "a"]}))
