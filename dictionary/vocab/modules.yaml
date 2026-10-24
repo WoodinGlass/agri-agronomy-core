@@ -16,6 +16,7 @@ modules:
       - air_rh
       - vpd
       - dli
+      - moisture_band
   stages:
     description: "Stage resolver."
     reads:
@@ -26,13 +27,25 @@ modules:
       - gdd_upper
   irrigation:
     description: "Irrigation modes."
-    reads: []
+    reads:
+      - kc
+      - kc_stage_length
+      - root_depth
+      - depletion_fraction
+      - awd_reflood_depth
+      - ponding_depth
+      - percolation_rate
+      - predrain_days
+      - must_flood_phases
+      - moisture_band
   fertilizer:
     description: "Nutrient to product, dose caps."
     reads: []
   media:
     description: "Growing media and water quality."
-    reads: []
+    reads:
+      - water_ec_max
+      - water_temp_max
   suitability:
     description: "Site suitability."
     reads: []

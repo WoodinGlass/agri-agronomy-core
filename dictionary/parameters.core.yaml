@@ -199,3 +199,211 @@ parameters:
     kind: core
     description: "Daily light integral optimal and absolute bounds."
     introduced_in: "1.0.0"
+
+
+  # --- c-2b: irrigation + media/air ---
+  kc:
+    stage: care
+    shape: scalar
+    unit: dimensionless
+    physical_range: [0.0, 2.0]
+    phase_set: kc
+    allowed_phases: [initial, midseason, late_season]
+    scope_keys: [country, region, elevation_m, system, climate_zone, variety]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [field]
+    used_by: [irrigation]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Crop coefficient for evapotranspiration."
+    introduced_in: "1.0.0"
+  kc_stage_length:
+    stage: care
+    shape: scalar
+    unit: day
+    physical_range: [1.0, 3650.0]
+    phase_set: kc
+    allowed_phases: [initial, development, midseason, late_season]
+    scope_keys: [country, region, elevation_m, system, climate_zone, variety]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [field]
+    used_by: [irrigation]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Length in days of a crop-coefficient stage."
+    introduced_in: "1.0.0"
+  root_depth:
+    stage: care
+    shape: scalar
+    unit: meter
+    physical_range: [0.05, 10.0]
+    phase_set: kc
+    scope_keys: [country, region, variety]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [field]
+    used_by: [irrigation]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Depth of the effective root zone."
+    introduced_in: "1.0.0"
+  depletion_fraction:
+    stage: care
+    shape: scalar
+    unit: dimensionless
+    physical_range: [0.0, 1.0]
+    phase_set: none
+    scope_keys: [country, region, variety]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [field]
+    used_by: [irrigation]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Fraction of plant-available water that can be depleted before irrigation."
+    introduced_in: "1.0.0"
+  awd_reflood_depth:
+    stage: care
+    shape: scalar
+    unit: centimeter
+    physical_range: [0.0, 50.0]
+    phase_set: none
+    scope_keys: [country, region, variety]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [flooded]
+    used_by: [irrigation]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Water-table depth below the soil surface at which an AWD field is re-flooded; positive values indicate depth below surface."
+    introduced_in: "1.0.0"
+  ponding_depth:
+    stage: care
+    shape: scalar
+    unit: centimeter
+    physical_range: [0.0, 30.0]
+    phase_set: biological
+    scope_keys: [country, region, variety]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [flooded]
+    used_by: [irrigation]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Standing water depth above the soil surface during a flooded phase."
+    introduced_in: "1.0.0"
+  percolation_rate:
+    stage: care
+    shape: scalar
+    unit: millimeter/day
+    physical_range: [0.0, 100.0]
+    phase_set: none
+    scope_keys: [country, region]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [flooded]
+    used_by: [irrigation]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Downward water loss through the soil profile."
+    introduced_in: "1.0.0"
+  predrain_days:
+    stage: care
+    shape: scalar
+    unit: day
+    physical_range: [0.0, 30.0]
+    phase_set: none
+    scope_keys: [country, region]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [flooded]
+    used_by: [irrigation]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Number of days before harvest at which a flooded field is drained."
+    introduced_in: "1.0.0"
+  must_flood_phases:
+    stage: care
+    shape: enum_set
+    enum_source: "phases:biological"
+    unit: null
+    physical_range: null
+    phase_set: none
+    scope_keys: [country, region, variety]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [flooded]
+    used_by: [irrigation]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Set of biological phases during which the field must remain flooded."
+    introduced_in: "1.0.0"
+  moisture_band:
+    stage: care
+    shape: trapezoid
+    unit: percent
+    physical_range: [0.0, 100.0]
+    phase_set: none
+    scope_keys: [country, region, variety]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [container]
+    used_by: [irrigation, thresholds]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Relative plant-available water target for container irrigation."
+    introduced_in: "1.0.0"
+  water_ec_max:
+    stage: site_media
+    shape: scalar
+    unit: decisiemens/meter
+    physical_range: [0.0, 10.0]
+    phase_set: none
+    scope_keys: [country, region, system]
+    applies_to:
+      organism_groups: [vascular_plant, fungus]
+    used_by: [media]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Maximum electrical conductivity of irrigation water."
+    introduced_in: "1.0.0"
+  water_temp_max:
+    stage: site_media
+    shape: scalar
+    unit: degree_Celsius
+    physical_range: [0.0, 50.0]
+    phase_set: none
+    scope_keys: [country, region, system]
+    applies_to:
+      organism_groups: [vascular_plant, fungus]
+    used_by: [media]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Maximum irrigation-water temperature."
+    introduced_in: "1.0.0"

@@ -230,3 +230,88 @@ def test_pint_canonical_units_are_used_somewhere(dictionary: Dictionary) -> None
                 "agri_core.models.units", fromlist=["CUSTOM_CANONICAL_UNITS"]
             ).CUSTOM_CANONICAL_UNITS
         ), f"parameter uses non-canonical unit {u!r}"
+
+
+# --- c-2b parameters ---
+
+
+def test_dictionary_has_24_params(dictionary: Dictionary) -> None:
+    """12 from c-1 + 12 from c-2b."""
+    assert len(dictionary.parameters) == 24
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "kc",
+        "kc_stage_length",
+        "root_depth",
+        "depletion_fraction",
+        "awd_reflood_depth",
+        "ponding_depth",
+        "percolation_rate",
+        "predrain_days",
+        "must_flood_phases",
+        "moisture_band",
+        "water_ec_max",
+        "water_temp_max",
+    ],
+)
+def test_c_2b_param_present(dictionary: Dictionary, key: str) -> None:
+    p = dictionary.lookup(key)
+    assert p.key == key
+
+
+def test_must_flood_phases_uses_enum_source(dictionary: Dictionary) -> None:
+    p = dictionary.lookup("must_flood_phases")
+    assert p.shape == "enum_set"
+    assert p.enum_source == "phases:biological"
+    assert p.enum_values is None
+
+
+def test_moisture_band_in_irrigation_and_thresholds(dictionary: Dictionary) -> None:
+    p = dictionary.lookup("moisture_band")
+    assert "irrigation" in p.used_by
+    assert "thresholds" in p.used_by
+    assert p.shape == "trapezoid"
+
+
+def test_kc_allowed_phases(dictionary: Dictionary) -> None:
+    p = dictionary.lookup("kc")
+    assert p.allowed_phases == ["initial", "midseason", "late_season"]
+
+
+def test_kc_stage_length_allowed_phases(dictionary: Dictionary) -> None:
+    p = dictionary.lookup("kc_stage_length")
+    assert p.allowed_phases == ["initial", "development", "midseason", "late_season"]
+
+
+def test_awd_reflood_depth_description(dictionary: Dictionary) -> None:
+    p = dictionary.lookup("awd_reflood_depth")
+    assert "below" in p.description.lower()
+    assert "positive" in p.description.lower()
+
+
+def test_root_depth_stage_and_unit(dictionary: Dictionary) -> None:
+    p = dictionary.lookup("root_depth")
+    assert p.stage == "care"
+    assert p.unit == "meter"
+    assert p.phase_set == "kc"
+
+
+def test_water_ec_max_stage_and_unit(dictionary: Dictionary) -> None:
+    p = dictionary.lookup("water_ec_max")
+    assert p.stage == "site_media"
+    assert p.unit == "decisiemens/meter"
+    assert "media" in p.used_by
+
+
+def test_percolation_rate_unit(dictionary: Dictionary) -> None:
+    p = dictionary.lookup("percolation_rate")
+    assert p.unit == "millimeter/day"
+
+
+def test_predrain_days_unit_and_range(dictionary: Dictionary) -> None:
+    p = dictionary.lookup("predrain_days")
+    assert p.unit == "day"
+    assert p.physical_range == (0.0, 30.0)
