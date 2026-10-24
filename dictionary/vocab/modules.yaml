@@ -1,24 +1,47 @@
 schema_version: 1
 # Modules that read parameters. Every core parameter must name at least one
-# module in used_by (enforced at M1-1c once parameters.core.yaml exists).
+# module in used_by, and that module must list the parameter in reads.
+# Test enforces the bidirectional relation.
 modules:
   climate:
     description: "VPD, GDD, DLI, ET0."
+    reads: [gdd_base, gdd_upper]
   thresholds:
     description: "Threshold checks."
+    reads:
+      - soil_ph
+      - soil_ec
+      - air_temp_day
+      - air_temp_night
+      - air_rh
+      - vpd
+      - dli
   stages:
     description: "Stage resolver."
+    reads:
+      - managed_cycle
+      - phase_duration
+      - phase_thermal_time
+      - gdd_base
+      - gdd_upper
   irrigation:
     description: "Irrigation modes."
+    reads: []
   fertilizer:
     description: "Nutrient to product, dose caps."
+    reads: []
   media:
     description: "Growing media and water quality."
+    reads: []
   suitability:
     description: "Site suitability."
+    reads: []
   propagation:
     description: "Propagation planner."
+    reads: []
   safety:
     description: "Dose caps and label referral."
+    reads: []
   export:
     description: "Exports and schemas."
+    reads: []

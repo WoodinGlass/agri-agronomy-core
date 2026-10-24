@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from agri_core.models.canonical import canonical_json
 from agri_core.models.dataset import DatasetRow
+from agri_core.models.dictionary import Dictionary
 from agri_core.models.fact import (
     BoolValue,
     EnumValue,
@@ -55,16 +57,25 @@ from agri_core.models.refusals import (
 from agri_core.models.result import ok
 from agri_core.models.scope_key import ScopeKey
 from agri_core.models.taxon import TaxonRank, TaxonRow
+from agri_core.models.units import (
+    CANONICAL_UNITS,
+    CUSTOM_CANONICAL_UNITS,
+    PINT_CANONICAL_UNITS,
+)
 
 __all__ = [
+    "CANONICAL_UNITS",
     "CROCKFORD_ALPHABET",
     "CROCKFORD_CHARS",
+    "CUSTOM_CANONICAL_UNITS",
+    "PINT_CANONICAL_UNITS",
     "Ambiguous",
     "AmbiguousCandidate",
     "AppliesTo",
     "BoolValue",
     "DatasetId",
     "DatasetRow",
+    "Dictionary",
     "EnumValue",
     "EvidenceGrade",
     "FactId",
@@ -100,6 +111,7 @@ __all__ = [
     "Unknown",
     "UnknownValue",
     "ambiguous",
+    "canonical_json",
     "ensure_src_or_dataset",
     "insufficient_input",
     "not_applicable",

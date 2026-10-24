@@ -70,10 +70,12 @@ packages = ["src/agri_core"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "schema" = "agri_core/_data/schema"
+"dictionary" = "agri_core/_dictionary"
 
 [tool.hatch.build.targets.sdist]
 include = [
     "src/agri_core",
+    "dictionary",
     "schema",
     "tests",
     "README.md",
