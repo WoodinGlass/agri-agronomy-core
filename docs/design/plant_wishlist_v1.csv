@@ -79,7 +79,7 @@ dionaea,herbaceous_perennial,ornamental,container,subtropical,humidity_min|water
 heliamphora,herbaceous_perennial,ornamental,container,tropical,humidity_min|water_tds_max
 utricularia,aquatic,ornamental,container,tropical,water_tds_max
 roridula,woody_perennial,ornamental,container,subtropical,
-nepenthes,epiphyte,ornamental,container,tropical,humidity_min|water_tds_max
+genlisea,herbaceous_perennial,ornamental,container,tropical,humidity_min|water_tds_max
 drosera,herbaceous_perennial,ornamental,container,temperate,humidity_min|water_tds_max
 pinguicula,herbaceous_perennial,ornamental,container,tropical,humidity_min|water_tds_max
 marigold,annual,ornamental,field,subtropical,
@@ -94,13 +94,13 @@ gerbera,herbaceous_perennial,ornamental,field,subtropical,
 canna,herbaceous_perennial,ornamental,field,tropical,
 peony,herbaceous_perennial,ornamental,field,temperate,
 water_lily,aquatic,ornamental,flooded,temperate,
-cyathea,pteridophyte,ornamental,field,tropical,
+nephrolepis,pteridophyte,ornamental,field,tropical,
 platycerium,pteridophyte,ornamental,container,tropical,
 equisetum,pteridophyte,ornamental,field,temperate,
 marsilea,pteridophyte,ornamental,flooded,tropical,
 ginkgo,gymnosperm,specialty,field,temperate,
 araucaria,gymnosperm,ornamental,field,subtropical,
-cycas,gymnosperm,ornamental,field,tropical,
+podocarpus,gymnosperm,ornamental,field,tropical,
 sequoia,gymnosperm,ornamental,field,temperate,
 eichhornia,aquatic,fodder,flooded,tropical,
 salvinia,pteridophyte,fodder,flooded,tropical,
