@@ -1,0 +1,386 @@
+{
+  "$defs": {
+    "BoolValue": {
+      "additionalProperties": false,
+      "description": "Boolean value.",
+      "properties": {
+        "shape": {
+          "const": "bool",
+          "title": "Shape",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "shape",
+        "value"
+      ],
+      "title": "BoolValue",
+      "type": "object"
+    },
+    "EnumValue": {
+      "additionalProperties": false,
+      "description": "One value from a closed set. Membership validated at M1-2 against\nthe parameter's ``enum_values``.",
+      "properties": {
+        "shape": {
+          "const": "enum",
+          "title": "Shape",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "shape",
+        "value"
+      ],
+      "title": "EnumValue",
+      "type": "object"
+    },
+    "RangeValue": {
+      "additionalProperties": false,
+      "description": "Range: min <= max, both with a unit.",
+      "properties": {
+        "max": {
+          "title": "Max",
+          "type": "number"
+        },
+        "min": {
+          "title": "Min",
+          "type": "number"
+        },
+        "shape": {
+          "const": "range",
+          "title": "Shape",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "shape",
+        "unit",
+        "min",
+        "max"
+      ],
+      "title": "RangeValue",
+      "type": "object"
+    },
+    "RuleValue": {
+      "additionalProperties": false,
+      "description": "Structured rule; shape-specific schema validated at M1-2 against\nthe parameter's ``rule_schema``.",
+      "properties": {
+        "data": {
+          "additionalProperties": true,
+          "title": "Data",
+          "type": "object"
+        },
+        "shape": {
+          "const": "rule",
+          "title": "Shape",
+          "type": "string"
+        }
+      },
+      "required": [
+        "shape",
+        "data"
+      ],
+      "title": "RuleValue",
+      "type": "object"
+    },
+    "ScalarValue": {
+      "additionalProperties": false,
+      "description": "Single numeric value with a unit.",
+      "properties": {
+        "shape": {
+          "const": "scalar",
+          "title": "Shape",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shape",
+        "unit",
+        "value"
+      ],
+      "title": "ScalarValue",
+      "type": "object"
+    },
+    "TrapezoidValue": {
+      "additionalProperties": false,
+      "description": "Four-point trapezoid: abs_min <= opt_min <= opt_max <= abs_max.",
+      "properties": {
+        "pts": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Pts",
+          "type": "array"
+        },
+        "shape": {
+          "const": "trapezoid",
+          "title": "Shape",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "shape",
+        "unit",
+        "pts"
+      ],
+      "title": "TrapezoidValue",
+      "type": "object"
+    },
+    "UnknownValue": {
+      "additionalProperties": false,
+      "description": "Explicitly unknown, with a required reason.",
+      "properties": {
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "shape": {
+          "const": "unknown",
+          "title": "Shape",
+          "type": "string"
+        }
+      },
+      "required": [
+        "shape",
+        "reason"
+      ],
+      "title": "UnknownValue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One row of ``fact.csv``: a single value at a single scope.\n\nCross-rules enforced here:\n- ``src`` or ``dataset_id`` (at least one)\n- ``provenance_kind=imported`` requires ``dataset_id`` and ``evidence`` C or D\n- ``provenance_kind=derived`` requires ``dataset_id``\n- ``provenance_kind=curated`` requires ``locator``\n- ``status`` reviewed/approved requires ``reviewed_by`` and ``reviewed_at``\n\nDeferred to validate (M1-2), because they need the dictionary:\n- ``parameter`` exists in ``parameters.core.yaml`` or a pack\n- ``phase`` is a member of the parameter's ``phase_set``\n- safety-critical parameters require ``status`` reviewed or approved\n- shape matches ``parameter.shape``\n- ``enum`` value is in the parameter's ``enum_values``\n- ``unit`` matches the parameter's ``unit``\n- ``scope`` keys and values are valid against ``scope_keys.yaml``",
+  "properties": {
+    "dataset_id": {
+      "anyOf": [
+        {
+          "pattern": "^D[0-9A-HJKMNP-TV-Z]{9}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Dataset Id"
+    },
+    "evidence": {
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "title": "Evidence",
+      "type": "string"
+    },
+    "fact_id": {
+      "pattern": "^F[0-9A-HJKMNP-TV-Z]{11,}$",
+      "title": "Fact Id",
+      "type": "string"
+    },
+    "locator": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Locator"
+    },
+    "parameter": {
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Parameter",
+      "type": "string"
+    },
+    "phase": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Phase"
+    },
+    "provenance_kind": {
+      "enum": [
+        "curated",
+        "imported",
+        "derived"
+      ],
+      "title": "Provenance Kind",
+      "type": "string"
+    },
+    "reviewed_at": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reviewed At"
+    },
+    "reviewed_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reviewed By"
+    },
+    "scope": {
+      "additionalProperties": true,
+      "title": "Scope",
+      "type": "object"
+    },
+    "src": {
+      "anyOf": [
+        {
+          "items": {
+            "pattern": "^S\\d{3,}$",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Src"
+    },
+    "status": {
+      "enum": [
+        "imported",
+        "draft",
+        "reviewed",
+        "approved"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "superseded_by": {
+      "anyOf": [
+        {
+          "pattern": "^F[0-9A-HJKMNP-TV-Z]{11,}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Superseded By"
+    },
+    "taxon_id": {
+      "pattern": "^T[0-9A-HJKMNP-TV-Z]{9}$",
+      "title": "Taxon Id",
+      "type": "string"
+    },
+    "value": {
+      "discriminator": {
+        "mapping": {
+          "bool": "#/$defs/BoolValue",
+          "enum": "#/$defs/EnumValue",
+          "range": "#/$defs/RangeValue",
+          "rule": "#/$defs/RuleValue",
+          "scalar": "#/$defs/ScalarValue",
+          "trapezoid": "#/$defs/TrapezoidValue",
+          "unknown": "#/$defs/UnknownValue"
+        },
+        "propertyName": "shape"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/TrapezoidValue"
+        },
+        {
+          "$ref": "#/$defs/RangeValue"
+        },
+        {
+          "$ref": "#/$defs/ScalarValue"
+        },
+        {
+          "$ref": "#/$defs/EnumValue"
+        },
+        {
+          "$ref": "#/$defs/BoolValue"
+        },
+        {
+          "$ref": "#/$defs/RuleValue"
+        },
+        {
+          "$ref": "#/$defs/UnknownValue"
+        }
+      ],
+      "title": "Value"
+    }
+  },
+  "required": [
+    "fact_id",
+    "taxon_id",
+    "parameter",
+    "value",
+    "provenance_kind",
+    "evidence",
+    "status"
+  ],
+  "title": "FactRow",
+  "type": "object"
+}
