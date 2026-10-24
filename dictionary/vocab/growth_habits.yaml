@@ -1,0 +1,18 @@
+schema_version: 1
+growth_habits:
+  rosette:
+    description: "Rosette; leaves radiate from a central point at ground level."
+  vine:
+    description: "Climbing or trailing vine."
+  shrub:
+    description: "Shrub; multiple woody stems branching near the base."
+  tree:
+    description: "Tree; single woody trunk with a crown."
+  clump:
+    description: "Clump-forming; multiple tillers or shoots from the base."
+  mat:
+    description: "Mat-forming or prostrate; spreads horizontally along the ground."
+  submerged:
+    description: "Fully submerged in water."
+  floating:
+    description: "Floating on the water surface."

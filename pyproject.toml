@@ -96,7 +96,10 @@ python_version = "3.11"
 strict = true
 warn_unreachable = true
 show_error_codes = true
-files = ["src", "tests"]
+# src/ only: mypy strict runs on production code. tests/ are type-checked
+# indirectly through pytest + ruff. Includes tests/ when a Colab-safe solution
+# for third-party stub parse errors (contourpy PEP 695, Python 3.12+) exists.
+files = ["src"]
 mypy_path = "src"
 
 [[tool.mypy.overrides]]

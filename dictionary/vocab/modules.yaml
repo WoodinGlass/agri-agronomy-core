@@ -1,0 +1,24 @@
+schema_version: 1
+# Modules that read parameters. Every core parameter must name at least one
+# module in used_by (enforced at M1-1c once parameters.core.yaml exists).
+modules:
+  climate:
+    description: "VPD, GDD, DLI, ET0."
+  thresholds:
+    description: "Threshold checks."
+  stages:
+    description: "Stage resolver."
+  irrigation:
+    description: "Irrigation modes."
+  fertilizer:
+    description: "Nutrient to product, dose caps."
+  media:
+    description: "Growing media and water quality."
+  suitability:
+    description: "Site suitability."
+  propagation:
+    description: "Propagation planner."
+  safety:
+    description: "Dose caps and label referral."
+  export:
+    description: "Exports and schemas."

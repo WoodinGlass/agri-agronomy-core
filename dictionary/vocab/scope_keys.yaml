@@ -1,0 +1,61 @@
+schema_version: 1
+# Allowed keys in a fact's scope object.
+# A key may be:
+#   - string: free-form string (multi=true allows an array)
+#   - enum: value must be in a vocabulary
+#   - range: two-element [min, max]
+# Vocabularies are resolved at validate time against the manifest's
+# dictionary_version, not hardcoded in row schemas.
+#
+# External vocabularies:
+#   iso_3166_1_alpha2: ISO 3166-1 alpha-2 country codes
+#   iso_3166_2:        ISO 3166-2 subdivision codes
+#   methods:           cultivation and propagation method names, defined in M1-2
+keys:
+  country:
+    type: string
+    vocab: iso_3166_1_alpha2
+    multi: true
+  region:
+    type: string
+    vocab: iso_3166_2
+    multi: true
+  elevation_m:
+    type: range
+    unit: m
+    multi: false
+  system:
+    type: enum
+    vocab: systems
+    multi: true
+  environment:
+    type: enum
+    vocab: environments
+    multi: true
+  climate_zone:
+    type: enum
+    vocab: climate_zones
+    multi: true
+  growth_habit:
+    type: enum
+    vocab: growth_habits
+    multi: true
+  establishment:
+    type: enum
+    vocab: establishment_states
+    multi: false
+  yield_target:
+    type: enum
+    vocab: yield_targets
+    multi: false
+  method:
+    type: string
+    vocab: methods
+    multi: true
+  variety:
+    type: string
+    multi: true
+  use:
+    type: enum
+    vocab: uses
+    multi: true
