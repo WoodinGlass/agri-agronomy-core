@@ -75,6 +75,7 @@ packages = ["src/agri_core"]
 [tool.hatch.build.targets.sdist]
 include = [
     "src/agri_core",
+    "dictionary",
     "schema",
     "tests",
     "README.md",
