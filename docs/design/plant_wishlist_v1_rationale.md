@@ -77,40 +77,59 @@ tidal range, and marine substrate — parameters not shared with paddy/pond.
 
 ## Protected species policy
 
-Three taxa that would otherwise be needed for archetype coverage are
-**excluded** because they are legally protected in Indonesia
-(Permen LHK 106/2018, UU 5/1990) or restricted by CITES in ways that make
-inclusion in a cultivation-oriented knowledge base inadvisable:
+This wishlist excludes every taxon with a legal conservation status that
+carries regulatory consequences, and replaces each 1:1 with a non-protected
+equivalent so that archetype coverage stays intact.
 
-- `nepenthes` — Permen LHK 106/2018; CITES App I for *N. rajah* and
-  *N. khasiana*, App II for the rest. Replaced by `genlisea` (carnivorous,
-  not CITES, commercially cultivated).
-- `cycas` — Permen LHK 106/2018 (some species); CITES App II for the genus.
-  Replaced by `podocarpus` (gymnosperm, not protected, nursery trade).
-- `cyathea` — Permen LHK 106/2018 (some species). Replaced by `nephrolepis`
-  (Boston fern, not protected, ubiquitous in horticulture).
+### Removed (9 taxa, all CITES- or Indonesian-protected or IUCN CR/EN/VU)
 
-Three taxa that are only IUCN Red List or CITES-listed (not protected under
-Indonesian law, and with a clear commercial cultivation pathway) are retained:
-`ginkgo` (EN wild, but mass plantation), `dionaea` (VU wild, but millions of
-tissue-culture units), `araucaria` (VU wild, but common nursery stock).
+| Taxon | Legal status | Replaced by |
+|---|---|---|
+| `nepenthes` | Permen LHK 106/2018; CITES App I (*N. rajah*, *N. khasiana*) / App II | `genlisea` |
+| `cycas` | Permen LHK 106/2018; CITES App II | `podocarpus` |
+| `cyathea` | Permen LHK 106/2018 (some species) | `nephrolepis` |
+| `orchid` | CITES App I/II (Orchidaceae); Permen LHK for many genera | `hoya` |
+| `dionaea` | CITES App II | `byblis` |
+| `heliamphora` | IUCN assessed, endemic to Venezuelan tepuis | `drosophyllum` |
+| `ginkgo` | IUCN EN (wild populations) | `pinus` |
+| `araucaria` | IUCN VU (wild populations) | `cupressus` |
+| `sequoia` | IUCN EN (wild populations) | `picea` |
 
-Two further protected species are excluded outright:
-`wollemi_pine` (~60 wild individuals), `welwitschia` (CITES App II, no
-commercial pathway). These are noted in `taxa_candidates.csv` with
-"protected species, no commercial cultivation pathway".
+### Retained: `vanilla`
+
+*Vanilla planifolia* is listed under CITES Appendix II as part of
+Orchidaceae, but the listing carries an explicit exemption for
+artificially propagated pods and seeds. *Vanilla planifolia* is **not** in
+Permen LHK 106/2018. Indonesia is one of the world's largest vanilla
+producers, and its cultivation is a legal, mainstream agricultural activity.
+It is retained as the only epiphyte with an unambiguous commercial pathway.
 
 ### Legal boundary
 
-Recording a species name and its published parameters (from open sources such
-as ICPS cultivation guides or peer-reviewed papers) does **not** constitute
-possession, trade, or propagation of a physical protected plant. UU 5/1990
-regulates the plant, not information about the plant. This repository:
+Recording a species name and its published parameters (from open sources
+such as ICPS cultivation guides or peer-reviewed papers) does **not**
+constitute possession, trade, or propagation of a physical protected plant.
+UU 5/1990 regulates the plant, not information about the plant.
 
-- records parameters only, never cultivation instructions for protected species;
-- does not endorse wild collection or unlicensed propagation;
-- excludes taxa that would raise reputational risk even where the legal
-  boundary would allow inclusion.
+However, this wishlist goes further than the strict legal minimum: any taxon
+that is CITES-listed, Permen LHK-listed, or IUCN-listed at CR/EN/VU is
+removed entirely, both to eliminate legal ambiguity and to avoid reputational
+risk. This is a design choice for a project that intends to be long-lived and
+publicly readable.
+
+### Non-protected replacements — verification
+
+All replacement taxa are:
+
+- not CITES-listed at any appendix;
+- not in Permen LHK 106/2018;
+- not IUCN CR/EN/VU (either LC or unassessed at species level);
+- commercially cultivated at scale in Indonesia or globally.
+
+The genus-level names (`pinus`, `cupressus`, `picea`, `hoya`) are placeholders
+consistent with the wishlist convention. At M1-2, each must resolve to a
+specific species such as *Pinus radiata*, *Cupressus sempervirens*,
+*Picea abies*, or *Hoya carnosa* — all non-protected and commercially available.
 
 This is not legal advice. Downstream users redistributing facts from
 `agri-knowledge` for commercial purposes should verify CITES and national
