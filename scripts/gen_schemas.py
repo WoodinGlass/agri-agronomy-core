@@ -8,6 +8,8 @@ from pathlib import Path
 
 from pydantic import TypeAdapter
 
+from agri_core.models.dataset import DatasetRow
+from agri_core.models.hazard import HazardRow
 from agri_core.models.outcome import OutcomeAdapter
 from agri_core.pack.manifest import PackManifest
 from agri_core.registry.sources import SourceRow
@@ -39,6 +41,16 @@ def main() -> int:
     _write(
         "manifest.schema.json",
         TypeAdapter(PackManifest).json_schema(mode="serialization"),
+        schema_dir,
+    )
+    _write(
+        "dataset.schema.json",
+        TypeAdapter(DatasetRow).json_schema(mode="serialization"),
+        schema_dir,
+    )
+    _write(
+        "hazard.schema.json",
+        TypeAdapter(HazardRow).json_schema(mode="serialization"),
         schema_dir,
     )
     return 0
