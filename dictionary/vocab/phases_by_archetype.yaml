@@ -1,0 +1,59 @@
+schema_version: 1
+# Default biological phases per archetype.
+# Only archetypes with has_default_phases=true in archetypes.yaml are listed.
+# Non-initial archetypes (pteridophyte, gymnosperm, algae, lichen, bryophyte)
+# are added when a taxon and calculator first need them.
+phases_by_archetype:
+  annual:
+    phases:
+      - vegetative
+      - flowering
+      - fruiting
+      - maturity
+  biennial:
+    phases:
+      - vegetative_year_1
+      - vernalization
+      - vegetative_year_2
+      - flowering
+      - fruiting
+  herbaceous_perennial:
+    phases:
+      - establishment
+      - active_growth
+      - dormancy
+      - flowering
+      - fruiting
+  woody_perennial:
+    phases:
+      - establishment
+      - juvenile
+      - mature_vegetative
+      - flowering
+      - fruiting
+      - dormancy
+  geophyte:
+    phases:
+      - dormancy
+      - sprouting
+      - vegetative
+      - flowering
+      - senescence
+  aquatic:
+    phases:
+      - establishment
+      - vegetative
+      - flowering
+      - senescence
+  epiphyte:
+    phases:
+      - establishment
+      - vegetative
+      - flowering
+      - fruiting
+  fungal:
+    phases:
+      - colonization
+      - primordia
+      - fruiting
+      - senescence

@@ -1,0 +1,20 @@
+schema_version: 1
+# A phase set describes the axis along which parameter values vary.
+# - none: no phase dimension
+# - biological: phases from phases_by_archetype, overridable per taxon
+# - kc: irrigation crop-coefficient phases (neutral vocabulary)
+phase_sets:
+  none:
+    source: none
+    description: "No phase dimension."
+  biological:
+    source: biological
+    description: "Phases from the taxon's archetype, overridable per taxon."
+  kc:
+    source: kc
+    phases:
+      - initial
+      - development
+      - midseason
+      - late_season
+    description: "Irrigation coefficient phases, neutral vocabulary."
