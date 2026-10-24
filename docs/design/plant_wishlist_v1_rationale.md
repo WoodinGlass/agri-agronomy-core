@@ -77,14 +77,44 @@ tidal range, and marine substrate — parameters not shared with paddy/pond.
 
 ## Protected species policy
 
-Six taxa in this list are IUCN-listed or CITES-listed but have a clear
-commercial horticultural pathway: `ginkgo`, `nepenthes`, `dionaea`,
-`cyathea`, `araucaria`, `cycas`.
+Three taxa that would otherwise be needed for archetype coverage are
+**excluded** because they are legally protected in Indonesia
+(Permen LHK 106/2018, UU 5/1990) or restricted by CITES in ways that make
+inclusion in a cultivation-oriented knowledge base inadvisable:
 
-Species without a realistic commercial cultivation pathway are excluded:
-`wollemi_pine` (~60 wild individuals), `welwitschia` (CITES App II,
-protected range states). These move to `taxa_candidates.csv` with note
+- `nepenthes` — Permen LHK 106/2018; CITES App I for *N. rajah* and
+  *N. khasiana*, App II for the rest. Replaced by `genlisea` (carnivorous,
+  not CITES, commercially cultivated).
+- `cycas` — Permen LHK 106/2018 (some species); CITES App II for the genus.
+  Replaced by `podocarpus` (gymnosperm, not protected, nursery trade).
+- `cyathea` — Permen LHK 106/2018 (some species). Replaced by `nephrolepis`
+  (Boston fern, not protected, ubiquitous in horticulture).
+
+Three taxa that are only IUCN Red List or CITES-listed (not protected under
+Indonesian law, and with a clear commercial cultivation pathway) are retained:
+`ginkgo` (EN wild, but mass plantation), `dionaea` (VU wild, but millions of
+tissue-culture units), `araucaria` (VU wild, but common nursery stock).
+
+Two further protected species are excluded outright:
+`wollemi_pine` (~60 wild individuals), `welwitschia` (CITES App II, no
+commercial pathway). These are noted in `taxa_candidates.csv` with
 "protected species, no commercial cultivation pathway".
+
+### Legal boundary
+
+Recording a species name and its published parameters (from open sources such
+as ICPS cultivation guides or peer-reviewed papers) does **not** constitute
+possession, trade, or propagation of a physical protected plant. UU 5/1990
+regulates the plant, not information about the plant. This repository:
+
+- records parameters only, never cultivation instructions for protected species;
+- does not endorse wild collection or unlicensed propagation;
+- excludes taxa that would raise reputational risk even where the legal
+  boundary would allow inclusion.
+
+This is not legal advice. Downstream users redistributing facts from
+`agri-knowledge` for commercial purposes should verify CITES and national
+rules for each species independently.
 
 ## Updating
 
