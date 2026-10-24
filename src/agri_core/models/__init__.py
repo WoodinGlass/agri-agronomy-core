@@ -14,6 +14,8 @@ from agri_core.models.outcome import (
     Result,
     Unknown,
 )
+from agri_core.models.parameter import AppliesTo, ParameterDef
+from agri_core.models.phase_set import PhaseSet
 from agri_core.models.provenance import Provenance
 from agri_core.models.refusals import (
     AmbiguousCandidate,
@@ -26,10 +28,12 @@ from agri_core.models.refusals import (
     unknown,
 )
 from agri_core.models.result import ok
+from agri_core.models.scope_key import ScopeKey
 
 __all__ = [
     "Ambiguous",
     "AmbiguousCandidate",
+    "AppliesTo",
     "EvidenceGrade",
     "FlagCode",
     "InsufficientInput",
@@ -37,10 +41,13 @@ __all__ = [
     "Notice",
     "Outcome",
     "OutcomeAdapter",
+    "ParameterDef",
+    "PhaseSet",
     "Provenance",
     "ReferToAuthority",
     "ReferToLabel",
     "Result",
+    "ScopeKey",
     "Unknown",
     "ambiguous",
     "insufficient_input",
