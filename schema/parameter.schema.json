@@ -1,0 +1,222 @@
+{
+  "$defs": {
+    "AppliesTo": {
+      "additionalProperties": false,
+      "description": "Dimensions this parameter applies to.\n\nEmpty list = wildcard (applies to all values of that dimension).\n``organism_groups=None`` means no filter; a non-empty list restricts\nthe parameter to those groups.",
+      "properties": {
+        "archetypes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Archetypes",
+          "type": "array"
+        },
+        "organism_groups": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Organism Groups"
+        },
+        "systems": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Systems",
+          "type": "array"
+        },
+        "traits": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Traits",
+          "type": "array"
+        },
+        "uses": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Uses",
+          "type": "array"
+        }
+      },
+      "title": "AppliesTo",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Definition of one parameter in the core dictionary or in a pack.",
+  "properties": {
+    "applies_to": {
+      "$ref": "#/$defs/AppliesTo"
+    },
+    "deprecated_in": {
+      "anyOf": [
+        {
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Deprecated In"
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "enum_values": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Enum Values"
+    },
+    "introduced_in": {
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "title": "Introduced In",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "core",
+        "extension"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "name": {
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Name",
+      "type": "string"
+    },
+    "phase_set": {
+      "default": "none",
+      "title": "Phase Set",
+      "type": "string"
+    },
+    "physical_range": {
+      "anyOf": [
+        {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Physical Range"
+    },
+    "replaced_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Replaced By"
+    },
+    "rule_schema": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rule Schema"
+    },
+    "safety_critical": {
+      "default": false,
+      "title": "Safety Critical",
+      "type": "boolean"
+    },
+    "shape": {
+      "enum": [
+        "trapezoid",
+        "range",
+        "scalar",
+        "enum",
+        "bool",
+        "rule",
+        "unknown"
+      ],
+      "title": "Shape",
+      "type": "string"
+    },
+    "stage": {
+      "title": "Stage",
+      "type": "string"
+    },
+    "tier_required": {
+      "default": false,
+      "title": "Tier Required",
+      "type": "boolean"
+    },
+    "unit": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Unit"
+    },
+    "used_by": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Used By",
+      "type": "array"
+    }
+  },
+  "required": [
+    "name",
+    "stage",
+    "shape",
+    "applies_to",
+    "kind",
+    "description",
+    "introduced_in"
+  ],
+  "title": "ParameterDef",
+  "type": "object"
+}
