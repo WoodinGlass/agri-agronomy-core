@@ -9,6 +9,7 @@ from pathlib import Path
 from pydantic import TypeAdapter
 
 from agri_core.models.dataset import DatasetRow
+from agri_core.models.fact import FactRow
 from agri_core.models.hazard import HazardRow
 from agri_core.models.name import NameRow
 from agri_core.models.outcome import OutcomeAdapter
@@ -69,6 +70,11 @@ def main() -> int:
     _write(
         "parameter.schema.json",
         TypeAdapter(ParameterDef).json_schema(mode="serialization"),
+        schema_dir,
+    )
+    _write(
+        "fact.schema.json",
+        TypeAdapter(FactRow).json_schema(mode="serialization"),
         schema_dir,
     )
     return 0
