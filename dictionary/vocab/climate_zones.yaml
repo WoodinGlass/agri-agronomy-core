@@ -1,0 +1,14 @@
+schema_version: 1
+climate_zones:
+  tropical:
+    description: "No frost, monthly mean above 18 C year-round."
+  subtropical:
+    description: "Warm summer, mild winter; frost rare or absent."
+  temperate:
+    description: "Four seasons with regular frost."
+  arid:
+    description: "Low and erratic rainfall; evaporation exceeds precipitation."
+  mediterranean:
+    description: "Dry summer, wet winter."
+  alpine:
+    description: "Short growing season; low mean temperature; long snow cover."
