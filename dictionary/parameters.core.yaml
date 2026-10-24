@@ -12,7 +12,7 @@ parameters:
     scope_keys: []
     applies_to:
       organism_groups: [vascular_plant, fungus]
-    used_by: [stages]
+    used_by: [stages, fertilizer]
     tier_required: true
     safety_class: none
     rationale: null
@@ -406,4 +406,126 @@ parameters:
     rationale: null
     kind: core
     description: "Maximum irrigation-water temperature."
+    introduced_in: "1.0.0"
+
+
+  # --- c-3a: fertilizer ---
+  n_fertilizer_rate:
+    stage: care
+    shape: range
+    unit: kilogram/hectare
+    physical_range: [0.0, 2000.0]
+    phase_set: none
+    scope_keys: [country, region, system, use, variety, yield_target]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [field, flooded]
+    used_by: [fertilizer]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Recommended nutrient rate to apply as fertilizer (as N, not crop uptake) for one crop period. The period is one cycle when managed_cycle is single_season, one calendar year when multi_season."
+    introduced_in: "1.0.0"
+  p2o5_fertilizer_rate:
+    stage: care
+    shape: range
+    unit: kilogram/hectare
+    physical_range: [0.0, 2000.0]
+    phase_set: none
+    scope_keys: [country, region, system, use, variety, yield_target]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [field, flooded]
+    used_by: [fertilizer]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Recommended nutrient rate to apply as fertilizer (as P2O5, not crop uptake) for one crop period. The period is one cycle when managed_cycle is single_season, one calendar year when multi_season."
+    introduced_in: "1.0.0"
+  k2o_fertilizer_rate:
+    stage: care
+    shape: range
+    unit: kilogram/hectare
+    physical_range: [0.0, 2000.0]
+    phase_set: none
+    scope_keys: [country, region, system, use, variety, yield_target]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [field, flooded]
+    used_by: [fertilizer]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Recommended nutrient rate to apply as fertilizer (as K2O, not crop uptake) for one crop period. The period is one cycle when managed_cycle is single_season, one calendar year when multi_season."
+    introduced_in: "1.0.0"
+  plant_density:
+    stage: planting
+    shape: scalar
+    unit: 1/hectare
+    physical_range: [0.0, 100000000.0]
+    phase_set: none
+    scope_keys: [country, region, system, environment, use, variety, growth_habit, establishment]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [field, flooded]
+    used_by: [fertilizer]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Planting density as counting stations per hectare. The counting unit matches the per-plant dose basis: individual plant, hill, banana stool, or tree. Profile values record the typical density; the calculator (M3) accepts the actual density from the caller and uses the profile value only as a recorded assumption, never silently."
+    introduced_in: "1.0.0"
+  n_max_per_application:
+    stage: care
+    shape: scalar
+    unit: kilogram/hectare
+    physical_range: [0.0, 500.0]
+    phase_set: none
+    scope_keys: [country, region, system]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [field, flooded]
+    used_by: [fertilizer, safety]
+    tier_required: false
+    safety_class: dose_cap
+    rationale: "Over-application of nitrogen leaches nitrate into groundwater, which is regulated in many jurisdictions, and can injure seedlings."
+    kind: core
+    description: "Maximum nitrogen per single fertilizer application, as kg N per hectare."
+    introduced_in: "1.0.0"
+  p2o5_max_per_application:
+    stage: care
+    shape: scalar
+    unit: kilogram/hectare
+    physical_range: [0.0, 500.0]
+    phase_set: none
+    scope_keys: [country, region, system]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [field, flooded]
+    used_by: [fertilizer, safety]
+    tier_required: false
+    safety_class: dose_cap
+    rationale: "Over-application of phosphorus runs off into surface water and causes eutrophication."
+    kind: core
+    description: "Maximum P2O5 per single fertilizer application, as kg P2O5 per hectare."
+    introduced_in: "1.0.0"
+  k2o_max_per_application:
+    stage: care
+    shape: scalar
+    unit: kilogram/hectare
+    physical_range: [0.0, 500.0]
+    phase_set: none
+    scope_keys: [country, region, system]
+    applies_to:
+      organism_groups: [vascular_plant]
+      systems: [field, flooded]
+    used_by: [fertilizer, safety]
+    tier_required: false
+    safety_class: dose_cap
+    rationale: "Over-application of potassium can cause root salt injury and can contribute to magnesium deficiency in grazing livestock."
+    kind: core
+    description: "Maximum K2O per single fertilizer application, as kg K2O per hectare."
     introduced_in: "1.0.0"

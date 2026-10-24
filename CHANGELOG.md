@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- 7 parameters in c-3a (fertilizer, `1.0.0-dev` total now 31):
+  `n_fertilizer_rate`, `p2o5_fertilizer_rate`, `k2o_fertilizer_rate`,
+  `plant_density`, and safety-critical dose caps
+  `n_max_per_application`, `p2o5_max_per_application`,
+  `k2o_max_per_application`.
+- Renamed (pre-release) `n_requirement` -> `n_fertilizer_rate`,
+  `p2o5_requirement` -> `p2o5_fertilizer_rate`, `k2o_requirement` ->
+  `k2o_fertilizer_rate`. Old names were ambiguous between crop uptake and
+  fertilizer recommendation; the fertilizer module reads the recommended
+  amount to apply.
+- `managed_cycle.used_by` now includes `fertilizer` (rate period depends
+  on `single_season` vs `multi_season`).
+- Added `dictionary/vocab/safety_classes.yaml` documenting the safety
+  class taxonomy (`none`, `dose_cap`, `toxicity_limit`, `regulatory`).
+  `dose_cap` is functional (amount constraint); `toxicity_limit` and
+  `regulatory` are by hazard type. Salinity (`soil_ec`, `water_ec_max`)
+  remains `none` (tolerance condition, not an applied amount).
+- New mechanical rule enforced by tests: a parameter whose
+  `applies_to.systems` contains more than one value must have `system`
+  in `scope_keys`.
 - 12 parameters in c-2b: irrigation (`kc`, `kc_stage_length`, `root_depth`, `depletion_fraction`, `awd_reflood_depth`, `ponding_depth`, `percolation_rate`, `predrain_days`, `must_flood_phases`, `moisture_band`) and media/air (`water_ec_max`, `water_temp_max`). `modules.reads` updated for irrigation, media, thresholds.
 - Initial repository scaffold: package layout (`src/agri_core`), `py.typed` marker, packaging via hatchling.
 - Dual licensing: Apache-2.0 for code, CC BY 4.0 for profiles (`LICENSE`, `LICENSE-DATA`).

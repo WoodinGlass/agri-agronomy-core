@@ -1,0 +1,26 @@
+schema_version: 1
+# Safety-class taxonomy for parameters. A parameter is safety-critical when
+# its safety_class is not "none".
+#
+# Classification criteria:
+#   dose_cap is functional: it bounds the amount that may be recommended per
+#   application, preventing overdose. It does not classify the type of hazard.
+#   toxicity_limit and regulatory are defined by the type of hazard: harm to
+#   humans, animals, or the environment, or a legal obligation.
+#
+# Salinity (soil_ec, water_ec_max) is not safety-critical: it is a tolerance
+# condition for the plant, not an applied amount and not a hazard to humans,
+# animals, or the environment.
+safety_classes:
+  none:
+    definition: "Not safety-critical."
+    criterion: null
+  dose_cap:
+    definition: "Upper bound on the recommendable application amount."
+    criterion: "functional (amount constraint)"
+  toxicity_limit:
+    definition: "Threshold above which a hazard harms humans, animals, or the environment."
+    criterion: "hazard (type of harm)"
+  regulatory:
+    definition: "Flag or limit mandated by a specific jurisdiction."
+    criterion: "obligation (legal)"

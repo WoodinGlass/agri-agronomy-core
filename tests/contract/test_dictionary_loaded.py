@@ -141,10 +141,15 @@ def test_trapezoid_implies_thresholds(dictionary: Dictionary) -> None:
             )
 
 
-def test_no_safety_critical_in_c_1(dictionary: Dictionary) -> None:
-    """c-1 has no safety-critical params; c-3 will pin the 3 dose caps."""
-    sc = {k for k, p in dictionary.parameters.items() if p.safety_critical}
-    assert sc == set(), f"unexpected safety_critical params in c-1: {sc}"
+def test_safety_critical_pinned_set(dictionary: Dictionary) -> None:
+    """Only the 3 dose caps are safety-critical in 1.0.0."""
+    expected = {
+        "n_max_per_application",
+        "p2o5_max_per_application",
+        "k2o_max_per_application",
+    }
+    actual = {k for k, p in dictionary.parameters.items() if p.safety_critical}
+    assert actual == expected, f"safety_critical diff: {sorted(actual ^ expected)}"
 
 
 def test_tier_required_pinned_set(dictionary: Dictionary) -> None:
@@ -235,9 +240,48 @@ def test_pint_canonical_units_are_used_somewhere(dictionary: Dictionary) -> None
 # --- c-2b parameters ---
 
 
-def test_dictionary_has_24_params(dictionary: Dictionary) -> None:
-    """12 from c-1 + 12 from c-2b."""
-    assert len(dictionary.parameters) == 24
+def test_all_keys_pinned(dictionary: Dictionary) -> None:
+    """Union of all sub-cell keys, pinned. Detects unintended additions/removals."""
+    expected = {
+        # c-1 (12)
+        "managed_cycle",
+        "phase_duration",
+        "phase_thermal_time",
+        "gdd_base",
+        "gdd_upper",
+        "soil_ph",
+        "soil_ec",
+        "air_temp_day",
+        "air_temp_night",
+        "air_rh",
+        "vpd",
+        "dli",
+        # c-2b (12)
+        "kc",
+        "kc_stage_length",
+        "root_depth",
+        "depletion_fraction",
+        "awd_reflood_depth",
+        "ponding_depth",
+        "percolation_rate",
+        "predrain_days",
+        "must_flood_phases",
+        "moisture_band",
+        "water_ec_max",
+        "water_temp_max",
+        # c-3a (7)
+        "n_fertilizer_rate",
+        "p2o5_fertilizer_rate",
+        "k2o_fertilizer_rate",
+        "plant_density",
+        "n_max_per_application",
+        "p2o5_max_per_application",
+        "k2o_max_per_application",
+    }
+    actual = set(dictionary.parameters.keys())
+    added = actual - expected
+    removed = expected - actual
+    assert actual == expected, f"key diff: added={sorted(added)}, removed={sorted(removed)}"
 
 
 @pytest.mark.parametrize(
@@ -315,3 +359,117 @@ def test_predrain_days_unit_and_range(dictionary: Dictionary) -> None:
     p = dictionary.lookup("predrain_days")
     assert p.unit == "day"
     assert p.physical_range == (0.0, 30.0)
+
+
+# --- c-3a parameters ---
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "n_fertilizer_rate",
+        "p2o5_fertilizer_rate",
+        "k2o_fertilizer_rate",
+        "plant_density",
+        "n_max_per_application",
+        "p2o5_max_per_application",
+        "k2o_max_per_application",
+    ],
+)
+def test_c_3a_param_present(dictionary: Dictionary, key: str) -> None:
+    p = dictionary.lookup(key)
+    assert p.key == key
+
+
+def test_fertilizer_rate_scope_keys(dictionary: Dictionary) -> None:
+    expected = ["country", "region", "system", "use", "variety", "yield_target"]
+    for key in ("n_fertilizer_rate", "p2o5_fertilizer_rate", "k2o_fertilizer_rate"):
+        p = dictionary.lookup(key)
+        assert p.scope_keys == expected, f"{key}: {p.scope_keys}"
+
+
+def test_max_per_application_scope_keys(dictionary: Dictionary) -> None:
+    expected = ["country", "region", "system"]
+    for key in ("n_max_per_application", "p2o5_max_per_application", "k2o_max_per_application"):
+        p = dictionary.lookup(key)
+        assert p.scope_keys == expected, f"{key}: {p.scope_keys}"
+
+
+def test_plant_density_scope_keys(dictionary: Dictionary) -> None:
+    p = dictionary.lookup("plant_density")
+    expected = [
+        "country",
+        "region",
+        "system",
+        "environment",
+        "use",
+        "variety",
+        "growth_habit",
+        "establishment",
+    ]
+    assert p.scope_keys == expected
+
+
+def test_dose_caps_are_safety_critical_with_rationale(dictionary: Dictionary) -> None:
+    for key in ("n_max_per_application", "p2o5_max_per_application", "k2o_max_per_application"):
+        p = dictionary.lookup(key)
+        assert p.safety_class == "dose_cap"
+        assert p.rationale is not None
+        assert len(p.rationale) > 30, f"{key}: rationale too short"
+
+
+def test_fertilizer_rate_physical_range(dictionary: Dictionary) -> None:
+    for key in ("n_fertilizer_rate", "p2o5_fertilizer_rate", "k2o_fertilizer_rate"):
+        p = dictionary.lookup(key)
+        assert p.physical_range == (0.0, 2000.0)
+
+
+def test_dose_cap_physical_range(dictionary: Dictionary) -> None:
+    for key in ("n_max_per_application", "p2o5_max_per_application", "k2o_max_per_application"):
+        p = dictionary.lookup(key)
+        assert p.physical_range == (0.0, 500.0)
+
+
+def test_plant_density_physical_range(dictionary: Dictionary) -> None:
+    p = dictionary.lookup("plant_density")
+    assert p.physical_range == (0.0, 100000000.0)
+
+
+def test_system_in_scope_keys_when_multi_system(dictionary: Dictionary) -> None:
+    """Mechanical rule: multi-system parameters must have 'system' in scope_keys."""
+    violations = []
+    for p in dictionary.parameters.values():
+        systems = p.applies_to.systems
+        if systems is not None and len(systems) > 1 and "system" not in p.scope_keys:
+            violations.append(p.key)
+    assert violations == [], (
+        f"parameters with multi-system applies_to but no 'system' in scope_keys: "
+        f"{sorted(violations)}"
+    )
+
+
+def test_managed_cycle_used_by_fertilizer(dictionary: Dictionary) -> None:
+    """managed_cycle must be read by fertilizer (K1)."""
+    p = dictionary.lookup("managed_cycle")
+    assert "fertilizer" in p.used_by
+    assert "stages" in p.used_by
+
+
+def test_safety_classes_vocab_exists() -> None:
+    scl = ROOT / "dictionary" / "vocab" / "safety_classes.yaml"
+    assert scl.is_file(), "safety_classes.yaml missing"
+    data = yaml.safe_load(scl.read_text(encoding="utf-8"))
+    assert data["schema_version"] == 1
+    classes = data["safety_classes"]
+    assert set(classes.keys()) == {"none", "dose_cap", "toxicity_limit", "regulatory"}
+    for meta in classes.values():
+        assert "definition" in meta
+        assert "criterion" in meta
+
+
+def test_fertilizer_rates_are_not_safety_critical(dictionary: Dictionary) -> None:
+    """Rates are not dose caps; caps are the safety-critical side."""
+    for key in ("n_fertilizer_rate", "p2o5_fertilizer_rate", "k2o_fertilizer_rate"):
+        p = dictionary.lookup(key)
+        assert p.safety_class == "none"
+        assert p.safety_critical is False

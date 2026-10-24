@@ -40,7 +40,15 @@ modules:
       - moisture_band
   fertilizer:
     description: "Nutrient to product, dose caps."
-    reads: []
+    reads:
+      - managed_cycle
+      - n_fertilizer_rate
+      - p2o5_fertilizer_rate
+      - k2o_fertilizer_rate
+      - plant_density
+      - n_max_per_application
+      - p2o5_max_per_application
+      - k2o_max_per_application
   media:
     description: "Growing media and water quality."
     reads:
@@ -54,7 +62,10 @@ modules:
     reads: []
   safety:
     description: "Dose caps and label referral."
-    reads: []
+    reads:
+      - n_max_per_application
+      - p2o5_max_per_application
+      - k2o_max_per_application
   export:
     description: "Exports and schemas."
     reads: []
