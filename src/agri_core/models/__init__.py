@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+from agri_core.models.ids import (
+    CROCKFORD_ALPHABET,
+    CROCKFORD_CHARS,
+    DatasetId,
+    FactId,
+    SourceId,
+    TaxonId,
+    ensure_src_or_dataset,
+)
 from agri_core.models.notices import EvidenceGrade, Notice
 from agri_core.models.outcome import (
     Ambiguous,
@@ -31,10 +40,14 @@ from agri_core.models.result import ok
 from agri_core.models.scope_key import ScopeKey
 
 __all__ = [
+    "CROCKFORD_ALPHABET",
+    "CROCKFORD_CHARS",
     "Ambiguous",
     "AmbiguousCandidate",
     "AppliesTo",
+    "DatasetId",
     "EvidenceGrade",
+    "FactId",
     "FlagCode",
     "InsufficientInput",
     "NotApplicable",
@@ -48,8 +61,11 @@ __all__ = [
     "ReferToLabel",
     "Result",
     "ScopeKey",
+    "SourceId",
+    "TaxonId",
     "Unknown",
     "ambiguous",
+    "ensure_src_or_dataset",
     "insufficient_input",
     "not_applicable",
     "ok",
