@@ -10,7 +10,9 @@ from pydantic import TypeAdapter
 
 from agri_core.models.dataset import DatasetRow
 from agri_core.models.hazard import HazardRow
+from agri_core.models.name import NameRow
 from agri_core.models.outcome import OutcomeAdapter
+from agri_core.models.taxon import TaxonRow
 from agri_core.pack.manifest import PackManifest
 from agri_core.registry.sources import SourceRow
 
@@ -51,6 +53,16 @@ def main() -> int:
     _write(
         "hazard.schema.json",
         TypeAdapter(HazardRow).json_schema(mode="serialization"),
+        schema_dir,
+    )
+    _write(
+        "name.schema.json",
+        TypeAdapter(NameRow).json_schema(mode="serialization"),
+        schema_dir,
+    )
+    _write(
+        "taxon.schema.json",
+        TypeAdapter(TaxonRow).json_schema(mode="serialization"),
         schema_dir,
     )
     return 0

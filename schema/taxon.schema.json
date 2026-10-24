@@ -1,0 +1,130 @@
+{
+  "additionalProperties": false,
+  "description": "One row of ``taxon.csv``: the identity of a cultivated organism.\n\nTier is **derived** from the taxon's facts, not stored on the row (W5).\nVocabularies (``organism_group``, ``archetype``, ``uses``, ``traits``) are\nstored as free strings and validated at validate time against the pack's\n``dictionary_version``, not by this model. That keeps the schema stateless\nwhen a vocabulary grows.\n\n``rank`` is a **closed** enum from W5, not a vocabulary. Adding a new rank\nis an engine change (minor bump).\n\n``parent_id`` is for navigation only; it does not imply inheritance of\nfacts. ``parent_id`` must not equal ``taxon_id``. Deeper cycles\n(A -> B -> A) are checked at validate time.",
+  "properties": {
+    "accepted_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Accepted Name"
+    },
+    "archetype": {
+      "minLength": 1,
+      "title": "Archetype",
+      "type": "string"
+    },
+    "dataset_id": {
+      "anyOf": [
+        {
+          "pattern": "^D[0-9A-HJKMNP-TV-Z]{9}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Dataset Id"
+    },
+    "external_ids": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "External Ids"
+    },
+    "organism_group": {
+      "minLength": 1,
+      "title": "Organism Group",
+      "type": "string"
+    },
+    "parent_id": {
+      "anyOf": [
+        {
+          "pattern": "^T[0-9A-HJKMNP-TV-Z]{9}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Id"
+    },
+    "rank": {
+      "enum": [
+        "species",
+        "hybrid",
+        "cultivar_group",
+        "genus"
+      ],
+      "title": "Rank",
+      "type": "string"
+    },
+    "scientific_name": {
+      "minLength": 1,
+      "title": "Scientific Name",
+      "type": "string"
+    },
+    "src": {
+      "anyOf": [
+        {
+          "items": {
+            "pattern": "^S\\d{3,}$",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Src"
+    },
+    "taxon_id": {
+      "pattern": "^T[0-9A-HJKMNP-TV-Z]{9}$",
+      "title": "Taxon Id",
+      "type": "string"
+    },
+    "traits": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Traits",
+      "type": "array"
+    },
+    "uses": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Uses",
+      "type": "array"
+    }
+  },
+  "required": [
+    "taxon_id",
+    "rank",
+    "scientific_name",
+    "organism_group",
+    "archetype",
+    "uses"
+  ],
+  "title": "TaxonRow",
+  "type": "object"
+}
