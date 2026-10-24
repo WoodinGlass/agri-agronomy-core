@@ -2,7 +2,7 @@
 
 Coverage matrix used as input for designing the core parameter dictionary (M1-1).
 
-- Artifact: `plant_wishlist_v1.csv` (125 rows)
+- Artifact: `plant_wishlist_v4.csv` (125 rows)
 - Spec: v2.9
 - Status: superseded by `agri-knowledge/packs/<version>/taxa.csv` at M1-2;
   kept as design rationale.
@@ -158,3 +158,7 @@ well:
 Replaced 1:1 with `davallia` (hare's foot fern, Davalliaceae), an epiphytic
 fern that is neither CITES-listed nor Permen LHK-listed and is common in
 horticulture. Archetype coverage for `pteridophyte` stays at 6.
+
+## Migration and freeze
+
+This snapshot (`plant_wishlist_v4.csv`) is frozen as design rationale. Its SHA-256 is recorded in `plant_wishlist_v4_migration.md` and verified by `tests/contract/test_snapshot.py`. Any change to the CSV will fail that test. Migrations to the current vocabulary and fixture live in `plant_wishlist_v4_migration.md` and `tests/fixtures/wishlist_derived.csv`.
