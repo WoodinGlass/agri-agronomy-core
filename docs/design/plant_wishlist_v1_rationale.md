@@ -143,3 +143,18 @@ rules for each species independently.
 - To add a special_needs code, submit a proposal (see spec §6.3) with
   rationale; do not silently extend the closed set.
 - After M1-2, this file is frozen. Additions happen in `agri-knowledge`.
+
+### Follow-up removal: `platycerium`
+
+After the initial legal sweep, `platycerium` was found to require removal as
+well:
+
+- **CITES Appendix II**: the entire genus *Platycerium* (~15 species) is
+  listed at genus level.
+- **Permen LHK 106/2018**: *Platycerium* spp. (tanduk rusa) is listed as
+  protected. A 2025 joint Indonesia–Malaysia border operation treated
+  smuggled *Platycerium* sp. as protected plants.
+
+Replaced 1:1 with `davallia` (hare's foot fern, Davalliaceae), an epiphytic
+fern that is neither CITES-listed nor Permen LHK-listed and is common in
+horticulture. Archetype coverage for `pteridophyte` stays at 6.
