@@ -1,0 +1,57 @@
+schema_version: 1
+# Traits are cultivation properties. Rules (enforced by tests):
+#   - cultivation property, not a parameter name
+#   - not a bound name (no _min / _max)
+#   - not a "preference" adjective
+#   - every trait must trigger at least one parameter via applies_to.traits
+#     (enforced at M1-1c once parameters.core.yaml exists)
+#   - every trait has a one-sentence definition and >=1 example taxon
+#   - examples are validated as non-empty ASCII snake_case strings
+#     (they are NOT required to be in wishlist_derived.csv; that fixture is
+#      a coverage matrix, not a registry)
+traits:
+  chill_requirement:
+    description: "Requires a cold period (0-7 C) to break dormancy or induce flowering."
+    examples: [apple, blueberry]
+  vernalization:
+    description: "Requires a cold period for floral induction in biennials or geophytes."
+    examples: [garlic, tulip, onion]
+  photoperiod_sensitive:
+    description: "Flowering or bulbing depends on day length."
+    examples: [chrysanthemum, onion, potato]
+  dormancy_period:
+    description: "Enters a seasonal dormancy that must be respected by the calendar."
+    examples: [apple, blueberry, peony, tulip]
+  symbiont_required:
+    description: "Requires a specific symbiont (tree host or mycorrhizal partner) to fruit."
+    examples: [truffle]
+  nitrogen_fixing:
+    description: "Fixes atmospheric nitrogen via a biological symbiont."
+    examples: [soybean, alfalfa, azolla, leucaena]
+  pollination_management:
+    description: "Fruit set needs managed pollination (cultivar pairing, pollinators, or hand)."
+    examples: [apple, blueberry, avocado]
+  rootstock_graft:
+    description: "Commercial cultivation requires grafting onto a selected rootstock."
+    examples: [apple, grape]
+  support_required:
+    description: "Needs a trellis, stake, or other support structure."
+    examples: [grape, vanilla, black_pepper, cucumber]
+  shade_required:
+    description: "Requires deliberate shading; full sun is harmful."
+    examples: [vanilla, wasabi]
+  regrowth_cycle:
+    description: "Regrows after harvest or cutting (ratoon, tiller, coppice)."
+    examples: [alfalfa, elephant_grass, lemongrass]
+  curing_required:
+    description: "Requires a curing phase after harvest before storage or sale."
+    examples: [onion, garlic, potato, sweet_potato]
+  acidic_media_required:
+    description: "Requires acidic growing medium or soil (pH below about 5.5)."
+    examples: [blueberry]
+  alkaline_soil_required:
+    description: "Requires alkaline soil (pH above about 7.5)."
+    examples: [cistus, gypsophila, arabis]
+  cool_water_required:
+    description: "Requires cool irrigation water (typically below 20 C)."
+    examples: [wasabi, watercress]
