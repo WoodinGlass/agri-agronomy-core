@@ -158,6 +158,14 @@ jobs:
               "agri_core/_data/schema/outcome.schema.json",
               "agri_core/_data/schema/source.schema.json",
               "agri_core/_data/schema/manifest.schema.json",
+              "agri_core/_data/schema/dataset.schema.json",
+              "agri_core/_data/schema/hazard.schema.json",
+              "agri_core/_data/schema/name.schema.json",
+              "agri_core/_data/schema/taxon.schema.json",
+              "agri_core/_data/schema/parameter.schema.json",
+              "agri_core/_data/schema/fact.schema.json",
+              "agri_core/_dictionary/parameters.core.yaml",
+              "agri_core/_dictionary/vocab/archetypes.yaml",
               "agri_core/_samples/sample_pack/pack.toml",
               "agri_core/_samples/sample_pack/sources.csv",
               "agri_core/_samples/sample_pack/README.md",
@@ -220,6 +228,7 @@ jobs:
           echo "$OUT"
           echo "$OUT" | grep -E '^pack: sample [0-9]+\.[0-9]+\.[0-9]+ \(sample\)$'
           ./venv-wheel/bin/agri-core lint-sources --pack sample
+          ./venv-wheel/bin/python -c "from agri_core.models.dictionary import Dictionary; d = Dictionary.load_packaged(); print('dict:', d.version, '|', len(d.parameters), 'params')"
       - name: Smoke test source install
         working-directory: ${{ runner.temp }}
         shell: bash
@@ -233,6 +242,7 @@ jobs:
           echo "$OUT"
           echo "$OUT" | grep -E '^pack: sample [0-9]+\.[0-9]+\.[0-9]+ \(sample\)$'
           ./venv-src/bin/agri-core lint-sources --pack sample
+          ./venv-src/bin/python -c "from agri_core.models.dictionary import Dictionary; d = Dictionary.load_packaged(); print('dict:', d.version, '|', len(d.parameters), 'params')"
 
   sdist-roundtrip:
     name: Sdist round-trip

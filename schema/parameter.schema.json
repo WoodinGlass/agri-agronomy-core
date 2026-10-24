@@ -2,16 +2,9 @@
   "$defs": {
     "AppliesTo": {
       "additionalProperties": false,
-      "description": "Dimensions this parameter applies to.\n\nEmpty list = wildcard (applies to all values of that dimension).\n``organism_groups=None`` means no filter; a non-empty list restricts\nthe parameter to those groups.",
+      "description": "Dimensions a parameter applies to (AND between, OR within).\n\n``organism_groups`` is required and non-empty. ``None`` means the dimension\nis not written (unlimited); an explicit empty list is rejected so that\n\"unlimited\" and \"no values\" cannot be confused.",
       "properties": {
         "archetypes": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Archetypes",
-          "type": "array"
-        },
-        "organism_groups": {
           "anyOf": [
             {
               "items": {
@@ -24,30 +17,65 @@
             }
           ],
           "default": null,
-          "title": "Organism Groups"
+          "title": "Archetypes"
+        },
+        "organism_groups": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Organism Groups",
+          "type": "array"
         },
         "systems": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Systems",
-          "type": "array"
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Systems"
         },
         "traits": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Traits",
-          "type": "array"
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Traits"
         },
         "uses": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Uses",
-          "type": "array"
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uses"
         }
       },
+      "required": [
+        "organism_groups"
+      ],
       "title": "AppliesTo",
       "type": "object"
     }
@@ -55,13 +83,27 @@
   "additionalProperties": false,
   "description": "Definition of one parameter in the core dictionary or in a pack.",
   "properties": {
+    "allowed_phases": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Allowed Phases"
+    },
     "applies_to": {
       "$ref": "#/$defs/AppliesTo"
     },
     "deprecated_in": {
       "anyOf": [
         {
-          "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "type": "string"
         },
         {
@@ -75,6 +117,18 @@
       "minLength": 1,
       "title": "Description",
       "type": "string"
+    },
+    "enum_source": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Enum Source"
     },
     "enum_values": {
       "anyOf": [
@@ -92,8 +146,12 @@
       "title": "Enum Values"
     },
     "introduced_in": {
-      "pattern": "^\\d+\\.\\d+\\.\\d+$",
       "title": "Introduced In",
+      "type": "string"
+    },
+    "key": {
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Key",
       "type": "string"
     },
     "kind": {
@@ -102,11 +160,6 @@
         "extension"
       ],
       "title": "Kind",
-      "type": "string"
-    },
-    "name": {
-      "pattern": "^[a-z][a-z0-9_]*$",
-      "title": "Name",
       "type": "string"
     },
     "phase_set": {
@@ -136,6 +189,18 @@
       "default": null,
       "title": "Physical Range"
     },
+    "rationale": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rationale"
+    },
     "replaced_by": {
       "anyOf": [
         {
@@ -161,10 +226,23 @@
       "default": null,
       "title": "Rule Schema"
     },
-    "safety_critical": {
-      "default": false,
-      "title": "Safety Critical",
-      "type": "boolean"
+    "safety_class": {
+      "default": "none",
+      "enum": [
+        "none",
+        "dose_cap",
+        "toxicity_limit",
+        "regulatory"
+      ],
+      "title": "Safety Class",
+      "type": "string"
+    },
+    "scope_keys": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Scope Keys",
+      "type": "array"
     },
     "shape": {
       "enum": [
@@ -172,6 +250,7 @@
         "range",
         "scalar",
         "enum",
+        "enum_set",
         "bool",
         "rule",
         "unknown"
@@ -209,7 +288,7 @@
     }
   },
   "required": [
-    "name",
+    "key",
     "stage",
     "shape",
     "applies_to",

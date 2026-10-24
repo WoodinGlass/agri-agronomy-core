@@ -216,7 +216,7 @@ def test_unit_registry_schema_version() -> None:
 
 def test_unit_registry_custom_units_exact_set() -> None:
     reg = yaml.safe_load(UNIT_REG.read_text(encoding="utf-8"))
-    assert set(reg["custom_units"]) == {"pH", "ppm", "percent"}
+    assert set(reg["custom_units"]) == {"pH", "ppm", "percent", "degree_day"}
 
 
 def test_unit_registry_custom_units_have_shape() -> None:

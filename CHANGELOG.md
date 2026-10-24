@@ -56,6 +56,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `profiles/` and `LICENSE-DATA` are no longer read by the CLI. They stay in
   the repository for now and will move to the `agri-knowledge` repo (M1-0).
 
+### Changed (dictionary 1.0.0-dev, pre-release)
+
+- Added `enum_set` shape to the fact value union (8th shape). Needed by
+  `must_flood_phases` in c-2 to avoid FACT_CONFLICT from multiple
+  facts with identical scope. This is a change to the W2 shape list.
+- `ParameterDef` fields renamed / added: `name` -> `key`,
+  `safety_critical` -> `safety_class` (with `safety_critical` derived),
+  `physical_range` required for numeric shapes, `applies_to.organism_groups`
+  required, `enum_source` added, `scope_keys` added.
+
 ## [0.0.0] - 2026-10-17
 
 - Repository created.

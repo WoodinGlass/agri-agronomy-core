@@ -1,0 +1,201 @@
+dictionary_version: 1.0.0-dev
+
+parameters:
+  # --- cycle (5) ---
+  managed_cycle:
+    stage: cycle
+    shape: enum
+    enum_values: [single_season, multi_season]
+    unit: null
+    physical_range: null
+    phase_set: none
+    scope_keys: []
+    applies_to:
+      organism_groups: [vascular_plant, fungus]
+    used_by: [stages]
+    tier_required: true
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Whether cultivation is a single season or spans multiple seasons."
+    introduced_in: "1.0.0"
+  phase_duration:
+    stage: cycle
+    shape: scalar
+    unit: day
+    physical_range: [1.0, 3650.0]
+    phase_set: biological
+    scope_keys: []
+    applies_to:
+      organism_groups: [vascular_plant, fungus]
+    used_by: [stages]
+    tier_required: true
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Number of days in a given biological phase."
+    introduced_in: "1.0.0"
+  phase_thermal_time:
+    stage: cycle
+    shape: scalar
+    unit: degree_day
+    physical_range: [0.0, 10000.0]
+    phase_set: biological
+    scope_keys: []
+    applies_to:
+      organism_groups: [vascular_plant]
+    used_by: [stages]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Accumulated thermal time in a given biological phase."
+    introduced_in: "1.0.0"
+  gdd_base:
+    stage: cycle
+    shape: scalar
+    unit: degree_Celsius
+    physical_range: [0.0, 30.0]
+    phase_set: none
+    scope_keys: []
+    applies_to:
+      organism_groups: [vascular_plant]
+    used_by: [climate, stages]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Base temperature for growing degree-day accumulation."
+    introduced_in: "1.0.0"
+  gdd_upper:
+    stage: cycle
+    shape: scalar
+    unit: degree_Celsius
+    physical_range: [0.0, 50.0]
+    phase_set: none
+    scope_keys: []
+    applies_to:
+      organism_groups: [vascular_plant]
+    used_by: [climate, stages]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Optional upper cut-off for growing degree-day accumulation."
+    introduced_in: "1.0.0"
+
+  # --- thresholds (7) ---
+  soil_ph:
+    stage: site_media
+    shape: trapezoid
+    unit: pH
+    physical_range: [0.0, 14.0]
+    phase_set: none
+    scope_keys: [country, region, elevation_m, system, climate_zone, variety]
+    applies_to:
+      organism_groups: [vascular_plant, fungus]
+      systems: [field, flooded, container]
+    used_by: [thresholds]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Soil or growing-medium pH optimal and absolute bounds."
+    introduced_in: "1.0.0"
+  soil_ec:
+    stage: site_media
+    shape: trapezoid
+    unit: decisiemens/meter
+    physical_range: [0.0, 50.0]
+    phase_set: none
+    scope_keys: [country, region, elevation_m, system, climate_zone, variety]
+    applies_to:
+      organism_groups: [vascular_plant, fungus]
+      systems: [field, flooded, container]
+    used_by: [thresholds]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Soil or medium electrical conductivity optimal and absolute bounds."
+    introduced_in: "1.0.0"
+  air_temp_day:
+    stage: care
+    shape: trapezoid
+    unit: degree_Celsius
+    physical_range: [-40.0, 60.0]
+    phase_set: biological
+    scope_keys: [country, region, elevation_m, climate_zone, variety]
+    applies_to:
+      organism_groups: [vascular_plant, fungus]
+    used_by: [thresholds]
+    tier_required: true
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Daytime air temperature optimal and absolute bounds."
+    introduced_in: "1.0.0"
+  air_temp_night:
+    stage: care
+    shape: trapezoid
+    unit: degree_Celsius
+    physical_range: [-40.0, 60.0]
+    phase_set: biological
+    scope_keys: [country, region, elevation_m, climate_zone, variety]
+    applies_to:
+      organism_groups: [vascular_plant, fungus]
+    used_by: [thresholds]
+    tier_required: true
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Night-time air temperature optimal and absolute bounds."
+    introduced_in: "1.0.0"
+  air_rh:
+    stage: care
+    shape: trapezoid
+    unit: percent
+    physical_range: [0.0, 100.0]
+    phase_set: biological
+    scope_keys: [country, region, elevation_m, climate_zone, variety]
+    applies_to:
+      organism_groups: [vascular_plant, fungus]
+    used_by: [thresholds]
+    tier_required: true
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Relative humidity optimal and absolute bounds."
+    introduced_in: "1.0.0"
+  vpd:
+    stage: care
+    shape: trapezoid
+    unit: kilopascal
+    physical_range: [0.0, 10.0]
+    phase_set: biological
+    scope_keys: [country, region, elevation_m, climate_zone, variety]
+    applies_to:
+      organism_groups: [vascular_plant]
+    used_by: [thresholds]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Vapor pressure deficit optimal and absolute bounds."
+    introduced_in: "1.0.0"
+  dli:
+    stage: care
+    shape: trapezoid
+    unit: mole/meter**2/day
+    physical_range: [0.0, 100.0]
+    phase_set: biological
+    scope_keys: [country, region, elevation_m, climate_zone, environment, variety]
+    applies_to:
+      organism_groups: [vascular_plant]
+    used_by: [thresholds]
+    tier_required: false
+    safety_class: none
+    rationale: null
+    kind: core
+    description: "Daily light integral optimal and absolute bounds."
+    introduced_in: "1.0.0"
