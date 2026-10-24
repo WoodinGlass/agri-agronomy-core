@@ -13,6 +13,7 @@ from agri_core.models.ids import (
     TaxonId,
     ensure_src_or_dataset,
 )
+from agri_core.models.name import NameKind, NameRow
 from agri_core.models.notices import EvidenceGrade, Notice
 from agri_core.models.outcome import (
     Ambiguous,
@@ -40,6 +41,7 @@ from agri_core.models.refusals import (
 )
 from agri_core.models.result import ok
 from agri_core.models.scope_key import ScopeKey
+from agri_core.models.taxon import TaxonRank, TaxonRow
 
 __all__ = [
     "CROCKFORD_ALPHABET",
@@ -55,6 +57,8 @@ __all__ = [
     "HazardRow",
     "HazardSeverity",
     "InsufficientInput",
+    "NameKind",
+    "NameRow",
     "NotApplicable",
     "Notice",
     "Outcome",
@@ -68,6 +72,8 @@ __all__ = [
     "ScopeKey",
     "SourceId",
     "TaxonId",
+    "TaxonRank",
+    "TaxonRow",
     "Unknown",
     "ambiguous",
     "ensure_src_or_dataset",

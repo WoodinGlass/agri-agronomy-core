@@ -1,0 +1,77 @@
+{
+  "additionalProperties": false,
+  "description": "One row of ``name.csv``: a name attached to a taxon.\n\n``language`` follows a pragmatic BCP-47 subset: a primary language tag of\n2-3 lowercase letters, optionally followed by `-` separated subtags of\n1-8 alphanumeric characters. This accepts ``en``, ``id``, ``und``,\n``zh-Hans``, ``en-US``, ``zh-Hans-CN``. Full BCP-47 validation happens\nat validate time against a lookup table if needed.\n\n``script`` is an ISO 15924 code: 4 letters, first uppercase, e.g.\n``Latn``, ``Arab``, ``Zyyy`` (undetermined).\n\n``kind`` is a closed set (``common``, ``scientific``, ``synonym``,\n``trade``) matching W5. ``preferred`` marks the canonical name in the\ngiven language and kind.",
+  "properties": {
+    "dataset_id": {
+      "anyOf": [
+        {
+          "pattern": "^D[0-9A-HJKMNP-TV-Z]{9}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Dataset Id"
+    },
+    "kind": {
+      "enum": [
+        "common",
+        "scientific",
+        "synonym",
+        "trade"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "language": {
+      "title": "Language",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "preferred": {
+      "default": false,
+      "title": "Preferred",
+      "type": "boolean"
+    },
+    "script": {
+      "title": "Script",
+      "type": "string"
+    },
+    "src": {
+      "anyOf": [
+        {
+          "items": {
+            "pattern": "^S\\d{3,}$",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Src"
+    },
+    "taxon_id": {
+      "pattern": "^T[0-9A-HJKMNP-TV-Z]{9}$",
+      "title": "Taxon Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "taxon_id",
+    "name",
+    "language",
+    "script",
+    "kind"
+  ],
+  "title": "NameRow",
+  "type": "object"
+}
