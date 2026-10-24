@@ -33,7 +33,7 @@ fennel,herbaceous_perennial,spice,field,subtropical,
 ginger,geophyte,spice,field,tropical,
 water_spinach,aquatic,vegetable,flooded,tropical,
 lotus,aquatic,ornamental,flooded,tropical,
-orchid,epiphyte,ornamental,container,tropical,humidity_min
+hoya,epiphyte,ornamental,container,tropical,humidity_min
 vanilla,epiphyte,spice,container,tropical,humidity_min|shade_required
 oyster_mushroom,fungal,specialty,substrate,temperate,
 truffle,fungal,specialty,substrate,temperate,host_tree_symbiosis
@@ -75,8 +75,8 @@ wild_rice,aquatic,staple,flooded,temperate,
 carob,woody_perennial,staple,field,subtropical,
 silverweed,herbaceous_perennial,staple,field,temperate,
 leucaena,woody_perennial,fodder,field,tropical,nitrogen_fixation
-dionaea,herbaceous_perennial,ornamental,container,subtropical,humidity_min|water_tds_max
-heliamphora,herbaceous_perennial,ornamental,container,tropical,humidity_min|water_tds_max
+byblis,herbaceous_perennial,ornamental,container,subtropical,humidity_min|water_tds_max
+drosophyllum,herbaceous_perennial,ornamental,container,temperate,
 utricularia,aquatic,ornamental,container,tropical,water_tds_max
 roridula,woody_perennial,ornamental,container,subtropical,
 genlisea,herbaceous_perennial,ornamental,container,tropical,humidity_min|water_tds_max
@@ -98,10 +98,10 @@ nephrolepis,pteridophyte,ornamental,field,tropical,
 platycerium,pteridophyte,ornamental,container,tropical,
 equisetum,pteridophyte,ornamental,field,temperate,
 marsilea,pteridophyte,ornamental,flooded,tropical,
-ginkgo,gymnosperm,specialty,field,temperate,
-araucaria,gymnosperm,ornamental,field,subtropical,
+pinus,gymnosperm,specialty,field,temperate,
+cupressus,gymnosperm,ornamental,field,subtropical,
 podocarpus,gymnosperm,ornamental,field,tropical,
-sequoia,gymnosperm,ornamental,field,temperate,
+picea,gymnosperm,ornamental,field,temperate,
 eichhornia,aquatic,fodder,flooded,tropical,
 salvinia,pteridophyte,fodder,flooded,tropical,
 typha,herbaceous_perennial,fodder,flooded,temperate,
