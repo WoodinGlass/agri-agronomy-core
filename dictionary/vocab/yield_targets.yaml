@@ -1,0 +1,8 @@
+schema_version: 1
+yield_targets:
+  subsistence:
+    description: "Subsistence or home-garden yield; no market constraint."
+  commercial:
+    description: "Commercial production; market quality and volume apply."
+  experimental:
+    description: "Experimental or research plot; yield is not the goal."

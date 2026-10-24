@@ -1,0 +1,6 @@
+schema_version: 1
+establishment_states:
+  new:
+    description: "Newly planted; in the establishment phase."
+  established:
+    description: "Past the establishment phase; roots and canopy are settled."

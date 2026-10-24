@@ -1,0 +1,32 @@
+schema_version: 1
+# Custom units not represented by pint. Standard units use their pint ID
+# directly in parameter definitions and do not need an entry here.
+#
+# Canonical unit IDs used across the dictionary:
+#   - degC, dS/m, kg/ha, mole/m^2/day, m, cm, L, g/plant (pint)
+#   - dimensionless (pint, empty string)
+#   - pH, ppm, percent (custom, below)
+#
+# Facts store values in these canonical units. Conversion happens at import.
+custom_units:
+  pH:
+    kind: custom
+    description: "Negative log10 of hydrogen ion activity."
+    range: [0.0, 14.0]
+  ppm:
+    kind: custom
+    description: "Milligrams per liter (mg/L). Water TDS only; not soil."
+    range: [0.0, 10000.0]
+  percent:
+    kind: custom
+    description: "Percentage, 0-100."
+    range: [0.0, 100.0]
+
+# Aliases registered on the pint UnitRegistry before parsing canonical units.
+# `plant` is a count-like denominator: `g/plant` means grams per individual
+# plant. Pint has `count` as a dimensionless unit; aliasing plant to count
+# lets `g/plant` parse while the "per plant" semantics stay in the unit string.
+# Dimensional analysis cannot distinguish `g/plant` from `g/count`; if you need
+# to convert per-plant doses to absolute mass, carry the plant count in scope.
+pint_aliases:
+  plant: count
