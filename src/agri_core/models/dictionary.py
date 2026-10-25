@@ -85,3 +85,213 @@ class Dictionary(BaseModel):
             key: self.parameters[key].model_dump(mode="json") for key in sorted(self.parameters)
         }
         return hashlib.sha256(canonical_json(payload)).hexdigest()
+
+
+def load_bundle_from_root(root: Path) -> dict[str, Any]:
+    """Load ``{version, parameters, vocab, units}`` from a dictionary root.
+
+    ``root`` must contain ``parameters.core.yaml``, ``unit_registry.yaml`` and
+    a ``vocab/`` directory of YAML files. All vocab files are parsed and
+    included; the resulting dict is the input for ``contract_hash`` and for
+    the history snapshots.
+    """
+    params_data = yaml.safe_load((root / "parameters.core.yaml").read_text(encoding="utf-8"))
+    units_data = yaml.safe_load((root / "unit_registry.yaml").read_text(encoding="utf-8"))
+    vocab: dict[str, Any] = {}
+    for f in sorted((root / "vocab").glob("*.yaml")):
+        vocab[f.stem] = yaml.safe_load(f.read_text(encoding="utf-8"))
+    return {
+        "version": params_data["dictionary_version"],
+        "parameters": params_data["parameters"],
+        "vocab": vocab,
+        "units": units_data,
+    }
+
+
+def contract_hash(bundle: dict[str, Any]) -> str:
+    """SHA-256 of canonical JSON of ``{parameters, vocab, units}``.
+
+    Version is intentionally excluded: the version + hash pair lives in
+    ``dictionary.lock`` and is checked separately. Two bundles with the same
+    content but different version strings have the same ``contract_hash``.
+    """
+    payload = {
+        "parameters": bundle["parameters"],
+        "vocab": bundle["vocab"],
+        "units": bundle["units"],
+    }
+    return hashlib.sha256(canonical_json(payload)).hexdigest()
+
+
+_SOFT_FIELDS: frozenset[str] = frozenset({"description", "rationale"})
+_WIDENABLE_FIELDS: frozenset[str] = frozenset(
+    {
+        "applies_to",
+        "scope_keys",
+        "allowed_phases",
+        "physical_range",
+    }
+)
+
+
+def _narrowed(old: list[str] | None, new: list[str] | None) -> bool:
+    """True if new is a strict narrowing of old (removed values, or from unlimited)."""
+    if old is None:
+        return new is not None
+    if new is None:
+        return False
+    return not set(new).issuperset(set(old))
+
+
+def _widened(old: list[str] | None, new: list[str] | None) -> bool:
+    """True if new is a widening of old (added values, or to unlimited)."""
+    if old is None:
+        return False
+    if new is None:
+        return True
+    return bool(set(new) - set(old))
+
+
+def _range_narrowed(
+    old: tuple[float, float] | list[float] | None,
+    new: tuple[float, float] | list[float] | None,
+) -> bool:
+    if old is None:
+        return new is not None
+    if new is None:
+        return False
+    return new[0] > old[0] or new[1] < old[1]
+
+
+def _range_widened(
+    old: tuple[float, float] | list[float] | None,
+    new: tuple[float, float] | list[float] | None,
+) -> bool:
+    if old is None:
+        return False
+    if new is None:
+        return True
+    return new[0] < old[0] or new[1] > old[1]
+
+
+_APPLIES_TO_DIMS: tuple[str, ...] = (
+    "organism_groups",
+    "archetypes",
+    "uses",
+    "systems",
+    "traits",
+)
+
+
+def classify_change(old: dict[str, Any], new: dict[str, Any]) -> str:
+    """Classify the SemVer bump required by a bundle change.
+
+    Returns ``"MAJOR"``, ``"MINOR"`` or ``"PATCH"``. Fail-closed: any change
+    that is not explicitly classified as a PATCH or a known MINOR pattern is
+    MAJOR.
+
+    MAJOR: key removed or renamed; shape, unit, phase_set, enum_values,
+    enum_source, or safety_class changed; applies_to, scope_keys,
+    allowed_phases, or physical_range narrowed; tier_required false -> true;
+    vocab value removed; custom unit definition changed or removed; any other
+    non-soft field changed.
+
+    MINOR: new key; applies_to, scope_keys, allowed_phases, or physical_range
+    widened; new vocab value; new custom unit.
+
+    PATCH: only description or rationale changed.
+    """
+    old_p = old["parameters"]
+    new_p = new["parameters"]
+
+    # --- MAJOR checks ---
+    if set(old_p) - set(new_p):
+        return "MAJOR"
+
+    for key in old_p:
+        op = old_p[key]
+        np_ = new_p[key]
+
+        for field in ("shape", "unit", "phase_set", "enum_values", "enum_source", "safety_class"):
+            if op.get(field) != np_.get(field):
+                return "MAJOR"
+
+        if op.get("tier_required") is False and np_.get("tier_required") is True:
+            return "MAJOR"
+
+        oa = op.get("applies_to") or {}
+        na = np_.get("applies_to") or {}
+        for dim in _APPLIES_TO_DIMS:
+            if _narrowed(oa.get(dim), na.get(dim)):
+                return "MAJOR"
+
+        if _narrowed(op.get("scope_keys") or [], np_.get("scope_keys") or []):
+            return "MAJOR"
+        if _narrowed(op.get("allowed_phases"), np_.get("allowed_phases")):
+            return "MAJOR"
+        if _range_narrowed(op.get("physical_range"), np_.get("physical_range")):
+            return "MAJOR"
+
+    for vname, ovocab in (old.get("vocab") or {}).items():
+        nvocab = (new.get("vocab") or {}).get(vname)
+        if nvocab is None:
+            return "MAJOR"
+        for section, ometa in ovocab.items():
+            if section == "schema_version" or not isinstance(ometa, dict):
+                continue
+            nmeta = nvocab.get(section)
+            if not isinstance(nmeta, dict):
+                if ometa:
+                    return "MAJOR"
+                continue
+            if set(ometa) - set(nmeta):
+                return "MAJOR"
+
+    ou = (old.get("units") or {}).get("custom_units") or {}
+    nu = (new.get("units") or {}).get("custom_units") or {}
+    for unit, odef in ou.items():
+        if unit not in nu or nu[unit] != odef:
+            return "MAJOR"
+
+    # Fail-closed: any non-soft field change not caught above is MAJOR
+    for key in old_p:
+        op = old_p[key]
+        np_ = new_p[key]
+        for field in set(op) | set(np_):
+            if field in _SOFT_FIELDS or field in _WIDENABLE_FIELDS:
+                continue
+            if op.get(field) != np_.get(field):
+                return "MAJOR"
+
+    # --- MINOR checks ---
+    if set(new_p) - set(old_p):
+        return "MINOR"
+
+    for key in old_p:
+        op = old_p[key]
+        np_ = new_p[key]
+        oa = op.get("applies_to") or {}
+        na = np_.get("applies_to") or {}
+        for dim in _APPLIES_TO_DIMS:
+            if _widened(oa.get(dim), na.get(dim)):
+                return "MINOR"
+        if _widened(op.get("scope_keys") or [], np_.get("scope_keys") or []):
+            return "MINOR"
+        if _widened(op.get("allowed_phases"), np_.get("allowed_phases")):
+            return "MINOR"
+        if _range_widened(op.get("physical_range"), np_.get("physical_range")):
+            return "MINOR"
+
+    for vname, ovocab in (old.get("vocab") or {}).items():
+        nvocab = (new.get("vocab") or {}).get(vname) or {}
+        for section, ometa in ovocab.items():
+            if section == "schema_version" or not isinstance(ometa, dict):
+                continue
+            nmeta = nvocab.get(section)
+            if isinstance(nmeta, dict) and (set(nmeta) - set(ometa)):
+                return "MINOR"
+
+    if set(nu) - set(ou):
+        return "MINOR"
+
+    return "PATCH"
