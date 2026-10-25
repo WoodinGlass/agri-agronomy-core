@@ -131,16 +131,16 @@
     },
     "Provenance": {
       "additionalProperties": false,
-      "description": "Where a calculation's numbers came from.\n\n``profile_ids`` names the crop profiles that contributed values.\n``profile_version`` is the content hash of those profiles at computation\ntime; it is ``None`` when the calculation does not read a profile (for\nexample, raw VPD from weather inputs).\n``source_ids`` lists the ``src`` IDs in ``profiles/sources.csv`` behind\nthe values used.",
+      "description": "Where a calculation's numbers came from.\n\n``fact_ids`` names the facts that contributed values.\n``pack_version`` is the version of the pack that supplied those facts;\nit is ``None`` when the calculation does not read a pack (for example,\nraw VPD from weather inputs).\n``pack_hash`` is the pack's ``content_hash`` (``sha256:<hex>``), which\npins the exact data used; it is ``None`` under the same conditions as\n``pack_version``.\n``source_ids`` lists the ``src`` IDs from ``sources.csv`` behind the\nvalues used.",
       "properties": {
-        "profile_ids": {
+        "fact_ids": {
           "items": {
             "type": "string"
           },
-          "title": "Profile Ids",
+          "title": "Fact Ids",
           "type": "array"
         },
-        "profile_version": {
+        "pack_hash": {
           "anyOf": [
             {
               "type": "string"
@@ -150,7 +150,19 @@
             }
           ],
           "default": null,
-          "title": "Profile Version"
+          "title": "Pack Hash"
+        },
+        "pack_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pack Version"
         },
         "source_ids": {
           "items": {

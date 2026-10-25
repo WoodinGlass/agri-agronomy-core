@@ -28,8 +28,9 @@ pytestmark = pytest.mark.unit
 
 def _provenance() -> Provenance:
     return Provenance(
-        profile_ids=["tomato"],
-        profile_version="sha256:abc",
+        fact_ids=["F0000001"],
+        pack_version="2026.10.0",
+        pack_hash="sha256:" + "a" * 64,
         source_ids=["S014"],
     )
 

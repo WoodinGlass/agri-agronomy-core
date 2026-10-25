@@ -30,8 +30,9 @@ pytestmark = pytest.mark.unit
                 "unit": "kPa",
                 "method": "x",
                 "provenance": {
-                    "profile_ids": [],
-                    "profile_version": None,
+                    "fact_ids": [],
+                    "pack_version": None,
+                    "pack_hash": None,
                     "source_ids": [],
                 },
                 "evidence": [],
@@ -60,8 +61,9 @@ def test_reject_unknown_status() -> None:
 
 def test_provenance_default_constructible() -> None:
     p = Provenance()
-    assert p.profile_ids == []
-    assert p.profile_version is None
+    assert p.fact_ids == []
+    assert p.pack_version is None
+    assert p.pack_hash is None
     assert p.source_ids == []
 
 
