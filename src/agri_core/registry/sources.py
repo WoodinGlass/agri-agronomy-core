@@ -1,4 +1,4 @@
-"""Source-row model and linting for ``profiles/sources.csv``."""
+"""Source-row model and linting for ``sources.csv``."""
 
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ def _is_valid_license(license_id: str) -> bool:
 
 
 class SourceRow(BaseModel):
-    """One row of ``profiles/sources.csv``."""
+    """One row of ``sources.csv``."""
 
     model_config = ConfigDict(
         frozen=True,
@@ -100,14 +100,14 @@ class Finding:
     message: str
 
 
-def _row_findings(row: SourceRow, line: int, *, today: date) -> list[Finding]:
+def _row_findings(row: SourceRow, line: int, *, today: date, filename: str) -> list[Finding]:
     out: list[Finding] = []
     if row.access_date > today:
         out.append(
             Finding(
                 code="SRC004",
                 severity="error",
-                file="profiles/sources.csv",
+                file=filename,
                 line=line,
                 message=f"{row.id}: access_date {row.access_date} is in the future",
             )
@@ -118,7 +118,7 @@ def _row_findings(row: SourceRow, line: int, *, today: date) -> list[Finding]:
                 Finding(
                     code="SRC002",
                     severity="error",
-                    file="profiles/sources.csv",
+                    file=filename,
                     line=line,
                     message=f"{row.id}: commercial_use=yes requires a known license",
                 )
@@ -128,7 +128,7 @@ def _row_findings(row: SourceRow, line: int, *, today: date) -> list[Finding]:
                 Finding(
                     code="SRC001",
                     severity="error",
-                    file="profiles/sources.csv",
+                    file=filename,
                     line=line,
                     message=(
                         f"{row.id}: commercial_use=yes conflicts with NC license {row.license}"
@@ -142,7 +142,7 @@ def lint_csv_text(
     text: str,
     *,
     today: date,
-    filename: str = "profiles/sources.csv",
+    filename: str = "<inline>",
 ) -> list[Finding]:
     """Lint an in-memory CSV text. Returns every finding; never stops early."""
     if text.startswith("\ufeff"):
@@ -199,7 +199,7 @@ def lint_csv_text(
             )
             continue
         seen[row.id] = line
-        findings.extend(_row_findings(row, line, today=today))
+        findings.extend(_row_findings(row, line, today=today, filename=filename))
     return findings
 
 

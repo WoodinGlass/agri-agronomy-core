@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "One row of ``profiles/sources.csv``.",
+  "description": "One row of ``sources.csv``.",
   "properties": {
     "access_date": {
       "format": "date",

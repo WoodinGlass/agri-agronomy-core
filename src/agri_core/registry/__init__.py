@@ -1,4 +1,4 @@
-"""Source-row model and linting for ``profiles/sources.csv``."""
+"""Source-row model and linting for ``sources.csv``."""
 
 from __future__ import annotations
 
