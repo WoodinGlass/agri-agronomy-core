@@ -18,6 +18,7 @@ from agri_core.pack.errors import (
     UnsupportedSchemaVersionError,
 )
 from agri_core.pack.manifest import SUPPORTED_SCHEMA_VERSIONS, PackManifest
+from agri_core.pack.verify import verify_pack_hash
 
 PackKind = Literal["sample", "directory"]
 
@@ -58,26 +59,28 @@ def _check_compat(manifest: PackManifest) -> None:
         raise EngineTooOldError(f"engine {engine} < required {required} (pack needs newer engine)")
 
 
-def _finish(root: Path, kind: PackKind) -> Pack:
+def _finish(root: Path, kind: PackKind, *, verify_hash: bool = True) -> Pack:
     manifest = _read_manifest(root)
     _check_compat(manifest)
+    if verify_hash:
+        verify_pack_hash(root, manifest)
     sources_csv = root / "sources.csv"
     if not sources_csv.is_file():
         raise InvalidPackError(f"sources.csv not found in {root}")
     return Pack(root=root, kind=kind, manifest=manifest, sources_csv=sources_csv)
 
 
-def load_pack(path: str | Path) -> Pack:
+def load_pack(path: str | Path, *, verify_hash: bool = True) -> Pack:
     """Load a pack from an explicit directory. The directory must contain pack.toml."""
     root = Path(path)
     if not root.is_dir():
         raise PackNotFoundError(f"pack directory not found: {root}")
-    return _finish(root, kind="directory")
+    return _finish(root, kind="directory", verify_hash=verify_hash)
 
 
-def load_sample_pack() -> Pack:
+def load_sample_pack(*, verify_hash: bool = True) -> Pack:
     """Load the sample pack shipped inside the installed package."""
     root = Path(str(_resource_files("agri_core") / "_samples" / "sample_pack"))
     if not root.is_dir():
         raise PackNotFoundError("sample pack missing from installed package (broken installation)")
-    return _finish(root, kind="sample")
+    return _finish(root, kind="sample", verify_hash=verify_hash)

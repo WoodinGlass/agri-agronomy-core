@@ -2,6 +2,18 @@
   "additionalProperties": false,
   "description": "Parsed ``pack.toml``.",
   "properties": {
+    "content_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Content Hash"
+    },
     "engine_min": {
       "title": "Engine Min",
       "type": "string"

@@ -11,6 +11,7 @@ SUPPORTED_SCHEMA_VERSIONS: frozenset[int] = frozenset({1})
 
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
 _SEMVER3_RE = re.compile(r"^\d+\.\d+\.\d+$")
+_HASH_RE = re.compile(r"^sha256:[a-f0-9]{64}$")
 
 
 def _check_semver3(value: str, field: str) -> str:
@@ -32,6 +33,7 @@ class PackManifest(BaseModel):
     version: str
     schema_version: int = Field(strict=True, ge=1)
     engine_min: str
+    content_hash: str | None = None
 
     @field_validator("name")
     @classmethod
@@ -49,3 +51,12 @@ class PackManifest(BaseModel):
     @classmethod
     def _engine_ok(cls, v: str) -> str:
         return _check_semver3(v, "engine_min")
+
+    @field_validator("content_hash")
+    @classmethod
+    def _content_hash_ok(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        if not _HASH_RE.match(v):
+            raise ValueError("content_hash must be 'sha256:<64 lowercase hex>'")
+        return v
