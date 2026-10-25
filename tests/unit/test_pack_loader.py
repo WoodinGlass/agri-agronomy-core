@@ -12,6 +12,7 @@ from agri_core.pack import (
     Pack,
     PackNotFoundError,
     UnsupportedSchemaVersionError,
+    compute_pack_hash,
     load_pack,
     load_sample_pack,
 )
@@ -32,15 +33,17 @@ def _make_pack(
 ) -> Path:
     root = tmp_path / "pack"
     root.mkdir()
-    (root / "pack.toml").write_text(
+    body = (
         f'name = "{name}"\n'
         f'version = "{version}"\n'
         f"schema_version = {schema_version}\n"
-        f'engine_min = "{engine_min}"\n',
-        encoding="utf-8",
+        f'engine_min = "{engine_min}"\n'
     )
+    (root / "pack.toml").write_text(body, encoding="utf-8")
     if sources is not None:
         (root / "sources.csv").write_bytes(sources)
+    digest = compute_pack_hash(root)
+    (root / "pack.toml").write_text(body + f'content_hash = "{digest}"\n', encoding="utf-8")
     return root
 
 

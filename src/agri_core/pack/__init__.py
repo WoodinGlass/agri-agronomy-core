@@ -11,6 +11,7 @@ from agri_core.pack.errors import (
 )
 from agri_core.pack.loader import Pack, PackKind, load_pack, load_sample_pack
 from agri_core.pack.manifest import SUPPORTED_SCHEMA_VERSIONS, PackManifest
+from agri_core.pack.verify import compute_pack_hash, verify_pack_hash
 
 __all__ = [
     "SUPPORTED_SCHEMA_VERSIONS",
@@ -22,6 +23,8 @@ __all__ = [
     "PackManifest",
     "PackNotFoundError",
     "UnsupportedSchemaVersionError",
+    "compute_pack_hash",
     "load_pack",
     "load_sample_pack",
+    "verify_pack_hash",
 ]

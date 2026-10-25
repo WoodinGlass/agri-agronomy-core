@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 
 from agri_core import __version__
 from agri_core.cli import app
+from agri_core.pack import compute_pack_hash
 
 pytestmark = pytest.mark.unit
 
@@ -30,14 +31,16 @@ def _make_pack(
 ) -> Path:
     root = tmp_path / "pack"
     root.mkdir()
-    (root / "pack.toml").write_text(
+    body = (
         f'name = "{name}"\n'
         f'version = "{version}"\n'
         f"schema_version = {schema_version}\n"
-        f'engine_min = "{engine_min}"\n',
-        encoding="utf-8",
+        f'engine_min = "{engine_min}"\n'
     )
+    (root / "pack.toml").write_text(body, encoding="utf-8")
     (root / "sources.csv").write_bytes(sources_content)
+    digest = compute_pack_hash(root)
+    (root / "pack.toml").write_text(body + f'content_hash = "{digest}"\n', encoding="utf-8")
     return root
 
 
