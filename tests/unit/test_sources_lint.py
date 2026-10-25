@@ -119,3 +119,30 @@ def test_broken_fixture_collects_multiple() -> None:
 def test_missing_file() -> None:
     findings = lint_csv_file(Path("/nonexistent/sources.csv"), today=TODAY)
     assert _codes(findings) == ["SRC000"]
+
+
+def test_lint_file_findings_carry_real_path(tmp_path: Path) -> None:
+    """SRC001/002/004 must report the actual file path, not a placeholder."""
+    target = tmp_path / "sources.csv"
+    target.write_text(
+        HEADER_LINE
+        + "S001,https://x,CC-BY-NC-4.0,yes,2099-01-01,doc\n"
+        + "S002,https://x,unclear,yes,2026-01-15,doc\n",
+        encoding="utf-8",
+    )
+    findings = lint_csv_file(target, today=TODAY)
+    codes = {f.code for f in findings}
+    assert {"SRC001", "SRC002", "SRC004"} <= codes, f"missing expected codes in {sorted(codes)}"
+    for f in findings:
+        assert f.file == str(target), f"{f.code} reports file={f.file!r}, expected {str(target)!r}"
+
+
+def test_lint_text_honours_explicit_filename() -> None:
+    """SRC001/002/004 honour the caller-supplied filename in lint_csv_text."""
+    text = HEADER_LINE + "S001,https://x,CC-BY-NC-4.0,yes,2099-01-01,doc\n"
+    findings = lint_csv_text(text, today=TODAY, filename="custom.csv")
+    assert findings, "expected at least one finding"
+    codes = {f.code for f in findings}
+    assert {"SRC001", "SRC004"} <= codes
+    for f in findings:
+        assert f.file == "custom.csv"
