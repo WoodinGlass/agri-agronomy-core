@@ -28,7 +28,7 @@ dependencies = [
     "jsonschema>=4.20,<5",
     "pyyaml>=6.0.2,<7",
     "pint>=0.24.4,<0.26",
-    "typer>=0.12,<0.16",
+    "typer>=0.16,<0.20",
     "packaging>=24,<27",
 ]
 
@@ -49,10 +49,6 @@ dev = [
     "hatchling>=1.25,<2",
     "editables>=0.5,<1",
     "types-jsonschema>=4.20,<5",
-    # click 8.2 (May 2025) changes Parameter.make_metavar signature; typer
-    # 0.12/0.15 break against it. Pin below 8.2 until typer lower bound is
-    # raised to a version that supports click 8.2 (0.16+).
-    "click>=8.1,<8.2",
     "types-PyYAML>=6.0,<7",
 ]
 
@@ -113,16 +109,12 @@ minversion = "8.0"
 addopts = "-ra --strict-markers --strict-config --cov=agri_core --cov-report=term-missing --cov-fail-under=90"
 testpaths = ["tests"]
 filterwarnings = [
-    # pytest inserts each entry at the front of the filter list, so the LAST
-    # entry wins for matching warnings. Keep "error" first so the ignore below
-    # takes precedence for the typer 0.12.0 deprecation only.
     "error",
-    # Typer 0.12.0 (lower bound) imports several names from click.utils that
-    # click 8.1.x deprecates on access: get_binary_stream, get_text_stream, and
-    # possibly more. Message pattern covers every click 9.0 deprecation without
-    # suppressing unrelated warnings. Remove this once the typer lower bound is
-    # raised to a version that no longer imports deprecated click.utils names.
-    "ignore:.*is deprecated and will be removed in Click 9\\.0.*:DeprecationWarning",
+    # typer 0.16+ (as of 0.19.2) still imports names such as
+    # click.utils.get_binary_stream that click 8.5 deprecates on access.
+    # Narrowed to click.utils.* only: other DeprecationWarnings still fail
+    # the suite. Remove when the typer line stops importing them.
+    "ignore:.*click\\.utils\\..*is deprecated and will be removed in Click 9.*:DeprecationWarning",
 ]
 xfail_strict = true
 markers = [
@@ -145,9 +137,3 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
 ]
-
-[tool.ruff.lint.per-file-ignores]
-# cli.py uses Optional[Path] instead of Path | None in typer-decorated
-# signatures because typer 0.12 does not support PEP 604 unions inside
-# Annotated. Remove once typer lower bound is raised to >=0.15.
-"src/agri_core/cli.py" = ["UP045"]
