@@ -1,0 +1,1735 @@
+{
+  "parameters": {
+    "air_rh": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant",
+          "fungus"
+        ]
+      },
+      "description": "Relative humidity optimal and absolute bounds.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "biological",
+      "physical_range": [
+        0.0,
+        100.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "elevation_m",
+        "climate_zone",
+        "variety"
+      ],
+      "shape": "trapezoid",
+      "stage": "care",
+      "tier_required": true,
+      "unit": "percent",
+      "used_by": [
+        "thresholds"
+      ]
+    },
+    "air_temp_day": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant",
+          "fungus"
+        ]
+      },
+      "description": "Daytime air temperature optimal and absolute bounds.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "biological",
+      "physical_range": [
+        -40.0,
+        60.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "elevation_m",
+        "climate_zone",
+        "variety"
+      ],
+      "shape": "trapezoid",
+      "stage": "care",
+      "tier_required": true,
+      "unit": "degree_Celsius",
+      "used_by": [
+        "thresholds"
+      ]
+    },
+    "air_temp_night": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant",
+          "fungus"
+        ]
+      },
+      "description": "Night-time air temperature optimal and absolute bounds.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "biological",
+      "physical_range": [
+        -40.0,
+        60.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "elevation_m",
+        "climate_zone",
+        "variety"
+      ],
+      "shape": "trapezoid",
+      "stage": "care",
+      "tier_required": true,
+      "unit": "degree_Celsius",
+      "used_by": [
+        "thresholds"
+      ]
+    },
+    "awd_reflood_depth": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "flooded"
+        ]
+      },
+      "description": "Water-table depth below the soil surface at which an AWD field is re-flooded; positive values indicate depth below surface.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        50.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "variety"
+      ],
+      "shape": "scalar",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "centimeter",
+      "used_by": [
+        "irrigation"
+      ]
+    },
+    "depletion_fraction": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "field"
+        ]
+      },
+      "description": "Fraction of plant-available water that can be depleted before irrigation.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        1.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "variety"
+      ],
+      "shape": "scalar",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "dimensionless",
+      "used_by": [
+        "irrigation"
+      ]
+    },
+    "dli": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ]
+      },
+      "description": "Daily light integral optimal and absolute bounds.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "biological",
+      "physical_range": [
+        0.0,
+        100.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "elevation_m",
+        "climate_zone",
+        "environment",
+        "variety"
+      ],
+      "shape": "trapezoid",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "mole/meter**2/day",
+      "used_by": [
+        "thresholds"
+      ]
+    },
+    "gdd_base": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ]
+      },
+      "description": "Base temperature for growing degree-day accumulation.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        30.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [],
+      "shape": "scalar",
+      "stage": "cycle",
+      "tier_required": false,
+      "unit": "degree_Celsius",
+      "used_by": [
+        "climate",
+        "stages"
+      ]
+    },
+    "gdd_upper": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ]
+      },
+      "description": "Optional upper cut-off for growing degree-day accumulation.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        50.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [],
+      "shape": "scalar",
+      "stage": "cycle",
+      "tier_required": false,
+      "unit": "degree_Celsius",
+      "used_by": [
+        "climate",
+        "stages"
+      ]
+    },
+    "k2o_fertilizer_rate": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "field",
+          "flooded"
+        ]
+      },
+      "description": "Recommended nutrient rate to apply as fertilizer (as K2O, not crop uptake) for one crop period. The period is one cycle when managed_cycle is single_season, one calendar year when multi_season.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        2000.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "system",
+        "use",
+        "variety",
+        "yield_target"
+      ],
+      "shape": "range",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "kilogram/hectare",
+      "used_by": [
+        "fertilizer"
+      ]
+    },
+    "k2o_max_per_application": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "field",
+          "flooded"
+        ]
+      },
+      "description": "Maximum K2O per single fertilizer application, as kg K2O per hectare.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        500.0
+      ],
+      "rationale": "Over-application of potassium can cause root salt injury and can contribute to magnesium deficiency in grazing livestock.",
+      "safety_class": "dose_cap",
+      "scope_keys": [
+        "country",
+        "region",
+        "system"
+      ],
+      "shape": "scalar",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "kilogram/hectare",
+      "used_by": [
+        "fertilizer",
+        "safety"
+      ]
+    },
+    "kc": {
+      "allowed_phases": [
+        "initial",
+        "midseason",
+        "late_season"
+      ],
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "field"
+        ]
+      },
+      "description": "Crop coefficient for evapotranspiration.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "kc",
+      "physical_range": [
+        0.0,
+        2.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "elevation_m",
+        "system",
+        "climate_zone",
+        "variety"
+      ],
+      "shape": "scalar",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "dimensionless",
+      "used_by": [
+        "irrigation"
+      ]
+    },
+    "kc_stage_length": {
+      "allowed_phases": [
+        "initial",
+        "development",
+        "midseason",
+        "late_season"
+      ],
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "field"
+        ]
+      },
+      "description": "Length in days of a crop-coefficient stage.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "kc",
+      "physical_range": [
+        1.0,
+        3650.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "elevation_m",
+        "system",
+        "climate_zone",
+        "variety"
+      ],
+      "shape": "scalar",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "day",
+      "used_by": [
+        "irrigation"
+      ]
+    },
+    "managed_cycle": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant",
+          "fungus"
+        ]
+      },
+      "description": "Whether cultivation is a single season or spans multiple seasons.",
+      "enum_values": [
+        "single_season",
+        "multi_season"
+      ],
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": null,
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [],
+      "shape": "enum",
+      "stage": "cycle",
+      "tier_required": true,
+      "unit": null,
+      "used_by": [
+        "stages",
+        "fertilizer"
+      ]
+    },
+    "moisture_band": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "container"
+        ]
+      },
+      "description": "Relative plant-available water target for container irrigation.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        100.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "variety"
+      ],
+      "shape": "trapezoid",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "percent",
+      "used_by": [
+        "irrigation",
+        "thresholds"
+      ]
+    },
+    "must_flood_phases": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "flooded"
+        ]
+      },
+      "description": "Set of biological phases during which the field must remain flooded.",
+      "enum_source": "phases:biological",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": null,
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "variety"
+      ],
+      "shape": "enum_set",
+      "stage": "care",
+      "tier_required": false,
+      "unit": null,
+      "used_by": [
+        "irrigation"
+      ]
+    },
+    "n_fertilizer_rate": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "field",
+          "flooded"
+        ]
+      },
+      "description": "Recommended nutrient rate to apply as fertilizer (as N, not crop uptake) for one crop period. The period is one cycle when managed_cycle is single_season, one calendar year when multi_season.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        2000.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "system",
+        "use",
+        "variety",
+        "yield_target"
+      ],
+      "shape": "range",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "kilogram/hectare",
+      "used_by": [
+        "fertilizer"
+      ]
+    },
+    "n_max_per_application": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "field",
+          "flooded"
+        ]
+      },
+      "description": "Maximum nitrogen per single fertilizer application, as kg N per hectare.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        500.0
+      ],
+      "rationale": "Over-application of nitrogen leaches nitrate into groundwater, which is regulated in many jurisdictions, and can injure seedlings.",
+      "safety_class": "dose_cap",
+      "scope_keys": [
+        "country",
+        "region",
+        "system"
+      ],
+      "shape": "scalar",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "kilogram/hectare",
+      "used_by": [
+        "fertilizer",
+        "safety"
+      ]
+    },
+    "p2o5_fertilizer_rate": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "field",
+          "flooded"
+        ]
+      },
+      "description": "Recommended nutrient rate to apply as fertilizer (as P2O5, not crop uptake) for one crop period. The period is one cycle when managed_cycle is single_season, one calendar year when multi_season.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        2000.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "system",
+        "use",
+        "variety",
+        "yield_target"
+      ],
+      "shape": "range",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "kilogram/hectare",
+      "used_by": [
+        "fertilizer"
+      ]
+    },
+    "p2o5_max_per_application": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "field",
+          "flooded"
+        ]
+      },
+      "description": "Maximum P2O5 per single fertilizer application, as kg P2O5 per hectare.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        500.0
+      ],
+      "rationale": "Over-application of phosphorus runs off into surface water and causes eutrophication.",
+      "safety_class": "dose_cap",
+      "scope_keys": [
+        "country",
+        "region",
+        "system"
+      ],
+      "shape": "scalar",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "kilogram/hectare",
+      "used_by": [
+        "fertilizer",
+        "safety"
+      ]
+    },
+    "percolation_rate": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "flooded"
+        ]
+      },
+      "description": "Downward water loss through the soil profile.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        100.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region"
+      ],
+      "shape": "scalar",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "millimeter/day",
+      "used_by": [
+        "irrigation"
+      ]
+    },
+    "phase_duration": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant",
+          "fungus"
+        ]
+      },
+      "description": "Number of days in a given biological phase.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "biological",
+      "physical_range": [
+        1.0,
+        3650.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [],
+      "shape": "scalar",
+      "stage": "cycle",
+      "tier_required": true,
+      "unit": "day",
+      "used_by": [
+        "stages"
+      ]
+    },
+    "phase_thermal_time": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ]
+      },
+      "description": "Accumulated thermal time in a given biological phase.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "biological",
+      "physical_range": [
+        0.0,
+        10000.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [],
+      "shape": "scalar",
+      "stage": "cycle",
+      "tier_required": false,
+      "unit": "degree_day",
+      "used_by": [
+        "stages"
+      ]
+    },
+    "plant_density": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "field",
+          "flooded"
+        ]
+      },
+      "description": "Planting density as counting stations per hectare. The counting unit matches the per-plant dose basis: individual plant, hill, banana stool, or tree. Profile values record the typical density; the calculator (M3) accepts the actual density from the caller and uses the profile value only as a recorded assumption, never silently.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        100000000.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "system",
+        "environment",
+        "use",
+        "variety",
+        "growth_habit",
+        "establishment"
+      ],
+      "shape": "scalar",
+      "stage": "planting",
+      "tier_required": false,
+      "unit": "1/hectare",
+      "used_by": [
+        "fertilizer"
+      ]
+    },
+    "ponding_depth": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "flooded"
+        ]
+      },
+      "description": "Standing water depth above the soil surface during a flooded phase.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "biological",
+      "physical_range": [
+        0.0,
+        30.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "variety"
+      ],
+      "shape": "scalar",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "centimeter",
+      "used_by": [
+        "irrigation"
+      ]
+    },
+    "predrain_days": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "flooded"
+        ]
+      },
+      "description": "Number of days before harvest at which a flooded field is drained.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        30.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region"
+      ],
+      "shape": "scalar",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "day",
+      "used_by": [
+        "irrigation"
+      ]
+    },
+    "root_depth": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ],
+        "systems": [
+          "field"
+        ]
+      },
+      "description": "Depth of the effective root zone.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "kc",
+      "physical_range": [
+        0.05,
+        10.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "variety"
+      ],
+      "shape": "scalar",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "meter",
+      "used_by": [
+        "irrigation"
+      ]
+    },
+    "soil_ec": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant",
+          "fungus"
+        ],
+        "systems": [
+          "field",
+          "flooded",
+          "container"
+        ]
+      },
+      "description": "Soil or medium electrical conductivity optimal and absolute bounds.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        50.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "elevation_m",
+        "system",
+        "climate_zone",
+        "variety"
+      ],
+      "shape": "trapezoid",
+      "stage": "site_media",
+      "tier_required": false,
+      "unit": "decisiemens/meter",
+      "used_by": [
+        "thresholds"
+      ]
+    },
+    "soil_ph": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant",
+          "fungus"
+        ],
+        "systems": [
+          "field",
+          "flooded",
+          "container"
+        ]
+      },
+      "description": "Soil or growing-medium pH optimal and absolute bounds.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        14.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "elevation_m",
+        "system",
+        "climate_zone",
+        "variety"
+      ],
+      "shape": "trapezoid",
+      "stage": "site_media",
+      "tier_required": false,
+      "unit": "pH",
+      "used_by": [
+        "thresholds"
+      ]
+    },
+    "vpd": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant"
+        ]
+      },
+      "description": "Vapor pressure deficit optimal and absolute bounds.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "biological",
+      "physical_range": [
+        0.0,
+        10.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "elevation_m",
+        "climate_zone",
+        "variety"
+      ],
+      "shape": "trapezoid",
+      "stage": "care",
+      "tier_required": false,
+      "unit": "kilopascal",
+      "used_by": [
+        "thresholds"
+      ]
+    },
+    "water_ec_max": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant",
+          "fungus"
+        ]
+      },
+      "description": "Maximum electrical conductivity of irrigation water.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        10.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "system"
+      ],
+      "shape": "scalar",
+      "stage": "site_media",
+      "tier_required": false,
+      "unit": "decisiemens/meter",
+      "used_by": [
+        "media"
+      ]
+    },
+    "water_temp_max": {
+      "applies_to": {
+        "organism_groups": [
+          "vascular_plant",
+          "fungus"
+        ]
+      },
+      "description": "Maximum irrigation-water temperature.",
+      "introduced_in": "1.0.0",
+      "kind": "core",
+      "phase_set": "none",
+      "physical_range": [
+        0.0,
+        50.0
+      ],
+      "rationale": null,
+      "safety_class": "none",
+      "scope_keys": [
+        "country",
+        "region",
+        "system"
+      ],
+      "shape": "scalar",
+      "stage": "site_media",
+      "tier_required": false,
+      "unit": "degree_Celsius",
+      "used_by": [
+        "media"
+      ]
+    }
+  },
+  "units": {
+    "custom_units": {
+      "degree_day": {
+        "description": "Accumulated thermal time above a base temperature: delta_degree_Celsius * day.",
+        "kind": "custom",
+        "range": [
+          0.0,
+          100000.0
+        ]
+      },
+      "pH": {
+        "description": "Negative log10 of hydrogen ion activity.",
+        "kind": "custom",
+        "range": [
+          0.0,
+          14.0
+        ]
+      },
+      "percent": {
+        "description": "Percentage, 0-100.",
+        "kind": "custom",
+        "range": [
+          0.0,
+          100.0
+        ]
+      },
+      "ppm": {
+        "description": "Milligrams per liter (mg/L). Water TDS only; not soil.",
+        "kind": "custom",
+        "range": [
+          0.0,
+          10000.0
+        ]
+      }
+    },
+    "pint_aliases": {
+      "plant": "count"
+    },
+    "schema_version": 1
+  },
+  "version": "1.0.0",
+  "vocab": {
+    "archetypes": {
+      "archetypes": {
+        "algae": {
+          "description": "Alga (marine or freshwater).",
+          "has_default_phases": false
+        },
+        "annual": {
+          "description": "Life cycle completes within one year; dies after harvest.",
+          "has_default_phases": true
+        },
+        "aquatic": {
+          "description": "Grows in or on water (vascular aquatic).",
+          "has_default_phases": true
+        },
+        "biennial": {
+          "description": "Year 1 vegetative, year 2 flowering then dies.",
+          "has_default_phases": true
+        },
+        "bryophyte": {
+          "description": "Moss or liverwort (non-vascular plant).",
+          "has_default_phases": false
+        },
+        "epiphyte": {
+          "description": "Grows on another plant or non-soil medium (not parasitic).",
+          "has_default_phases": true
+        },
+        "fungal": {
+          "description": "Cultivated fungus.",
+          "has_default_phases": true
+        },
+        "geophyte": {
+          "description": "Underground storage organ (bulb, corm, tuber, rhizome).",
+          "has_default_phases": true
+        },
+        "gymnosperm": {
+          "description": "Conifer, cycad, or ginkgo; cone reproduction.",
+          "has_default_phases": false
+        },
+        "herbaceous_perennial": {
+          "description": "Multi-year, non-woody.",
+          "has_default_phases": true
+        },
+        "lichen": {
+          "description": "Lichen (fungus + alga/cyanobacterium symbiosis).",
+          "has_default_phases": false
+        },
+        "pteridophyte": {
+          "description": "Fern, horsetail, or lycophyte; spore reproduction.",
+          "has_default_phases": false
+        },
+        "woody_perennial": {
+          "description": "Multi-year, woody.",
+          "has_default_phases": true
+        }
+      },
+      "schema_version": 1
+    },
+    "climate_zones": {
+      "climate_zones": {
+        "alpine": {
+          "description": "Short growing season; low mean temperature; long snow cover."
+        },
+        "arid": {
+          "description": "Low and erratic rainfall; evaporation exceeds precipitation."
+        },
+        "mediterranean": {
+          "description": "Dry summer, wet winter."
+        },
+        "subtropical": {
+          "description": "Warm summer, mild winter; frost rare or absent."
+        },
+        "temperate": {
+          "description": "Four seasons with regular frost."
+        },
+        "tropical": {
+          "description": "No frost, monthly mean above 18 C year-round."
+        }
+      },
+      "schema_version": 1
+    },
+    "environments": {
+      "environments": {
+        "indoor": {
+          "description": "Indoor, fully artificial climate."
+        },
+        "open": {
+          "description": "Open air, ambient climate."
+        },
+        "protected": {
+          "description": "Greenhouse, tunnel, shade house."
+        }
+      },
+      "schema_version": 1
+    },
+    "establishment_states": {
+      "establishment_states": {
+        "established": {
+          "description": "Past the establishment phase; roots and canopy are settled."
+        },
+        "new": {
+          "description": "Newly planted; in the establishment phase."
+        }
+      },
+      "schema_version": 1
+    },
+    "growth_habits": {
+      "growth_habits": {
+        "clump": {
+          "description": "Clump-forming; multiple tillers or shoots from the base."
+        },
+        "floating": {
+          "description": "Floating on the water surface."
+        },
+        "mat": {
+          "description": "Mat-forming or prostrate; spreads horizontally along the ground."
+        },
+        "rosette": {
+          "description": "Rosette; leaves radiate from a central point at ground level."
+        },
+        "shrub": {
+          "description": "Shrub; multiple woody stems branching near the base."
+        },
+        "submerged": {
+          "description": "Fully submerged in water."
+        },
+        "tree": {
+          "description": "Tree; single woody trunk with a crown."
+        },
+        "vine": {
+          "description": "Climbing or trailing vine."
+        }
+      },
+      "schema_version": 1
+    },
+    "modules": {
+      "modules": {
+        "climate": {
+          "description": "VPD, GDD, DLI, ET0.",
+          "reads": [
+            "gdd_base",
+            "gdd_upper"
+          ]
+        },
+        "export": {
+          "description": "Exports and schemas.",
+          "reads": []
+        },
+        "fertilizer": {
+          "description": "Nutrient to product, dose caps.",
+          "reads": [
+            "managed_cycle",
+            "n_fertilizer_rate",
+            "p2o5_fertilizer_rate",
+            "k2o_fertilizer_rate",
+            "plant_density",
+            "n_max_per_application",
+            "p2o5_max_per_application",
+            "k2o_max_per_application"
+          ]
+        },
+        "irrigation": {
+          "description": "Irrigation modes.",
+          "reads": [
+            "kc",
+            "kc_stage_length",
+            "root_depth",
+            "depletion_fraction",
+            "awd_reflood_depth",
+            "ponding_depth",
+            "percolation_rate",
+            "predrain_days",
+            "must_flood_phases",
+            "moisture_band"
+          ]
+        },
+        "media": {
+          "description": "Growing media and water quality.",
+          "reads": [
+            "water_ec_max",
+            "water_temp_max"
+          ]
+        },
+        "propagation": {
+          "description": "Propagation planner.",
+          "reads": []
+        },
+        "safety": {
+          "description": "Dose caps and label referral.",
+          "reads": [
+            "n_max_per_application",
+            "p2o5_max_per_application",
+            "k2o_max_per_application"
+          ]
+        },
+        "stages": {
+          "description": "Stage resolver.",
+          "reads": [
+            "managed_cycle",
+            "phase_duration",
+            "phase_thermal_time",
+            "gdd_base",
+            "gdd_upper"
+          ]
+        },
+        "suitability": {
+          "description": "Site suitability.",
+          "reads": []
+        },
+        "thresholds": {
+          "description": "Threshold checks.",
+          "reads": [
+            "soil_ph",
+            "soil_ec",
+            "air_temp_day",
+            "air_temp_night",
+            "air_rh",
+            "vpd",
+            "dli",
+            "moisture_band"
+          ]
+        }
+      },
+      "schema_version": 1
+    },
+    "organism_groups": {
+      "organism_groups": {
+        "alga": {
+          "allowed_archetypes": [
+            "algae"
+          ],
+          "description": "Alga (marine or freshwater)."
+        },
+        "bryophyte": {
+          "allowed_archetypes": [
+            "bryophyte"
+          ],
+          "description": "Moss or liverwort (non-vascular plant)."
+        },
+        "fungus": {
+          "allowed_archetypes": [
+            "fungal"
+          ],
+          "description": "Fungus."
+        },
+        "lichen": {
+          "allowed_archetypes": [
+            "lichen"
+          ],
+          "description": "Lichen (symbiosis of fungus and alga/cyanobacterium)."
+        },
+        "vascular_plant": {
+          "allowed_archetypes": [
+            "annual",
+            "biennial",
+            "herbaceous_perennial",
+            "woody_perennial",
+            "geophyte",
+            "aquatic",
+            "epiphyte",
+            "pteridophyte",
+            "gymnosperm"
+          ],
+          "description": "Vascular plant (fern, gymnosperm, angiosperm)."
+        }
+      },
+      "schema_version": 1
+    },
+    "phase_sets": {
+      "phase_sets": {
+        "biological": {
+          "description": "Phases from the taxon's archetype, overridable per taxon.",
+          "source": "biological"
+        },
+        "kc": {
+          "description": "Irrigation coefficient phases, neutral vocabulary.",
+          "phases": [
+            "initial",
+            "development",
+            "midseason",
+            "late_season"
+          ],
+          "source": "kc"
+        },
+        "none": {
+          "description": "No phase dimension.",
+          "source": "none"
+        }
+      },
+      "schema_version": 1
+    },
+    "phases_by_archetype": {
+      "phases_by_archetype": {
+        "annual": {
+          "phases": [
+            "vegetative",
+            "flowering",
+            "fruiting",
+            "maturity"
+          ]
+        },
+        "aquatic": {
+          "phases": [
+            "establishment",
+            "vegetative",
+            "flowering",
+            "senescence"
+          ]
+        },
+        "biennial": {
+          "phases": [
+            "vegetative_year_1",
+            "vernalization",
+            "vegetative_year_2",
+            "flowering",
+            "fruiting"
+          ]
+        },
+        "epiphyte": {
+          "phases": [
+            "establishment",
+            "vegetative",
+            "flowering",
+            "fruiting"
+          ]
+        },
+        "fungal": {
+          "phases": [
+            "colonization",
+            "primordia",
+            "fruiting",
+            "senescence"
+          ]
+        },
+        "geophyte": {
+          "phases": [
+            "dormancy",
+            "sprouting",
+            "vegetative",
+            "flowering",
+            "senescence"
+          ]
+        },
+        "herbaceous_perennial": {
+          "phases": [
+            "establishment",
+            "active_growth",
+            "dormancy",
+            "flowering",
+            "fruiting"
+          ]
+        },
+        "woody_perennial": {
+          "phases": [
+            "establishment",
+            "juvenile",
+            "mature_vegetative",
+            "flowering",
+            "fruiting",
+            "dormancy"
+          ]
+        }
+      },
+      "schema_version": 1
+    },
+    "safety_classes": {
+      "safety_classes": {
+        "dose_cap": {
+          "criterion": "functional (amount constraint)",
+          "definition": "Upper bound on the recommendable application amount."
+        },
+        "none": {
+          "criterion": null,
+          "definition": "Not safety-critical."
+        },
+        "regulatory": {
+          "criterion": "obligation (legal)",
+          "definition": "Flag or limit mandated by a specific jurisdiction."
+        },
+        "toxicity_limit": {
+          "criterion": "hazard (type of harm)",
+          "definition": "Threshold above which a hazard harms humans, animals, or the environment."
+        }
+      },
+      "schema_version": 1
+    },
+    "scope_keys": {
+      "keys": {
+        "climate_zone": {
+          "multi": true,
+          "type": "enum",
+          "vocab": "climate_zones"
+        },
+        "country": {
+          "multi": true,
+          "type": "string",
+          "vocab": "iso_3166_1_alpha2"
+        },
+        "elevation_m": {
+          "multi": false,
+          "type": "range",
+          "unit": "m"
+        },
+        "environment": {
+          "multi": true,
+          "type": "enum",
+          "vocab": "environments"
+        },
+        "establishment": {
+          "multi": false,
+          "type": "enum",
+          "vocab": "establishment_states"
+        },
+        "growth_habit": {
+          "multi": true,
+          "type": "enum",
+          "vocab": "growth_habits"
+        },
+        "method": {
+          "multi": true,
+          "type": "string",
+          "vocab": "methods"
+        },
+        "region": {
+          "multi": true,
+          "type": "string",
+          "vocab": "iso_3166_2"
+        },
+        "system": {
+          "multi": true,
+          "type": "enum",
+          "vocab": "systems"
+        },
+        "use": {
+          "multi": true,
+          "type": "enum",
+          "vocab": "uses"
+        },
+        "variety": {
+          "multi": true,
+          "type": "string"
+        },
+        "yield_target": {
+          "multi": false,
+          "type": "enum",
+          "vocab": "yield_targets"
+        }
+      },
+      "schema_version": 1
+    },
+    "stages": {
+      "schema_version": 1,
+      "stages": {
+        "care": {
+          "description": "Irrigation, fertilizer, protection.",
+          "order": 4,
+          "runtime": true
+        },
+        "cycle": {
+          "description": "Cross-stage grouping for cycle-level parameters.",
+          "order": 0,
+          "runtime": false
+        },
+        "harvest": {
+          "description": "Harvest.",
+          "order": 5,
+          "runtime": true
+        },
+        "planting": {
+          "description": "Planting and transplanting.",
+          "order": 3,
+          "runtime": true
+        },
+        "propagation": {
+          "description": "Propagation (optional per taxon).",
+          "order": 6,
+          "runtime": true
+        },
+        "seeding": {
+          "description": "Seeding and nursery.",
+          "order": 2,
+          "runtime": true
+        },
+        "site_media": {
+          "description": "Site and growing-medium selection.",
+          "order": 1,
+          "runtime": true
+        }
+      }
+    },
+    "systems": {
+      "schema_version": 1,
+      "systems": {
+        "container": {
+          "description": "Pot, planter, raised bed, or organic medium in a container."
+        },
+        "field": {
+          "description": "Open ground, no controlled shelter."
+        },
+        "flooded": {
+          "description": "Paddy or flooded bed; standing water."
+        },
+        "fungal_bed": {
+          "description": "Log, bag, or bed for cultivated fungi."
+        },
+        "marine": {
+          "description": "Seawater medium with salinity and tidal conditions."
+        },
+        "soilless": {
+          "description": "Hydroponic, aeroponic, or inert medium (rockwool, perlite, pure coco)."
+        }
+      }
+    },
+    "traits": {
+      "schema_version": 1,
+      "traits": {
+        "acidic_media_required": {
+          "description": "Requires acidic growing medium or soil (pH below about 5.5).",
+          "examples": [
+            "blueberry"
+          ]
+        },
+        "alkaline_soil_required": {
+          "description": "Requires alkaline soil (pH above about 7.5).",
+          "examples": [
+            "cistus",
+            "gypsophila",
+            "arabis"
+          ]
+        },
+        "chill_requirement": {
+          "description": "Requires a cold period (0-7 C) to break dormancy or induce flowering.",
+          "examples": [
+            "apple",
+            "blueberry"
+          ]
+        },
+        "cool_water_required": {
+          "description": "Requires cool irrigation water (typically below 20 C).",
+          "examples": [
+            "wasabi",
+            "watercress"
+          ]
+        },
+        "curing_required": {
+          "description": "Requires a curing phase after harvest before storage or sale.",
+          "examples": [
+            "onion",
+            "garlic",
+            "potato",
+            "sweet_potato"
+          ]
+        },
+        "dormancy_period": {
+          "description": "Enters a seasonal dormancy that must be respected by the calendar.",
+          "examples": [
+            "apple",
+            "blueberry",
+            "peony",
+            "tulip"
+          ]
+        },
+        "nitrogen_fixing": {
+          "description": "Fixes atmospheric nitrogen via a biological symbiont.",
+          "examples": [
+            "soybean",
+            "alfalfa",
+            "azolla",
+            "leucaena"
+          ]
+        },
+        "photoperiod_sensitive": {
+          "description": "Flowering or bulbing depends on day length.",
+          "examples": [
+            "chrysanthemum",
+            "onion",
+            "potato"
+          ]
+        },
+        "pollination_management": {
+          "description": "Fruit set needs managed pollination (cultivar pairing, pollinators, or hand).",
+          "examples": [
+            "apple",
+            "blueberry",
+            "avocado"
+          ]
+        },
+        "regrowth_cycle": {
+          "description": "Regrows after harvest or cutting (ratoon, tiller, coppice).",
+          "examples": [
+            "alfalfa",
+            "elephant_grass",
+            "lemongrass"
+          ]
+        },
+        "rootstock_graft": {
+          "description": "Commercial cultivation requires grafting onto a selected rootstock.",
+          "examples": [
+            "apple",
+            "grape"
+          ]
+        },
+        "shade_required": {
+          "description": "Requires deliberate shading; full sun is harmful.",
+          "examples": [
+            "vanilla",
+            "wasabi"
+          ]
+        },
+        "support_required": {
+          "description": "Needs a trellis, stake, or other support structure.",
+          "examples": [
+            "grape",
+            "vanilla",
+            "black_pepper",
+            "cucumber"
+          ]
+        },
+        "symbiont_required": {
+          "description": "Requires a specific symbiont (tree host or mycorrhizal partner) to fruit.",
+          "examples": [
+            "truffle"
+          ]
+        },
+        "vernalization": {
+          "description": "Requires a cold period for floral induction in biennials or geophytes.",
+          "examples": [
+            "garlic",
+            "tulip",
+            "onion"
+          ]
+        }
+      }
+    },
+    "uses": {
+      "schema_version": 1,
+      "uses": {
+        "edible_fungus": {
+          "description": "Cultivated edible fungus or lichen (functional category).",
+          "status": "proposed"
+        },
+        "forage": {
+          "description": "Forage crop for livestock (green or conserved), not rations.",
+          "status": "stable"
+        },
+        "fruit": {
+          "description": "Fresh or processed fruit.",
+          "status": "stable"
+        },
+        "ornamental": {
+          "description": "Ornamental or cut flower.",
+          "status": "stable"
+        },
+        "spice": {
+          "description": "Culinary spice, herb, or aromatic.",
+          "status": "proposed"
+        },
+        "staple": {
+          "description": "Primary carbohydrate or protein staple.",
+          "status": "stable"
+        },
+        "vegetable": {
+          "description": "Vegetable for household or market consumption.",
+          "status": "stable"
+        }
+      }
+    },
+    "yield_targets": {
+      "schema_version": 1,
+      "yield_targets": {
+        "commercial": {
+          "description": "Commercial production; market quality and volume apply."
+        },
+        "experimental": {
+          "description": "Experimental or research plot; yield is not the goal."
+        },
+        "subsistence": {
+          "description": "Subsistence or home-garden yield; no market constraint."
+        }
+      }
+    }
+  }
+}

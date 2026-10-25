@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Dictionary `1.0.0` finalized (c-3b): `dictionary_version: 1.0.0`
+  (was `1.0.0-dev`). 31 parameters.
+- `dictionary/dictionary.lock` (new) — append-only log of
+  `<version> <contract_hash>` per release, sorted by SemVer.
+  `contract_hash` = SHA-256 of canonical JSON of
+  `{parameters, vocab, units}`; version is checked separately.
+- `dictionary/history/1.0.0.json` (new) — frozen snapshot of
+  `{version, parameters, vocab, units}`. Older snapshots are never
+  edited; a change to `1.0.0` requires a version bump and a new snapshot.
+- `classify_change(old_bundle, new_bundle)` (c-3b-1) — fail-closed SemVer
+  classifier used by `test_semver_compat` to verify each consecutive
+  snapshot pair. With 1.0.0 as the only snapshot the test currently has
+  no pairs and skips; the machinery is ready for 1.0.1 / 1.1.0.
+- Wheel allowlist gains `agri_core/_dictionary/dictionary.lock` and
+  `agri_core/_dictionary/history/1.0.0.json`.
 - 7 parameters in c-3a (fertilizer, `1.0.0-dev` total now 31):
   `n_fertilizer_rate`, `p2o5_fertilizer_rate`, `k2o_fertilizer_rate`,
   `plant_density`, and safety-critical dose caps
