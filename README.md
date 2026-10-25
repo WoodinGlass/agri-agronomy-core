@@ -65,7 +65,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 | 6 | Irrigation, fertilizer, media and water | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. Every mode declares the parameters it requires; missing → `unknown` or `insufficient_input`. | M11 | Not started |
 | 7 | Suitability and propagation | Single and batch site suitability with `suitable`/`marginal`/`unsuitable` and per-factor reasons; dated propagation plans. | M12 | Not started |
 | 8 | Exports | `tool_schemas.json` (function-calling schemas with `taxon_id`, `country`, `system`), `edge_thresholds.json` per site, `review_sheet.csv` per tier. | M13 | Not started |
-| 9 | Command line | `validate` and `lint-sources` ship in M5; `scaffold`, `build`, `coverage` and `diff` in M6–M7; `show` in M8; `calc` in M11; `export` in M13. | M5–M13 | In progress |
+| 9 | Command line | `lint-sources` and a basic `validate` ship in M0; `scaffold` and `build` in M6; full `validate`, `diff` and `coverage` in M7; `show` in M8; `calc` in M11; `export` in M13. | M0, M6–M13 | In progress |
 
 ## Quick start
 
@@ -79,19 +79,21 @@ pip install "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.0"
 
 `v0.1.0` is not tagged yet. Until it is, replace `@v0.1.0` with `@main` in this and the Colab snippet, for development use only.
 
-Requires Python 3.11 or newer (tested on 3.11, 3.12, 3.13 and 3.14, with a Windows smoke job). Runtime dependencies: Pydantic v2, jsonschema, PyYAML (`safe_load` only), pint, Typer and `sqlite3` (stdlib). Pure Python, CPU only.
+Requires Python 3.11 or newer (tested on 3.11, 3.12, 3.13 and 3.14 on Ubuntu-latest). Runtime dependencies: Pydantic v2, jsonschema, PyYAML (`safe_load` only), pint, Typer, packaging and `sqlite3` (Python stdlib). Pure Python, CPU only.
 
 ### Google Colab
 
-Open the quickstart notebook, or install in any Colab cell:
+Install in any Colab cell:
 
 ```python
 !pip install -q "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.0"
 ```
 
-No API key or GPU is needed. The quickstart notebook is executed in CI, so it is verified to run.
+No API key or GPU is needed. Pure Python, CPU only.
 
 ### Python (preview)
+
+The snippet shows the intended `v0.1` interface that the contract tests are written against. Names may change until `v0.1.0` is tagged.
 
 ```python
 from pathlib import Path
@@ -101,7 +103,7 @@ from agri_core.climate import vpd
 from agri_core.pack import load_pack
 
 # Load a pack explicitly. No current-directory lookup, no environment variables.
-pack = load_pack(Path("/data/agri-knowledge/packs/2026.10"))
+pack = load_pack(Path("/data/agri-knowledge/packs/2026.10.0"))
 
 # Resolve a taxon by name. Returns ok, ambiguous or unknown.
 taxon = registry.resolve_taxon("tomato", country="ID", pack=pack)
@@ -164,10 +166,11 @@ A pack is a directory with a manifest and CSV tables. `agri-core build` compiles
 <pack>/
 ├─ advisories.csv         # critical corrections keyed by fact_id
 ├─ datasets.csv           # reference tables (fertilizer products, media, soil tests) with scope and license
-├─ facts.csv              # one row per fact: fact_id, taxon_id, parameter, phase, value, scope, src, evidence, status
+├─ facts/                 # one CSV per taxon: facts/<taxon_id>.csv
+│                        #   one row per fact: fact_id, taxon_id, parameter, phase, value, scope, src, evidence, status
 ├─ hazards.csv            # hazard flags per taxon or scope
 ├─ names.csv              # aliases per taxon: taxon_id, name, language, kind
-├─ pack.toml              # manifest: name, version, schema_version, engine_min
+├─ pack.toml              # manifest: name, version, schema_version, engine_min, content_hash
 ├─ sources.csv            # one row per source: id, url, license, commercial_use, access_date, citation
 └─ taxa.csv               # one row per taxon: taxon_id, rank, scientific_name, parent_id
 ```
@@ -179,6 +182,8 @@ name = "agri-knowledge"
 version = "2026.10.0"
 schema_version = 1
 engine_min = "0.1.0"
+# Written by `agri-core build`. sha256 of the pack's canonical content.
+content_hash = "sha256:..."
 ```
 
 ### Facts
@@ -264,108 +269,33 @@ Adding a **core** parameter is a minor engine release. Adding an **extension** p
 - `rank` is one of `cultivar_group`, `genus`, `hybrid`, `species`.
 - `parent_id` is for navigation only; it does not imply inheritance of facts. Values never flow from parent to child automatically.
 
-## Repository layout
+## Coverage
 
-```
-agri-agronomy-core/
-├─ dictionary/
-│  ├─ parameters.core.yaml   # 31 core parameters at dictionary_version 1.0.0
-│  ├─ dictionary.lock        # append-only: <version> <contract_hash>, one line per release
-│  ├─ history/               # frozen snapshots per release (1.0.0.json, ...)
-│  ├─ unit_registry.yaml     # custom units (pH, ppm, percent, degree_day) + pint aliases
-│  └─ vocab/                 # closed sets: archetypes, phases_by_archetype, phase_sets,
-│                            #   stages, systems, environments, uses, traits, organism_groups,
-│                            #   climate_zones, growth_habits, establishment_states,
-│                            #   yield_targets, scope_keys, modules, safety_classes
-├─ docs/                     # ADDING_A_TAXON, DICTIONARY, PACK_FORMAT, RESOLUTION_POLICY,
-│                            #   REVIEW_GUIDE, SAFETY, ADR
-├─ notebooks/                # Colab quickstart, executed in CI
-├─ schema/                   # JSON Schemas: outcome, source, taxon, name, fact, hazard,
-│                            #   parameter, dataset, manifest
-├─ src/agri_core/
-│  ├─ _samples/              # synthetic Apache-2.0 sample pack
-│  ├─ climate/               # VPD, GDD, DLI, ET0
-│  ├─ export/                # bundle, tool schemas, edge thresholds, review sheet
-│  ├─ fertilizer/            # nutrient to product, unit conversion
-│  ├─ irrigation/            # registry of modes: container_band, field_etc, paddy_awd
-│  ├─ media/                 # media mixes and water quality
-│  ├─ models/                # Outcome, Result, Dictionary, ParameterDef, PhaseSet, ScopeKey,
-│  │                         #   row models, canonical JSON, ids, units
-│  ├─ pack/                  # build, diff, license gate, load, migrate, scaffold, validate, verify
-│  ├─ propagation/           # dated planner
-│  ├─ registry/              # meta, resolve_fact, resolve_taxon
-│  ├─ safety/                # dose caps, label referral
-│  ├─ stages/                # stage resolver
-│  ├─ suitability/           # scoring with reasons
-│  ├─ thresholds/            # four-point trapezoid checks
-│  ├─ cli.py
-│  └─ py.typed
-├─ tests/
-│  ├─ contract/              # Outcome, dictionary, exported schemas stay stable
-│  ├─ fixtures/              # synthetic data for behavior tests only
-│  ├─ golden/                # validated against published examples or independent permissive implementations
-│  ├─ offline/               # socket blocker proving no network access
-│  ├─ perf/                  # performance budget checks
-│  ├─ property/              # Hypothesis checks
-│  ├─ scenario/              # end-to-end expectations
-│  └─ unit/
-├─ .github/                  # CODEOWNERS, workflows
-├─ CHANGELOG.md
-├─ LICENSE                   # Apache-2.0
-├─ Makefile
-└─ pyproject.toml
-```
+First release line (six profiles across five archetypes):
 
-## Development
+| Profile | Archetype | Notes |
+|---|---|---|
+| Rice | annual | `paddy_awd` irrigation mode |
+| Tomato | annual | `field_etc` irrigation mode |
+| Mango | woody_perennial | Propagation: air layering, budding |
+| Vanilla | epiphyte | `container_band` irrigation; propagation: stem cuttings |
+| Genlisea | herbaceous_perennial | `container_band` irrigation; ornamental carnivorous |
+| Black truffle | fungal | Suitability profile. Expected `unsuitable` at warm, low-elevation tropical sites, so it tests that the library can say no |
 
-```bash
-git clone https://github.com/WoodinGlass/agri-agronomy-core.git
-cd agri-agronomy-core
-pip install -e ".[dev]"
-pre-commit install
+The propagation planner returns the `not_applicable` outcome for rice, tomato and black truffle.
 
-ruff check . && ruff format --check .
-mypy
-pytest
-agri-core validate --pack sample
-agri-core lint-sources --pack sample
-```
+**Protected species are excluded.** Taxa listed under CITES Appendix I or II, Permen LHK 106/2018 (Indonesia), or the IUCN Red List at CR, EN or VU are not included in the sample pack or in the initial `agri-knowledge` release unless a documented lawful cultivation pathway exists (for example, an artificial-propagation exemption under CITES, or data on commercially cultivated varieties rather than wild-type material). *Vanilla planifolia* is retained under the CITES exemption for artificially propagated pods. The design rationale and the per-taxon decisions are recorded in `docs/design/plant_wishlist_v4_rationale.md` and `docs/design/plant_wishlist_v4_migration.md`.
 
-Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout, pre-commit and pip-audit. A `socket`-blocking pytest plugin runs in every test to prove the engine is offline. A `windows-latest` smoke job runs alongside the Python 3.11–3.14 matrix on Ubuntu.
+Planned next: maize, chili pepper, broccoli, potato, lettuce, grape, apple, watermelon, melon, blueberry, lychee, wasabi and bonsai (per species, with a technique module for pruning, wiring and repotting). Carnivorous plants are split by genus; the wishlist covers Genlisea, Byblis, Drosophyllum, Drosera, Pinguicula, Utricularia and Roridula.
 
-**Test kinds**
+**International by design.** Profiles are not tied to a country. Each value declares its scope (elevation, variety, growing system) and its source, so the same crop can carry different values for different conditions. Crop names carry aliases in several languages, and new aliases are welcome. Region-specific material, such as soil-test interpretation tables, is tagged with the region and method it applies to.
 
-- `contract`: `Outcome`, dictionary, exported tool schemas and JSON Schemas stay stable.
-- `golden`: results validated against published worked examples, or against independent permissively licensed implementations.
-- `offline`: network access is blocked; any attempt to open a socket fails the test.
-- `perf`: pack load and resolution stay within the published budget.
-- `property`: Hypothesis checks such as unit round-trips, no negative amounts, and monotonic behavior with area.
-- `scenario`: end-to-end expectations, for example a taxon whose every suitability factor is `unsuitable` in the requested scope must return `unsuitable`.
-- `unit`: functions in isolation.
+## Exports
 
-**Release gates (every release)**
-
-- ruff and mypy (strict) are clean.
-- Coverage is at least 90%, and 100% for `safety/`.
-- CI is green on Python 3.11, 3.12, 3.13 and 3.14, plus the Windows smoke job; `pip-audit` runs in CI.
-- Every test runs with network access blocked.
-- The performance budget is met (see [Performance](#performance)).
-- Notebooks execute (nbmake) and are committed without outputs (nbstripout).
-- The pack and the wheel are reproducible: identical SHA-256 when built twice from the same inputs.
-- `dictionary.lock` matches the running dictionary (`contract_hash` verified).
-- `CHANGELOG.md` is updated.
-- The GitHub Release contains the wheel, the sample pack, the built packs of `agri-knowledge` at the pinned version, and hashes.
-
-## Performance
-
-These targets are measured in CI and in Colab, and will be recalibrated once real pack sizes are known.
-
-| Operation | Budget |
-|---|---|
-| Batch suitability, 5,000 taxa | ≤ 200 ms p95 |
-| Load a pack with 10,000 taxa | ≤ 1 s |
-| Peak memory | ≤ 200 MB |
-| `resolve_taxon` p95 | ≤ 5 ms |
+- `bundle.json`: all profiles, the sources table (including `commercial_use`) and metadata in one versioned file.
+- `tool_schemas.json`: function-calling schemas for LLM agents, generated from the same Pydantic models as the library so tools and code cannot drift apart.
+- `edge_thresholds.json`: compact thresholds for gateways and devices that must keep working offline.
+- `review_sheet.csv`: one row per value, so domain experts can review in a spreadsheet without using GitHub.
 
 ## Safety and limitations
 
@@ -392,6 +322,14 @@ The engine enforces provenance; the data lives in [`agri-knowledge`](https://git
 - Reviewers are identified by ID; names appear only with consent. Packs and exports contain no personal data.
 - Organizations and publications are named only to identify sources. There is no affiliation or endorsement.
 
+### Protected species
+
+- A taxon listed on CITES (any appendix), Permen LHK 106/2018 (Indonesia), or the IUCN Red List at CR, EN or VU is not included in the sample pack or in the initial `agri-knowledge` release unless a documented lawful cultivation pathway exists.
+- Acceptable pathways include: artificial propagation explicitly exempted by the source treaty (such as the *Vanilla* pod and seed exemption under CITES), or data on commercially cultivated varieties rather than wild-type material.
+- Facts about a protected taxon recorded by a third party must cite their source and state the conservation status; they are not added to `agri-knowledge` without the maintainer confirming the pathway.
+- The detailed policy, the list of excluded taxa and the replacements are recorded in `docs/design/plant_wishlist_v4_rationale.md`.
+- This is a design choice, not a legal opinion. Users redistributing data for commercial purposes should verify CITES and national rules for each species independently.
+
 ## Contributing
 
 Contributions are welcome. Data contributions go to [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge); code contributions go here.
@@ -417,6 +355,7 @@ Rules:
 4. **Everything is in English:** code, schema keys, identifiers and documentation. Local-language taxon names go in `names.csv`.
 5. **Code changes need tests.** Changes under `safety/` also need 100% coverage, a maintainer review and, for safety-critical parameters, a second independent review.
 6. **Licensing.** By submitting a contribution you confirm that you have the right to contribute it and that it is licensed under the same terms as the files it changes.
+7. **Protected species need a documented pathway.** Before proposing a taxon listed on CITES (any appendix), Permen LHK 106/2018 or the IUCN Red List at CR, EN or VU, cite the lawful cultivation pathway (an artificial-propagation exemption, a cultivated variety, or equivalent). Wild-collected material is not accepted.
 
 Domain experts can review through `review_sheet.csv` without a GitHub account, and the maintainer records the outcome. Code owners are listed in `.github/CODEOWNERS`.
 
@@ -448,7 +387,7 @@ If you use the engine in research or in a product, cite this repository with the
 | **M2** Contract models | Done | `Outcome` (7 statuses), `Result`, row models (`taxon`, `name`, `fact`, `hazard`, `dataset`, `source`), identifier primitives (Crockford base32), `ParameterDef` v1.0.0, `PhaseSet`, `ScopeKey`. | Drift tests, frozen / extra-forbid invariants, and identifier pattern tests pass. |
 | **M3** Row JSON schemas | Done | JSON schemas for the 6 row models and the 8-shape `FactValue` union, generated from the Pydantic models. | Drift tests green; `EnumSetValue` in `FactValue` tested; `$defs` checked. |
 | **M4** Core dictionary 1.0.0 | Done | 31 parameters at `dictionary_version: 1.0.0`, `dictionary.lock` (append-only), `history/1.0.0.json`, `classify_change` for SemVer, safety-class taxonomy. | Lock hash verified against the running dictionary; `introduced_in` matches first snapshot; `test_semver_compat` infrastructure ready. |
-| **M5** Loader and sample pack | In progress | `compute_pack_hash` / `verify_pack_hash`; `load_knowledge_set(path)`; immutable `KnowledgeSet`; sample pack with 8 synthetic taxa (one per archetype, without real agronomic data). | Hash determinism and mismatch tests pass; sample pack loads cleanly; foreign keys on `taxon_id`, `parameter`, `src` verified. |
+| **M5** Loader and sample pack | In progress | `compute_pack_hash` / `verify_pack_hash`; `load_knowledge_set(path)`; immutable `KnowledgeSet`; sample pack with 8 synthetic taxa, one per initial archetype (`annual`, `aquatic`, `biennial`, `epiphyte`, `fungal`, `geophyte`, `herbaceous_perennial`, `woody_perennial`), without real agronomic data. | Hash determinism and mismatch tests pass; sample pack loads cleanly; foreign keys on `taxon_id`, `parameter`, `src` verified. |
 | **M6** Build | Not started | `scaffold` (opaque taxon IDs, never reused) plus `build` (CSV → SQLite + manifest, reproducible). | Wheel and pack build reproducibly (identical SHA-256 twice). |
 | **M7** Validate, diff, coverage, license gate | Not started | Trapezoid order, scope validity, unit resolution, duplicate detection, tier derivation (T0–T3), `diff` report, `coverage`, license gate. | Sample pack passes validate with 0 errors; `diff` matches fixtures; coverage assigns tiers; license gate rejects NC + `commercial_use=yes`. |
 | **M8** `resolve_taxon` and `resolve_fact` | Not started | Deterministic resolution per the fixed policy; `show` CLI. | `resolve_taxon` p95 ≤ 5 ms; resolution tests match fixtures. |
@@ -457,6 +396,118 @@ If you use the engine in research or in a product, cite this repository with the
 | **M11** Irrigation, fertilizer, media and water | Not started | Registry of irrigation modes (`container_band`, `field_etc`, `paddy_awd`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. | `v0.1.0` passes against the sample pack and against `agri-knowledge` `v0.1.0`; irrigation results match scenario fixtures. |
 | **M12** Suitability and propagation | Not started | Single and batch site suitability, per-factor reasons, hazard flags, dated propagation plans. | Batch mode within the performance budget; scenario tests including an `unsuitable` case. |
 | **M13** Exports and documentation | Not started | `tool_schemas.json`, `edge_thresholds.json` per site, `review_sheet.csv` per tier, quickstart notebook, `docs/`. | A release tag includes exports, generated from the same Pydantic models as the library, with a stable contract test. |
+
+## Development
+
+```bash
+git clone https://github.com/WoodinGlass/agri-agronomy-core.git
+cd agri-agronomy-core
+pip install -e ".[dev]"
+pre-commit install
+
+ruff check . && ruff format --check .
+mypy
+pytest
+agri-core validate --pack sample
+agri-core lint-sources --pack sample
+```
+
+Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout, pre-commit and pip-audit. Socket-blocking pytest plugin and Windows smoke job are planned for `v0.1.0`.
+
+**Test kinds**
+
+- `contract`: `Outcome`, dictionary, exported tool schemas and JSON Schemas stay stable.
+- `golden`: results validated against published worked examples, or against independent permissively licensed implementations.
+- `offline` (from `v0.1.0`): network access is blocked; any attempt to open a socket fails the test.
+- `perf` (from `v0.1.0`): pack load and resolution stay within the published budget.
+- `property`: Hypothesis checks such as unit round-trips, no negative amounts, and monotonic behavior with area.
+- `scenario`: end-to-end expectations, for example a taxon whose every suitability factor is `unsuitable` in the requested scope must return `unsuitable`.
+- `unit`: functions in isolation.
+
+**Release gates (every release)**
+
+- ruff and mypy (strict) are clean.
+- Coverage is at least 90%, and 100% for `safety/`.
+- CI is green on Python 3.11, 3.12, 3.13 and 3.14; `pip-audit` runs in CI.
+- `dictionary.lock` matches the running dictionary (`contract_hash` verified).
+- The pack and the wheel are reproducible: identical SHA-256 when built twice from the same inputs.
+- `CHANGELOG.md` is updated.
+- The GitHub Release contains the wheel, the sample pack, the built packs of `agri-knowledge` at the pinned version, and hashes.
+
+**Additional release gates from `v0.1.0`**
+
+- Every test runs with network access blocked.
+- The performance budget is met (see [Performance](#performance)).
+- A Windows smoke job runs alongside the Python 3.11–3.14 matrix on Ubuntu.
+
+**Additional release gates from `v0.2.0`**
+
+- Notebooks execute (nbmake) and are committed without outputs (nbstripout).
+
+## Performance
+
+These targets are measured in CI and in Colab from `v0.1.0`, and will be recalibrated once real pack sizes are known.
+
+| Operation | Budget |
+|---|---|
+| Batch suitability, 5,000 taxa | ≤ 200 ms p95 |
+| Load a pack with 10,000 taxa | ≤ 1 s |
+| Peak memory | ≤ 200 MB |
+| `resolve_taxon` p95 | ≤ 5 ms |
+
+## Repository layout
+
+```
+agri-agronomy-core/
+├─ dictionary/
+│  ├─ parameters.core.yaml   # 31 core parameters at dictionary_version 1.0.0
+│  ├─ dictionary.lock        # append-only: <version> <contract_hash>, one line per release
+│  ├─ history/               # frozen snapshots per release (1.0.0.json, ...)
+│  ├─ unit_registry.yaml     # custom units (pH, ppm, percent, degree_day) + pint aliases
+│  └─ vocab/                 # closed sets: archetypes, phases_by_archetype, phase_sets,
+│                            #   stages, systems, environments, uses, traits, organism_groups,
+│                            #   climate_zones, growth_habits, establishment_states,
+│                            #   yield_targets, scope_keys, modules, safety_classes
+├─ docs/                     # ADDING_A_TAXON, DICTIONARY, PACK_FORMAT, RESOLUTION_POLICY,
+│                            #   REVIEW_GUIDE, SAFETY, ADR
+│  └─ design/                # plant_wishlist_v4.csv, plant_wishlist_v4_rationale.md,
+│                            #   plant_wishlist_v4_migration.md
+├─ notebooks/                # Colab quickstart (from v0.2.0), executed in CI
+├─ schema/                   # JSON Schemas: outcome, source, taxon, name, fact, hazard,
+│                            #   parameter, dataset, manifest
+├─ src/agri_core/
+│  ├─ _samples/              # synthetic Apache-2.0 sample pack
+│  ├─ climate/               # VPD, GDD, DLI, ET0
+│  ├─ export/                # bundle, tool schemas, edge thresholds, review sheet
+│  ├─ fertilizer/            # nutrient to product, unit conversion
+│  ├─ irrigation/            # registry of modes: container_band, field_etc, paddy_awd
+│  ├─ media/                 # media mixes and water quality
+│  ├─ models/                # Outcome, Result, Dictionary, ParameterDef, PhaseSet, ScopeKey,
+│  │                         #   row models, canonical JSON, ids, units
+│  ├─ pack/                  # build, diff, license gate, load, migrate, scaffold, validate, verify
+│  ├─ propagation/           # dated planner
+│  ├─ registry/              # meta, resolve_fact, resolve_taxon
+│  ├─ safety/                # dose caps, label referral
+│  ├─ stages/                # stage resolver
+│  ├─ suitability/           # scoring with reasons
+│  ├─ thresholds/            # four-point trapezoid checks
+│  ├─ cli.py
+│  └─ py.typed
+├─ tests/
+│  ├─ contract/              # Outcome, dictionary, exported schemas stay stable
+│  ├─ fixtures/              # synthetic data for behavior tests only
+│  ├─ golden/                # validated against published examples or independent permissive implementations
+│  ├─ offline/               # socket blocker (from v0.1.0)
+│  ├─ perf/                  # performance budget (from v0.1.0)
+│  ├─ property/              # Hypothesis checks
+│  ├─ scenario/              # end-to-end expectations
+│  └─ unit/
+├─ .github/                  # CODEOWNERS, workflows
+├─ CHANGELOG.md
+├─ LICENSE                   # Apache-2.0
+├─ Makefile
+└─ pyproject.toml
+```
 
 ## License
 
