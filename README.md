@@ -55,17 +55,17 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 
 ## Features
 
-| # | Area | What it does | Target |
-|---|------|--------------|--------|
-| 1 | Data contract | JSON Schemas for `outcome`, `result`, `source`, `taxon`, `name`, `fact`, `hazard`, `parameter`, `dataset`, `manifest`. Core dictionary (`parameters.core.yaml`) with physical ranges, `applies_to`, tier requirements, phases per archetype, safety-class taxonomy and an append-only lock. | M1 |
-| 2 | Pack lifecycle | `scaffold`, `build` (CSV → SQLite + manifest, reproducible), `load` (verify hash), `validate`, `diff`, `coverage`. | M1 |
-| 3 | Registry | `resolve_taxon(name, country?, language?)` returns `ok`, `ambiguous` or `unknown`. `resolve_fact` applies the deterministic resolution policy. `meta()` reports engine version, pack version, `schema_version` and pack hash. | M1 |
-| 4 | Climate | Vapor pressure deficit (VPD), growing degree days (GDD), daily light integral (DLI) and reference evapotranspiration (ET0: FAO-56 Penman–Monteith, with a Hargreaves–Samani fallback). Temperature estimate from elevation. | M2 |
-| 5 | Thresholds and stages | Four-point trapezoid checks that return `optimal`, `suboptimal` or `critical`. Stage resolver from planting age and GDD; perennials driven by dated events supplied by the caller. | M2 |
-| 6 | Irrigation, fertilizer, media and water | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. Every mode declares the parameters it requires; missing → `unknown` or `insufficient_input`. | M3 |
-| 7 | Suitability and propagation | Single and batch site suitability with `suitable`/`marginal`/`unsuitable` and per-factor reasons; dated propagation plans. | M4 |
-| 8 | Exports | `tool_schemas.json` (function-calling schemas with `taxon_id`, `country`, `system`), `edge_thresholds.json` per site, `review_sheet.csv` per tier. | M5 |
-| 9 | Command line | `validate`, `lint-sources`, `show`, `coverage`, `scaffold`, `build`, `diff`, `calc`, `export`. | M1+ |
+| # | Area | What it does | Target | Status |
+|---|------|--------------|--------|--------|
+| 1 | Data contract | JSON Schemas for `outcome`, `source`, `taxon`, `name`, `fact`, `hazard`, `parameter`, `dataset`, `manifest`. Core dictionary (`parameters.core.yaml`) with physical ranges, `applies_to`, tier requirements, phases per archetype, safety-class taxonomy and an append-only lock. | M2–M4 | Done |
+| 2 | Pack lifecycle | `scaffold`, `build` (CSV → SQLite + manifest, reproducible), `load` (verify hash), `validate`, `diff`, `coverage`. | M5–M7 | In progress |
+| 3 | Registry | `resolve_taxon(name, country?, language?)` returns `ok`, `ambiguous` or `unknown`. `resolve_fact` applies the deterministic resolution policy. `meta()` reports engine version, pack version, `schema_version` and pack hash. | M8 | Not started |
+| 4 | Climate | Vapor pressure deficit (VPD), growing degree days (GDD), daily light integral (DLI) and reference evapotranspiration (ET0: FAO-56 Penman–Monteith, with a Hargreaves–Samani fallback). Temperature estimate from elevation. | M10 | Not started |
+| 5 | Thresholds and stages | Four-point trapezoid checks that return `optimal`, `suboptimal` or `critical`. Stage resolver from planting age and GDD; perennials driven by dated events supplied by the caller. | M10 | Not started |
+| 6 | Irrigation, fertilizer, media and water | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. Every mode declares the parameters it requires; missing → `unknown` or `insufficient_input`. | M11 | Not started |
+| 7 | Suitability and propagation | Single and batch site suitability with `suitable`/`marginal`/`unsuitable` and per-factor reasons; dated propagation plans. | M12 | Not started |
+| 8 | Exports | `tool_schemas.json` (function-calling schemas with `taxon_id`, `country`, `system`), `edge_thresholds.json` per site, `review_sheet.csv` per tier. | M13 | Not started |
+| 9 | Command line | `validate` and `lint-sources` ship in M5; `scaffold`, `build`, `coverage` and `diff` in M6–M7; `show` in M8; `calc` in M11; `export` in M13. | M5–M13 | In progress |
 
 ## Quick start
 
