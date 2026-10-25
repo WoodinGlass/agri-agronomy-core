@@ -27,7 +27,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 
 ## What this is not
 
-- **Not a data repository.** This repository contains the engine, the schemas and the sample pack used by tests. Real data lives in `agri-knowledge`.
+- **Not a data repository.** This repository contains the engine, the schemas, the dictionary and the sample pack used by tests. Real data lives in `agri-knowledge`.
 - **Not a substitute for an agronomist, extension service, product label or local law.** It supports decisions; it does not make them.
 - **Not a pesticide tool.** It never calculates pesticide, herbicide or fungicide doses. Such requests return `refer_to_label` or `refer_to_authority`.
 - **Not a controller.** It does not operate pumps, valves, dosing units or any other actuator. It returns values and plans for systems that have their own safeguards.
@@ -57,7 +57,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 
 | # | Area | What it does | Target |
 |---|------|--------------|--------|
-| 1 | Data contract | JSON Schemas for `outcome`, `result`, `source`, `taxon`, `name`, `fact`, `hazard`, `parameter`, `dataset`, `manifest`. Core dictionary (`parameters.core.yaml`) with physical ranges, `applies_to`, tier requirements and phases per archetype. | M1 |
+| 1 | Data contract | JSON Schemas for `outcome`, `result`, `source`, `taxon`, `name`, `fact`, `hazard`, `parameter`, `dataset`, `manifest`. Core dictionary (`parameters.core.yaml`) with physical ranges, `applies_to`, tier requirements, phases per archetype, safety-class taxonomy and an append-only lock. | M1 |
 | 2 | Pack lifecycle | `scaffold`, `build` (CSV → SQLite + manifest, reproducible), `load` (verify hash), `validate`, `diff`, `coverage`. | M1 |
 | 3 | Registry | `resolve_taxon(name, country?, language?)` returns `ok`, `ambiguous` or `unknown`. `resolve_fact` applies the deterministic resolution policy. `meta()` reports engine version, pack version, `schema_version` and pack hash. | M1 |
 | 4 | Climate | Vapor pressure deficit (VPD), growing degree days (GDD), daily light integral (DLI) and reference evapotranspiration (ET0: FAO-56 Penman–Monteith, with a Hargreaves–Samani fallback). Temperature estimate from elevation. | M2 |
@@ -191,7 +191,7 @@ Each fact is one value at one scope. The engine resolves facts deterministically
 | `taxon_id` | Opaque ID created by `agri-core scaffold`; scientific names may change without changing the ID. |
 | `parameter` | A core parameter from `parameters.core.yaml` or an extension parameter declared in the pack. |
 | `phase` | A phase from `phases_by_archetype`. |
-| `value` | Number, range (four-point trapezoid), unit, or `unknown: true` with a reason. |
+| `value` | One of eight shapes: `trapezoid`, `range`, `scalar`, `enum`, `enum_set`, `bool`, `rule`, `unknown`. |
 | `scope` | Country, region, elevation range, growing system, variety, season, use. Empty keys are wildcards; filled keys must cover the caller's context. |
 | `src` | Source IDs, each defined in `sources.csv`. |
 | `evidence` | `A` (guideline or peer-reviewed) to `D` (anecdotal). |
@@ -208,7 +208,15 @@ Each fact is one value at one scope. The engine resolves facts deterministically
 
 ### Safety-critical parameters
 
-Dose caps, toxicity thresholds and legal flags are marked safety-critical in the dictionary. They may never be `draft` or `imported`. `approved` requires two independent reviews.
+Parameters with a `safety_class` other than `none` are safety-critical in the dictionary. The classes are:
+
+| Class | Meaning |
+|---|---|
+| `dose_cap` | Functional upper bound on the recommendable amount per application. Prevents overdose without classifying the hazard type. |
+| `toxicity_limit` | Threshold above which a hazard harms humans, animals or the environment. |
+| `regulatory` | Flag or limit mandated by a specific jurisdiction. |
+
+Safety-critical parameters may never be `draft` or `imported`; `approved` requires two independent reviews. Salinity (`soil_ec`, `water_ec_max`) is a tolerance condition for the plant, not an applied amount and not a hazard to humans, animals or the environment; it stays `safety_class: none`.
 
 ### Pack security
 
@@ -220,15 +228,38 @@ Dose caps, toxicity thresholds and legal flags are marked safety-critical in the
 
 ## Dictionary
 
-The core dictionary (`dictionary/parameters.core.yaml`) defines, for every parameter the engine consumes: unit, physical range, `applies_to` (which `use` and `archetype` values the parameter applies to), whether it is core or extension, and whether it is safety-critical. The vocabulary files (`archetypes`, `phases_by_archetype`, `stages`, `systems`, `uses`) are the closed sets a pack may reference.
+The core dictionary (`dictionary/parameters.core.yaml`) defines, for every parameter the engine consumes:
 
-Initial archetypes: `annual`, `aquatic`, `biennial`, `epiphyte`, `fungal`, `geophyte`, `herbaceous_perennial`, `woody_perennial`.
+- `key`, `stage`, `shape` (one of the eight fact-value shapes), `unit`
+- `physical_range` (physical sanity bound, not an agronomic judgement)
+- `phase_set` (one of `none`, `biological`, `kc`) and optional `allowed_phases`
+- `applies_to` (organism groups, archetypes, uses, systems, traits; AND between dimensions, OR within, omitted dimension means unlimited)
+- `scope_keys` (which keys may appear in a fact's scope)
+- `used_by` (which modules read the parameter) and `tier_required`
+- `safety_class` and, when not `none`, a `rationale`
+- `kind` (`core` or `extension`)
+- `introduced_in` (SemVer of the dictionary release that first added the key)
+
+The vocabulary files under `dictionary/vocab/` are the closed sets a pack may reference: `archetypes`, `phases_by_archetype`, `phase_sets`, `stages`, `systems`, `environments`, `uses`, `traits`, `organism_groups`, `climate_zones`, `growth_habits`, `establishment_states`, `yield_targets`, `scope_keys`, `modules` and `safety_classes`.
+
+### Archetypes
+
+Eight archetypes carry default biological phases: `annual`, `aquatic`, `biennial`, `epiphyte`, `fungal`, `geophyte`, `herbaceous_perennial`, `woody_perennial`.
+
+Five more are present in the vocabulary without default phases and gain phases when a taxon and a calculator first need them: `algae`, `bryophyte`, `gymnosperm`, `lichen`, `pteridophyte`.
+
+### Dictionary lock
+
+- `dictionary/dictionary.lock` is an append-only log, one line per release: `<version> <contract_hash>`, sorted by SemVer. The last line is the running version.
+- `contract_hash` is the SHA-256 of canonical JSON (sorted keys, no whitespace, `-0.0` normalized per RFC 8785) of `{parameters, vocab, units}`. The version string is not part of the hash; the `(version, hash)` pair is verified separately.
+- `dictionary/history/<version>.json` is a frozen snapshot of `{version, parameters, vocab, units}` per release. Older snapshots are never edited; changing a released dictionary requires a new version and a new snapshot.
+- `classify_change(old, new)` returns the required SemVer bump from a bundle diff. It is fail-closed: any change not explicitly classified as `PATCH` or a known `MINOR` pattern returns `MAJOR`. `MINOR` covers added keys and widened `applies_to` / `scope_keys` / `allowed_phases` / `physical_range` / vocabularies / custom units. `PATCH` is limited to `description` and `rationale` changes.
 
 Adding a **core** parameter is a minor engine release. Adding an **extension** parameter is a pack change, validated by the engine, with no engine release.
 
 ## Taxa and identifiers
 
-- Taxon IDs are created by `agri-core scaffold` and are opaque. They are never reused.
+- Taxon IDs are created by `agri-core scaffold` and are opaque (Crockford base32 with a `T` prefix, ten characters). They are never reused.
 - Scientific names may change without changing the ID.
 - `rank` is one of `cultivar_group`, `genus`, `hybrid`, `species`.
 - `parent_id` is for navigation only; it does not imply inheritance of facts. Values never flow from parent to child automatically.
@@ -237,39 +268,50 @@ Adding a **core** parameter is a minor engine release. Adding an **extension** p
 
 ```
 agri-agronomy-core/
-├─ dictionary/           # parameters.core.yaml; vocab: archetypes, phases_by_archetype, stages, systems, uses
-├─ docs/                 # ADDING_A_TAXON, DICTIONARY, PACK_FORMAT, RESOLUTION_POLICY, REVIEW_GUIDE, SAFETY, ADR
-├─ notebooks/            # Colab quickstart, executed in CI
-├─ schema/               # JSON Schemas: outcome, result, source, taxon, name, fact, hazard, parameter, dataset, manifest
+├─ dictionary/
+│  ├─ parameters.core.yaml   # 31 core parameters at dictionary_version 1.0.0
+│  ├─ dictionary.lock        # append-only: <version> <contract_hash>, one line per release
+│  ├─ history/               # frozen snapshots per release (1.0.0.json, ...)
+│  ├─ unit_registry.yaml     # custom units (pH, ppm, percent, degree_day) + pint aliases
+│  └─ vocab/                 # closed sets: archetypes, phases_by_archetype, phase_sets,
+│                            #   stages, systems, environments, uses, traits, organism_groups,
+│                            #   climate_zones, growth_habits, establishment_states,
+│                            #   yield_targets, scope_keys, modules, safety_classes
+├─ docs/                     # ADDING_A_TAXON, DICTIONARY, PACK_FORMAT, RESOLUTION_POLICY,
+│                            #   REVIEW_GUIDE, SAFETY, ADR
+├─ notebooks/                # Colab quickstart, executed in CI
+├─ schema/                   # JSON Schemas: outcome, source, taxon, name, fact, hazard,
+│                            #   parameter, dataset, manifest
 ├─ src/agri_core/
-│  ├─ _samples/          # synthetic Apache-2.0 sample pack
-│  ├─ climate/           # VPD, GDD, DLI, ET0
-│  ├─ export/            # bundle, tool schemas, edge thresholds, review sheet
-│  ├─ fertilizer/        # nutrient to product, unit conversion
-│  ├─ irrigation/        # registry of modes: container_band, field_etc, paddy_awd
-│  ├─ media/             # media mixes and water quality
-│  ├─ models/            # Outcome, Result, row models
-│  ├─ pack/              # build, diff, license gate, load, migrate, scaffold, validate, verify
-│  ├─ propagation/       # dated planner
-│  ├─ registry/          # meta, resolve_fact, resolve_taxon
-│  ├─ safety/            # dose caps, label referral
-│  ├─ stages/            # stage resolver
-│  ├─ suitability/       # scoring with reasons
-│  ├─ thresholds/        # four-point trapezoid checks
+│  ├─ _samples/              # synthetic Apache-2.0 sample pack
+│  ├─ climate/               # VPD, GDD, DLI, ET0
+│  ├─ export/                # bundle, tool schemas, edge thresholds, review sheet
+│  ├─ fertilizer/            # nutrient to product, unit conversion
+│  ├─ irrigation/            # registry of modes: container_band, field_etc, paddy_awd
+│  ├─ media/                 # media mixes and water quality
+│  ├─ models/                # Outcome, Result, Dictionary, ParameterDef, PhaseSet, ScopeKey,
+│  │                         #   row models, canonical JSON, ids, units
+│  ├─ pack/                  # build, diff, license gate, load, migrate, scaffold, validate, verify
+│  ├─ propagation/           # dated planner
+│  ├─ registry/              # meta, resolve_fact, resolve_taxon
+│  ├─ safety/                # dose caps, label referral
+│  ├─ stages/                # stage resolver
+│  ├─ suitability/           # scoring with reasons
+│  ├─ thresholds/            # four-point trapezoid checks
 │  ├─ cli.py
 │  └─ py.typed
 ├─ tests/
-│  ├─ contract/          # Outcome and exported schemas stay stable
-│  ├─ fixtures/          # synthetic data for behavior tests only
-│  ├─ golden/            # validated against published examples or independent permissive implementations
-│  ├─ offline/           # socket blocker proving no network access
-│  ├─ perf/              # performance budget checks
-│  ├─ property/          # Hypothesis checks
-│  ├─ scenario/          # end-to-end expectations
+│  ├─ contract/              # Outcome, dictionary, exported schemas stay stable
+│  ├─ fixtures/              # synthetic data for behavior tests only
+│  ├─ golden/                # validated against published examples or independent permissive implementations
+│  ├─ offline/               # socket blocker proving no network access
+│  ├─ perf/                  # performance budget checks
+│  ├─ property/              # Hypothesis checks
+│  ├─ scenario/              # end-to-end expectations
 │  └─ unit/
-├─ .github/              # CODEOWNERS, workflows
+├─ .github/                  # CODEOWNERS, workflows
 ├─ CHANGELOG.md
-├─ LICENSE               # Apache-2.0
+├─ LICENSE                   # Apache-2.0
 ├─ Makefile
 └─ pyproject.toml
 ```
@@ -293,7 +335,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 
 **Test kinds**
 
-- `contract`: `Outcome`, exported tool schemas and JSON Schemas stay stable.
+- `contract`: `Outcome`, dictionary, exported tool schemas and JSON Schemas stay stable.
 - `golden`: results validated against published worked examples, or against independent permissively licensed implementations.
 - `offline`: network access is blocked; any attempt to open a socket fails the test.
 - `perf`: pack load and resolution stay within the published budget.
@@ -310,6 +352,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 - The performance budget is met (see [Performance](#performance)).
 - Notebooks execute (nbmake) and are committed without outputs (nbstripout).
 - The pack and the wheel are reproducible: identical SHA-256 when built twice from the same inputs.
+- `dictionary.lock` matches the running dictionary (`contract_hash` verified).
 - `CHANGELOG.md` is updated.
 - The GitHub Release contains the wheel, the sample pack, the built packs of `agri-knowledge` at the pinned version, and hashes.
 
@@ -389,6 +432,7 @@ Domain experts can review through `review_sheet.csv` without a GitHub account, a
 - Every pack carries a `schema_version` and an `engine_min`. The engine supports two consecutive `schema_version` values and ships `agri-core pack migrate` to move a pack forward. A pack that declares a `schema_version` the engine does not support is rejected; a pack that requires a newer engine than the one running is rejected.
 - Every fact has a stable `fact_id`. A superseded fact is marked with `superseded_by`; a critical correction is published as an advisory in the pack.
 - Every release pins the `agri-knowledge` version it was tested against, and a canary CI job runs against `agri-knowledge` `main` to surface incompatibilities early.
+- `dictionary/dictionary.lock` records `<version> <contract_hash>` per dictionary release; the SemVer rule is that adding a key is `MINOR`, removing / renaming / changing shape, unit, phase_set, enum values or narrowing a dimension is `MAJOR`, and description / rationale changes are `PATCH`. `classify_change` enforces this and is exercised by the test suite.
 - Releases are git tags and GitHub Releases (wheel, sample pack, built packs, hashes). They are not published on PyPI.
 
 ## Citing
@@ -397,14 +441,22 @@ If you use the engine in research or in a product, cite this repository with the
 
 ## Milestones
 
-| Milestone | Scope | Done when |
-|---|---|---|
-| **M0** Foundation | Repository, `pyproject.toml`, CI, pre-commit, `Outcome` and `Result` models, JSON Schemas, `sources.csv` linter, wheel smoke test. | CI is green on the empty but valid package, and a clean-venv install of the wheel passes `agri-core validate --pack sample`. |
-| **M1** Contract, dictionary and pack lifecycle | Row schemas, core dictionary v1, resolution policy, `scaffold` / `build` / `load` / `verify` / `validate` / `diff` / `coverage`, license gate, `resolve_taxon`, `show`, complete sample pack, offline tests, performance budget. | The sample pack passes every check; the offline blocker is green; the performance budget is met; the three kinds of change are enforced by CI. |
-| **M2** Climate, thresholds and stages | VPD, GDD, DLI, ET0 with fallback, temperature from elevation, threshold checks, stage resolver. | Golden tests pass; phases resolve per archetype; perennials use caller-supplied events. |
-| **M3** Irrigation, fertilizer, media and water | Registry of irrigation modes (`container_band`, `field_etc`, `paddy_awd`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. | `v0.1.0` tagged: passes against the sample pack and against `agri-knowledge` `v0.1.0`. |
-| **M4** Suitability and propagation | Single and batch site suitability, per-factor reasons, hazard flags, dated propagation plans. | `v0.2.0` tagged: batch mode within the performance budget; scenario tests including an `unsuitable` case. |
-| **M5** Exports and documentation | `tool_schemas.json`, `edge_thresholds.json` per site, `review_sheet.csv` per tier, quickstart notebook, `docs/`. | A release tag includes exports, generated from the same Pydantic models as the library, with a stable contract test. |
+| Milestone | Status | Scope | Done when |
+|---|---|---|---|
+| **M0** Foundation | Done | Repository, `pyproject.toml`, CI, pre-commit, `Outcome` and `Result` models, JSON Schemas, `sources.csv` linter, wheel smoke test. | CI is green on the empty but valid package, and a clean-venv install of the wheel passes `agri-core validate --pack sample`. |
+| **M1-0** Data split | Done | Remove `profiles/` and `LICENSE-DATA`; the engine keeps schemas, dictionary and sample pack. | `pip install git+...` loads from a clean env without the `profiles/` folder; README reflects the split. |
+| **M1-1** Contract models | Done | `Outcome` (7 statuses), `Result`, row models (`taxon`, `name`, `fact`, `hazard`, `dataset`, `source`), identifier primitives (Crockford base32), `ParameterDef` v1.0.0, `PhaseSet`, `ScopeKey`. | Drift tests, frozen / extra-forbid invariants, and identifier pattern tests pass. |
+| **M1-2** Row JSON schemas | Done | JSON schemas for the 6 row models and the 8-shape `FactValue` union, generated from the Pydantic models. | Drift tests green; `EnumSetValue` in `FactValue` tested; `$defs` checked. |
+| **M1-3** Core dictionary 1.0.0 | Done | 31 parameters at `dictionary_version: 1.0.0`, `dictionary.lock` (append-only), `history/1.0.0.json`, `classify_change` for SemVer, safety-class taxonomy. | Lock hash verified against the running dictionary; `introduced_in` matches first snapshot; `test_semver_compat` infrastructure ready. |
+| **M1-4** Loader and sample pack | In progress | `compute_pack_hash` / `verify_pack_hash`; `load_knowledge_set(path)`; immutable `KnowledgeSet`; sample pack with 8 synthetic taxa (one per archetype, without real agronomic data). | Hash determinism and mismatch tests pass; sample pack loads cleanly; foreign keys on `taxon_id`, `parameter`, `src` verified. |
+| **M1-5** Build | Not started | `scaffold` (opaque taxon IDs, never reused) plus `build` (CSV → SQLite + manifest, reproducible). | Wheel and pack build reproducibly (identical SHA-256 twice). |
+| **M1-6** Validate, diff, coverage, license gate | Not started | Trapezoid order, scope validity, unit resolution, duplicate detection, tier derivation (T0–T3), `diff` report, `coverage`, license gate. | Sample pack passes validate with 0 errors; `diff` matches fixtures; coverage assigns tiers; license gate rejects NC + `commercial_use=yes`. |
+| **M1-7** `resolve_taxon` and `resolve_fact` | Not started | Deterministic resolution per the fixed policy; `show` CLI. | `resolve_taxon` p95 ≤ 5 ms; resolution tests match fixtures. |
+| **M1-8** Offline, performance, docs | Not started | Socket-blocking pytest plugin, performance budget tests, `docs/` skeleton (`REVIEW_GUIDE`, `PACK_FORMAT`, `DICTIONARY`, `RESOLUTION_POLICY`, `SAFETY`, `ADDING_A_TAXON`). | Every test passes with network blocked; performance budget met; M1 tag `v0.1.0`. |
+| **M2** Climate, thresholds and stages | Not started | VPD, GDD, DLI, ET0 with fallback, temperature from elevation, threshold checks, stage resolver. | Golden tests pass; phases resolve per archetype; perennials use caller-supplied events. |
+| **M3** Irrigation, fertilizer, media and water | Not started | Registry of irrigation modes (`container_band`, `field_etc`, `paddy_awd`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. | `v0.1.0` tagged: passes against the sample pack and against `agri-knowledge` `v0.1.0`. |
+| **M4** Suitability and propagation | Not started | Single and batch site suitability, per-factor reasons, hazard flags, dated propagation plans. | `v0.2.0` tagged: batch mode within the performance budget; scenario tests including an `unsuitable` case. |
+| **M5** Exports and documentation | Not started | `tool_schemas.json`, `edge_thresholds.json` per site, `review_sheet.csv` per tier, quickstart notebook, `docs/`. | A release tag includes exports, generated from the same Pydantic models as the library, with a stable contract test. |
 
 ## License
 
