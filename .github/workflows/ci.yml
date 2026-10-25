@@ -166,6 +166,8 @@ jobs:
               "agri_core/_data/schema/fact.schema.json",
               "agri_core/_dictionary/parameters.core.yaml",
               "agri_core/_dictionary/vocab/archetypes.yaml",
+              "agri_core/_dictionary/dictionary.lock",
+              "agri_core/_dictionary/history/1.0.0.json",
               "agri_core/_samples/sample_pack/pack.toml",
               "agri_core/_samples/sample_pack/sources.csv",
               "agri_core/_samples/sample_pack/README.md",
