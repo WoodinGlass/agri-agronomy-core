@@ -24,7 +24,7 @@ def _valid_license(v: str) -> bool:
 
 
 class DatasetRow(BaseModel):
-    """One row of ``dataset.csv``: an external dataset a fact cites.
+    """One row of ``datasets.csv``: an external dataset a fact cites.
 
     ``license`` accepts SPDX-shaped identifiers, ``LicenseRef-<slug>`` for
     custom licenses, or ``unclear`` when the license is unknown. Full SPDX

@@ -123,9 +123,8 @@ else:
 
 ```bash
 agri-core --help
-agri-core validate --pack sample           # manifest + sources + facts
+agri-core validate --pack sample           # manifest + sources (facts in M7)
 agri-core lint-sources --pack sample       # sources.csv checks
-agri-core show --pack sample --taxon tomato
 ```
 
 ## Output contract
@@ -160,7 +159,7 @@ The word `unknown` appears at three levels: a fact whose value is marked unknown
 
 ## Pack format
 
-A pack is a directory with a manifest and CSV tables. `agri-core build` compiles it into a verified SQLite file plus a manifest that records hashes.
+A pack is a directory with a manifest and CSV tables. `agri-core build` (planned for M6) will compile it into a verified SQLite file plus a manifest that records hashes.
 
 ```
 <pack>/
@@ -182,7 +181,7 @@ name = "agri-knowledge"
 version = "2026.10.0"
 schema_version = 1
 engine_min = "0.1.0"
-# Written by `agri-core build`. sha256 of the pack's canonical content.
+# Written by `agri-core build` (M6). sha256 of the pack's canonical content.
 content_hash = "sha256:..."
 ```
 
@@ -193,7 +192,7 @@ Each fact is one value at one scope. The engine resolves facts deterministically
 | Field | Meaning |
 |---|---|
 | `fact_id` | Stable identifier; never reused. Superseded facts are kept with `superseded_by`. |
-| `taxon_id` | Opaque ID created by `agri-core scaffold`; scientific names may change without changing the ID. |
+| `taxon_id` | Opaque ID created by `agri-core scaffold` (M6); scientific names may change without changing the ID. |
 | `parameter` | A core parameter from `parameters.core.yaml` or an extension parameter declared in the pack. |
 | `phase` | A phase from `phases_by_archetype`. |
 | `value` | One of eight shapes: `trapezoid`, `range`, `scalar`, `enum`, `enum_set`, `bool`, `rule`, `unknown`. |
@@ -264,7 +263,7 @@ Adding a **core** parameter is a minor engine release. Adding an **extension** p
 
 ## Taxa and identifiers
 
-- Taxon IDs are created by `agri-core scaffold` and are opaque (Crockford base32 with a `T` prefix, ten characters). They are never reused.
+- Taxon IDs will be created by `agri-core scaffold` (M6) and are opaque (Crockford base32 with a `T` prefix, ten characters). They are never reused.
 - Scientific names may change without changing the ID.
 - `rank` is one of `cultivar_group`, `genus`, `hybrid`, `species`.
 - `parent_id` is for navigation only; it does not imply inheritance of facts. Values never flow from parent to child automatically.
@@ -284,7 +283,7 @@ First release line (six profiles across five archetypes):
 
 The propagation planner returns the `not_applicable` outcome for rice, tomato and black truffle.
 
-**Protected species are excluded.** Taxa listed under CITES Appendix I or II, Permen LHK 106/2018 (Indonesia), or the IUCN Red List at CR, EN or VU are not included in the sample pack or in the initial `agri-knowledge` release unless a documented lawful cultivation pathway exists (for example, an artificial-propagation exemption under CITES, or data on commercially cultivated varieties rather than wild-type material). *Vanilla planifolia* is retained under the CITES exemption for artificially propagated pods. The design rationale and the per-taxon decisions are recorded in `docs/design/plant_wishlist_v4_rationale.md` and `docs/design/plant_wishlist_v4_migration.md`.
+**Protected species are excluded.** Taxa listed under CITES Appendix I or II, Permen LHK 106/2018 (Indonesia), or the IUCN Red List at CR, EN or VU are not included in the sample pack or in the initial `agri-knowledge` release unless a documented lawful cultivation pathway exists (for example, an artificial-propagation exemption under CITES, or data on commercially cultivated varieties rather than wild-type material). *Vanilla planifolia* is listed under CITES Appendix II as part of the Orchidaceae family and is retained under the CITES exemption for artificially propagated pods and seeds; it is not listed in Permen LHK 106/2018. The design rationale and the per-taxon decisions are recorded in `docs/design/plant_wishlist_v4_rationale.md` and `docs/design/plant_wishlist_v4_migration.md`.
 
 Planned next: maize, chili pepper, broccoli, potato, lettuce, grape, apple, watermelon, melon, blueberry, lychee, wasabi and bonsai (per species, with a technique module for pruning, wiring and repotting). Carnivorous plants are split by genus; the wishlist covers Genlisea, Byblis, Drosophyllum, Drosera, Pinguicula, Utricularia and Roridula.
 
