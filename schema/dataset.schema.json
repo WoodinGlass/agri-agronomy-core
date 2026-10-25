@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "One row of ``dataset.csv``: an external dataset a fact cites.\n\n``license`` accepts SPDX-shaped identifiers, ``LicenseRef-<slug>`` for\ncustom licenses, or ``unclear`` when the license is unknown. Full SPDX\nmembership is checked at validate time against the manifest's\ndictionary_version, not here.",
+  "description": "One row of ``datasets.csv``: an external dataset a fact cites.\n\n``license`` accepts SPDX-shaped identifiers, ``LicenseRef-<slug>`` for\ncustom licenses, or ``unclear`` when the license is unknown. Full SPDX\nmembership is checked at validate time against the manifest's\ndictionary_version, not here.",
   "properties": {
     "access_date": {
       "format": "date",

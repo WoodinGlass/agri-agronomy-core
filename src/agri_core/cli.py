@@ -131,7 +131,6 @@ def validate(
     findings = lint_csv_file(p.sources_csv, today=date.today())
     errors, warnings = _emit_findings(findings)
     counts = _count_commercial_use(p.sources_csv)
-    typer.echo("profiles: 0")
     typer.echo(
         f"sources: {sum(counts.values())} "
         f"(yes: {counts['yes']}, no: {counts['no']}, unclear: {counts['unclear']})"
