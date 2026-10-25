@@ -108,12 +108,12 @@ pack = load_pack(Path("/data/agri-knowledge/packs/2026.10.0"))
 # Resolve a taxon by name. Returns ok, ambiguous or unknown.
 taxon = registry.resolve_taxon("tomato", country="ID", pack=pack)
 if taxon.status != "ok":
-    print(taxon.status)                   # "ambiguous" or "unknown"
+    print(taxon.status)  # "ambiguous" or "unknown"
 
 # Every result carries the fact IDs, engine version, pack version and hash.
 r = vpd(temp_c=28.0, rh_pct=65.0)
 if r.status == "ok":
-    print(r.value, r.unit)                # about 1.32 kPa
+    print(r.value, r.unit)  # about 1.32 kPa
     print(r.method, r.assumptions, r.warnings)
 else:
     print(r.status)
