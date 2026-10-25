@@ -28,7 +28,7 @@ dependencies = [
     "jsonschema>=4.20,<5",
     "pyyaml>=6.0.2,<7",
     "pint>=0.24.4,<0.26",
-    "typer>=0.16,<0.20",
+    "typer>=0.18,<0.20",
     "packaging>=24,<27",
 ]
 
@@ -110,7 +110,7 @@ addopts = "-ra --strict-markers --strict-config --cov=agri_core --cov-report=ter
 testpaths = ["tests"]
 filterwarnings = [
     "error",
-    # typer 0.16+ (as of 0.19.2) still imports names such as
+    # typer 0.18+ (as of 0.19.2) still imports names such as
     # click.utils.get_binary_stream that click 8.5 deprecates on access.
     # Narrowed to click.utils.* only: other DeprecationWarnings still fail
     # the suite. Remove when the typer line stops importing them.
