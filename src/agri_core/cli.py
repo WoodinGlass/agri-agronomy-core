@@ -20,10 +20,12 @@ from agri_core.pack import (
     PackManifest,
     compute_pack_hash,
     hash_pack_files,
+    load_knowledge_set,
     load_knowledge_set_from_files,
     parse_manifest_bytes,
     read_pack_bytes,
 )
+from agri_core.pack.sqlite_schema import write_built_pack
 from agri_core.registry import Finding, lint_csv_text
 
 EXIT_OK = 0
@@ -264,6 +266,111 @@ def pack_lock(
         raise typer.Exit(EXIT_UNEXPECTED)
 
     typer.echo(f"wrote content_hash = {new_hash}")
+
+
+def _strip_content_hash(toml_bytes: bytes) -> bytes:
+    """Remove the content_hash line so structural validation skips hash check."""
+    text = toml_bytes.decode("utf-8")
+    lines = [ln for ln in text.splitlines() if not ln.lstrip().startswith("content_hash")]
+    return ("\n".join(lines) + "\n").encode("utf-8")
+
+
+def _reject_existing_artifacts(out_dir: Path) -> None:
+    for name in ("pack.sqlite", "pack.toml"):
+        target = out_dir / name
+        if target.exists():
+            typer.echo(
+                f"error: {target} already exists; remove it or choose another --out",
+                err=True,
+            )
+            raise typer.Exit(EXIT_USAGE)
+
+
+def _sync_source_hash(
+    source: Path, files: Mapping[str, bytes], manifest: PackManifest
+) -> tuple[str, dict[str, bytes]]:
+    """Rewrite source pack.toml canonically. Returns (status, files_with_fresh_toml)."""
+    computed = hash_pack_files(files)
+    fresh_bytes = _render_pack_toml(manifest, computed).encode("utf-8")
+    if manifest.content_hash == computed and files["pack.toml"] == fresh_bytes:
+        return "unchanged", dict(files)
+    status = "updated" if manifest.content_hash != computed else "normalized"
+    target = source / "pack.toml"
+    tmp = source / "pack.toml.tmp"
+    try:
+        tmp.write_bytes(fresh_bytes)
+        os.replace(tmp, target)
+    except OSError as exc:
+        with contextlib.suppress(OSError):
+            tmp.unlink(missing_ok=True)
+        typer.echo(f"error: OSError: {exc}", err=True)
+        raise typer.Exit(EXIT_UNEXPECTED) from exc
+    return status, {**files, "pack.toml": fresh_bytes}
+
+
+@pack_app.command(name="build")
+def pack_build(
+    pack: Annotated[
+        str,
+        typer.Option(
+            "--pack",
+            help=("Path to a source pack directory (explicit path only; 'sample' is rejected)."),
+        ),
+    ],
+    out: Annotated[
+        Path,
+        typer.Option("--out", help="Output directory for pack.sqlite and pack.toml."),
+    ],
+    update_source_hash: Annotated[
+        bool,
+        typer.Option(
+            "--update-source-hash",
+            help="Rewrite source pack.toml when content_hash or formatting is stale.",
+        ),
+    ] = False,
+) -> None:
+    """Validate a source pack and write a built (SQLite) pack."""
+    if pack == "sample":
+        typer.echo(
+            "error: pack build requires an explicit path; 'sample' is not "
+            "allowed. Pass the path, e.g. src/agri_core/_samples/sample_pack.",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
+
+    out_dir = Path(out)
+    _reject_existing_artifacts(out_dir)
+
+    source = Path(pack)
+    try:
+        files: Mapping[str, bytes] = read_pack_bytes(source)
+        manifest = parse_manifest_bytes(files["pack.toml"])
+
+        if update_source_hash:
+            stripped = {
+                **files,
+                "pack.toml": _strip_content_hash(files["pack.toml"]),
+            }
+            load_knowledge_set_from_files(stripped, allow_synthetic=True)
+            status, files_new = _sync_source_hash(source, files, manifest)
+            typer.echo(f"source_hash: {status}")
+            files = files_new
+        else:
+            load_knowledge_set(source, allow_synthetic=True)
+
+        write_built_pack(files, out_dir=out_dir)
+        built = parse_manifest_bytes((out_dir / "pack.toml").read_bytes())
+    except PackError as exc:
+        typer.echo(f"error: {exc.code}: {exc}", err=True)
+        for finding in getattr(exc, "findings", ()):
+            loc = f"{finding.file}:{finding.line}" if getattr(finding, "file", None) else "-"
+            typer.echo(f"  {finding.code} {loc}: {finding}", err=True)
+        raise typer.Exit(EXIT_PACK) from exc
+
+    typer.echo(f"source: {source}")
+    typer.echo(f"built: {out_dir}")
+    typer.echo(f"content_hash: {built.content_hash}")
+    typer.echo(f"artifact_sha256: {built.artifact_sha256}")
 
 
 def main() -> NoReturn:

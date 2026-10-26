@@ -129,6 +129,7 @@ agri-core --help
 agri-core validate --pack sample           # manifest + sources (facts in M7)
 agri-core lint-sources --pack sample       # sources.csv checks
 agri-core pack lock --pack src/agri_core/_samples/sample_pack   # regenerate content_hash
+agri-core pack build --pack src/agri_core/_samples/sample_pack --out build/  # build SQLite
 ```
 
 ## Output contract
@@ -163,7 +164,7 @@ The word `unknown` appears at three levels: a fact whose value is marked unknown
 
 ## Pack format
 
-A pack is a directory with a manifest and CSV tables. `agri-core build` (planned for M6) will compile it into a verified SQLite file plus a manifest that records hashes. `docs/PACK_FORMAT.md` is the reference for the format as it stands today.
+A pack is a directory with a manifest and CSV tables. `agri-core pack build` will compile it into a verified SQLite file plus a manifest that records hashes. `docs/PACK_FORMAT.md` is the reference for the format as it stands today.
 
 ```
 <pack>/
