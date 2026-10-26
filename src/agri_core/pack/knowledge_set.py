@@ -1,11 +1,16 @@
-"""Immutable in-memory pack view (KnowledgeSet Protocol + InMemoryKnowledgeSet)."""
+"""KnowledgeSet Protocol and its in-memory and SQLite implementations."""
 
 from __future__ import annotations
 
+import json
+import sqlite3
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from types import MappingProxyType
-from typing import Protocol
+from typing import Any, Protocol, TypeVar
+
+from pydantic import BaseModel
 
 from agri_core.models.dataset import DatasetRow
 from agri_core.models.fact import FactRow
@@ -13,9 +18,12 @@ from agri_core.models.hazard import HazardRow
 from agri_core.models.name import NameRow
 from agri_core.models.taxon import TaxonRow
 from agri_core.pack.manifest import PackManifest
+from agri_core.pack.tables import TABLES, TableSpec
 from agri_core.registry.sources import SourceRow
 
-__all__ = ["InMemoryKnowledgeSet", "KnowledgeSet"]
+__all__ = ["InMemoryKnowledgeSet", "KnowledgeSet", "SQLiteKnowledgeSet"]
+
+_T = TypeVar("_T", bound=BaseModel)
 
 
 class KnowledgeSet(Protocol):
@@ -282,4 +290,255 @@ class InMemoryKnowledgeSet:
 
 def _conforms(ks: InMemoryKnowledgeSet) -> KnowledgeSet:
     """mypy structural check: InMemoryKnowledgeSet satisfies KnowledgeSet."""
+    return ks
+
+
+# ---- SQLiteKnowledgeSet (M6-2) ----------------------------------------
+
+
+def _sqlite_uri(path: Path) -> str:
+    return f"file:{path.as_posix()}?mode=ro&immutable=1"
+
+
+def _row_to_dict(row: sqlite3.Row, spec: TableSpec) -> dict[str, Any]:
+    """Decode a SQLite row into the shape Pydantic expects.
+
+    Mirrors the writer in ``pack/sqlite_schema.py``: ``list_str`` cells
+    are pipe-joined (sorted on write), JSON cells are canonical JSON,
+    everything else is stored as-is (str / int / float / bool-as-int /
+    date-as-ISO). Pydantic performs the final conversion to the row model.
+    """
+    out: dict[str, Any] = {}
+    for col in spec.columns:
+        v = row[col.name]
+        if v is None:
+            out[col.name] = None
+        elif col.type == "list_str":
+            out[col.name] = v.split("|") if v else []
+        elif col.type in ("dict_str_str", "json"):
+            out[col.name] = json.loads(v)
+        else:
+            out[col.name] = v
+    return out
+
+
+# Do not add slots=True: on Python 3.10/3.11 @dataclass(slots=True) with
+# frozen=True rebuilds the class and breaks super().__setattr__. See the
+# comment on InMemoryKnowledgeSet.
+@dataclass(frozen=True, init=False)
+class SQLiteKnowledgeSet:
+    """Read-only SQLite-backed KnowledgeSet.
+
+    Each method opens a fresh connection in ``mode=ro&immutable=1`` with
+    ``query_only=ON`` and ``trusted_schema=OFF``, runs one query, and
+    closes. No state is cached; reads are thread-safe by construction.
+    Rows are validated with ``model_validate`` before being returned.
+
+    Construct via :meth:`_build` from the loader after all integrity
+    checks have passed. Not part of the public API; consumers depend on
+    the ``KnowledgeSet`` Protocol.
+    """
+
+    _sqlite_path: Path
+    _manifest: PackManifest
+    _pack_hash: str
+    _dictionary_version: str
+    _verified: bool
+
+    @classmethod
+    def _build(
+        cls,
+        *,
+        sqlite_path: Path,
+        manifest: PackManifest,
+        pack_hash: str,
+        dictionary_version: str,
+        verified: bool,
+    ) -> SQLiteKnowledgeSet:
+        ks = object.__new__(cls)
+        object.__setattr__(ks, "_sqlite_path", Path(sqlite_path))
+        object.__setattr__(ks, "_manifest", manifest)
+        object.__setattr__(ks, "_pack_hash", pack_hash)
+        object.__setattr__(ks, "_dictionary_version", dictionary_version)
+        object.__setattr__(ks, "_verified", verified)
+        return ks
+
+    # ---- internal -----------------------------------------------------
+
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(_sqlite_uri(self._sqlite_path), uri=True)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA query_only = ON")
+        conn.execute("PRAGMA trusted_schema = OFF")
+        return conn
+
+    def _taxon_exists(self, conn: sqlite3.Connection, taxon_id: str) -> bool:
+        row = conn.execute("SELECT 1 FROM taxa WHERE taxon_id = ? LIMIT 1", (taxon_id,)).fetchone()
+        return row is not None
+
+    def _row_or_none(
+        self,
+        sql: str,
+        params: tuple[Any, ...],
+        spec: TableSpec,
+        model: type[_T],
+    ) -> _T | None:
+        conn = self._connect()
+        try:
+            row = conn.execute(sql, params).fetchone()
+        finally:
+            conn.close()
+        if row is None:
+            return None
+        return model.model_validate(_row_to_dict(row, spec))
+
+    def _iter_models(
+        self,
+        sql: str,
+        spec: TableSpec,
+        model: type[_T],
+    ) -> Iterator[_T]:
+        conn = self._connect()
+        try:
+            for row in conn.execute(sql):
+                yield model.model_validate(_row_to_dict(row, spec))
+        finally:
+            conn.close()
+
+    # ---- Protocol properties ------------------------------------------
+
+    @property
+    def manifest(self) -> PackManifest:
+        return self._manifest
+
+    @property
+    def pack_hash(self) -> str:
+        return self._pack_hash
+
+    @property
+    def dictionary_version(self) -> str:
+        return self._dictionary_version
+
+    @property
+    def verified(self) -> bool:
+        return self._verified
+
+    # ---- per-item lookups ---------------------------------------------
+
+    def taxon(self, taxon_id: str) -> TaxonRow:
+        result = self._row_or_none(
+            "SELECT * FROM taxa WHERE taxon_id = ?",
+            (taxon_id,),
+            TABLES["taxa"],
+            TaxonRow,
+        )
+        if result is None:
+            raise KeyError(taxon_id)
+        return result
+
+    def source(self, source_id: str) -> SourceRow:
+        result = self._row_or_none(
+            "SELECT * FROM sources WHERE id = ?",
+            (source_id,),
+            TABLES["sources"],
+            SourceRow,
+        )
+        if result is None:
+            raise KeyError(source_id)
+        return result
+
+    def dataset(self, dataset_id: str) -> DatasetRow:
+        result = self._row_or_none(
+            "SELECT * FROM datasets WHERE dataset_id = ?",
+            (dataset_id,),
+            TABLES["datasets"],
+            DatasetRow,
+        )
+        if result is None:
+            raise KeyError(dataset_id)
+        return result
+
+    # ---- iterators ----------------------------------------------------
+
+    def taxa(self) -> Iterator[TaxonRow]:
+        return self._iter_models(
+            "SELECT * FROM taxa ORDER BY taxon_id",
+            TABLES["taxa"],
+            TaxonRow,
+        )
+
+    def facts(self) -> Iterator[FactRow]:
+        return self._iter_models(
+            "SELECT * FROM facts ORDER BY fact_id",
+            TABLES["facts"],
+            FactRow,
+        )
+
+    def names(self) -> Iterator[NameRow]:
+        return self._iter_models(
+            "SELECT * FROM names ORDER BY taxon_id, name, language, script, kind",
+            TABLES["names"],
+            NameRow,
+        )
+
+    def hazards(self) -> Iterator[HazardRow]:
+        return self._iter_models(
+            "SELECT * FROM hazards ORDER BY taxon_id, hazard_code",
+            TABLES["hazards"],
+            HazardRow,
+        )
+
+    # ---- per-taxon collections ----------------------------------------
+
+    def facts_for(self, taxon_id: str, parameter: str | None = None) -> tuple[FactRow, ...]:
+        conn = self._connect()
+        try:
+            if parameter is None:
+                cursor = conn.execute(
+                    "SELECT * FROM facts WHERE taxon_id = ? ORDER BY fact_id",
+                    (taxon_id,),
+                )
+            else:
+                cursor = conn.execute(
+                    "SELECT * FROM facts WHERE taxon_id = ? AND parameter = ? ORDER BY fact_id",
+                    (taxon_id, parameter),
+                )
+            rows = cursor.fetchall()
+            if not rows and not self._taxon_exists(conn, taxon_id):
+                raise KeyError(taxon_id)
+        finally:
+            conn.close()
+        return tuple(FactRow.model_validate(_row_to_dict(r, TABLES["facts"])) for r in rows)
+
+    def names_for(self, taxon_id: str) -> tuple[NameRow, ...]:
+        conn = self._connect()
+        try:
+            cursor = conn.execute(
+                "SELECT * FROM names WHERE taxon_id = ? ORDER BY name, language, script, kind",
+                (taxon_id,),
+            )
+            rows = cursor.fetchall()
+            if not rows and not self._taxon_exists(conn, taxon_id):
+                raise KeyError(taxon_id)
+        finally:
+            conn.close()
+        return tuple(NameRow.model_validate(_row_to_dict(r, TABLES["names"])) for r in rows)
+
+    def hazards_for(self, taxon_id: str) -> tuple[HazardRow, ...]:
+        conn = self._connect()
+        try:
+            cursor = conn.execute(
+                "SELECT * FROM hazards WHERE taxon_id = ? ORDER BY hazard_code",
+                (taxon_id,),
+            )
+            rows = cursor.fetchall()
+            if not rows and not self._taxon_exists(conn, taxon_id):
+                raise KeyError(taxon_id)
+        finally:
+            conn.close()
+        return tuple(HazardRow.model_validate(_row_to_dict(r, TABLES["hazards"])) for r in rows)
+
+
+def _conforms_sqlite(ks: SQLiteKnowledgeSet) -> KnowledgeSet:
+    """mypy structural check: SQLiteKnowledgeSet satisfies KnowledgeSet."""
     return ks

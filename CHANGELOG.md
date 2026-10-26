@@ -42,6 +42,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ADR-002: two-hash model (`content_hash` semantic,
   `artifact_sha256` file integrity), DDL pinning, `WITHOUT ROWID`
   benchmark, cross-version SQLite caveat.
+- `SQLiteKnowledgeSet` in `pack/knowledge_set.py`: read-only SQLite
+  backend implementing the `KnowledgeSet` Protocol. Per-call
+  connection in `mode=ro&immutable=1` with `query_only=ON` and
+  `trusted_schema=OFF`; no cache; thread-safe by construction. Rows
+  are `model_validate`'d on read; the writer's encoding (pipe-joined
+  lists, canonical JSON for value/scope, ISO dates) is decoded by
+  `_row_to_dict`.
+- `load_knowledge_set` now detects the pack kind from directory
+  contents: `pack.sqlite` + `pack.toml` selects the SQLite backend;
+  `taxa.csv` + `pack.toml` selects the CSV backend. Both or neither
+  raises `InvalidPackError`. On a built pack, `expected_hash`
+  compares against `artifact_sha256` (the file hash); `pack_hash`
+  on the returned `KnowledgeSet` remains `content_hash` on both
+  backends for provenance consistency.
+- Built-pack load verification is 3 layers: `artifact_sha256` vs
+  sha256(`pack.sqlite`), `content_hash` vs `metadata.content_hash`,
+  and `PRAGMA user_version` vs `manifest.sqlite_schema_version`
+  plus 8 metadata rows vs `pack.toml` fields.
+
 ### Added
 
 - Dictionary `1.0.0` finalized (c-3b): `dictionary_version: 1.0.0`

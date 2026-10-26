@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
+import sqlite3
 import tomllib
 from collections.abc import Mapping
 from pathlib import Path
+from typing import Literal
 
 from packaging.version import Version
 from pydantic import BaseModel
@@ -33,20 +36,27 @@ from agri_core.pack.errors import (
     PackFeatureUnsupportedError,
     PackFKViolationError,
     PackHashMismatchError,
+    PackNotFoundError,
     PackPhaseInvalidError,
     PackSafetyViolationError,
     PackScopeInvalidError,
     PackShapeMismatchError,
     PackSyntheticNotAllowedError,
     PackTableInvalidError,
+    PackTooLargeError,
     PackUnitMismatchError,
     PackUnknownParameterError,
     PackValueOutOfRangeError,
     UnsupportedSchemaVersionError,
 )
 from agri_core.pack.files import DEFAULT_MAX_BYTES, read_pack_bytes
-from agri_core.pack.knowledge_set import InMemoryKnowledgeSet, KnowledgeSet
+from agri_core.pack.knowledge_set import (
+    InMemoryKnowledgeSet,
+    KnowledgeSet,
+    SQLiteKnowledgeSet,
+)
 from agri_core.pack.manifest import SUPPORTED_SCHEMA_VERSIONS, PackManifest
+from agri_core.pack.sqlite_schema import SQLITE_SCHEMA_VERSION
 from agri_core.pack.tables import TABLES, Table, read_table
 from agri_core.pack.verify import hash_pack_files
 from agri_core.registry.sources import SourceRow
@@ -549,6 +559,154 @@ def load_knowledge_set_from_files(
     )
 
 
+def _detect_pack_kind(root: Path) -> Literal["source", "built"]:
+    """Detect pack kind from directory contents.
+
+    Built pack:  ``pack.sqlite`` + ``pack.toml``.
+    Source pack: ``taxa.csv`` + ``pack.toml``.
+    Both or neither: ``InvalidPackError``.
+    """
+    has_sqlite = (root / "pack.sqlite").is_file()
+    has_taxa = (root / "taxa.csv").is_file()
+    if has_sqlite and has_taxa:
+        raise InvalidPackError(
+            f"{root} contains both pack.sqlite and taxa.csv; cannot tell source from built pack"
+        )
+    if has_sqlite:
+        return "built"
+    if has_taxa:
+        return "source"
+    raise InvalidPackError(f"{root} contains neither pack.sqlite nor taxa.csv; not a pack")
+
+
+def _check_built_metadata(
+    pack_sqlite: Path,
+    manifest: PackManifest,
+    *,
+    schema_version: int,
+    content_hash: str,
+    built_by: str,
+) -> None:
+    """Verify pack.toml and SQLite metadata agree on 8 rows + user_version."""
+    conn = sqlite3.connect(f"file:{pack_sqlite.as_posix()}?mode=ro&immutable=1", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        conn.execute("PRAGMA query_only = ON")
+        conn.execute("PRAGMA trusted_schema = OFF")
+        uv = conn.execute("PRAGMA user_version").fetchone()[0]
+        if uv != schema_version:
+            raise InvalidPackError(
+                f"sqlite user_version {uv} != manifest sqlite_schema_version {schema_version}",
+                file="pack.sqlite",
+            )
+        rows = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM metadata")}
+    finally:
+        conn.close()
+
+    expected = {
+        "name": manifest.name,
+        "version": manifest.version,
+        "schema_version": str(manifest.schema_version),
+        "engine_min": manifest.engine_min,
+        "dictionary_min": manifest.dictionary_min,
+        "synthetic": "1" if manifest.synthetic else "0",
+        "content_hash": content_hash,
+        "built_by": built_by,
+    }
+    for key, expected_val in expected.items():
+        actual = rows.get(key)
+        if actual != expected_val:
+            raise InvalidPackError(
+                f"metadata mismatch for {key!r}: sqlite={actual!r} manifest={expected_val!r}",
+                file="pack.sqlite",
+            )
+
+
+def _load_built_pack(
+    root: Path,
+    *,
+    allow_synthetic: bool,
+    expected_hash: str | None,
+    dictionary: Dictionary | None,
+    max_bytes: int,
+) -> KnowledgeSet:
+    """Load a built pack (pack.sqlite + pack.toml) into a SQLiteKnowledgeSet."""
+    pack_toml = root / "pack.toml"
+    pack_sqlite = root / "pack.sqlite"
+    if not pack_toml.is_file():
+        raise InvalidPackError(f"pack.toml not found in {root}", file="pack.toml")
+    if not pack_sqlite.is_file():
+        raise InvalidPackError(f"pack.sqlite not found in {root}", file="pack.sqlite")
+    if pack_toml.is_symlink() or pack_sqlite.is_symlink():
+        raise InvalidPackError(f"symlinks not allowed in built pack: {root}")
+
+    total = pack_toml.stat().st_size + pack_sqlite.stat().st_size
+    if total > max_bytes:
+        raise PackTooLargeError(
+            f"built pack size {total} > max_bytes {max_bytes}",
+            file=str(root),
+        )
+
+    manifest = parse_manifest_bytes(pack_toml.read_bytes())
+
+    schema_version = manifest.sqlite_schema_version
+    artifact_sha256 = manifest.artifact_sha256
+    content_hash = manifest.content_hash
+    built_by = manifest.built_by
+    if schema_version is None or artifact_sha256 is None or built_by is None:
+        raise InvalidPackError(
+            "built pack.toml must declare artifact_sha256, sqlite_schema_version, "
+            "and built_by (all-or-none)",
+            file="pack.toml",
+        )
+    if content_hash is None:
+        raise InvalidPackError("built pack.toml must declare content_hash", file="pack.toml")
+
+    if schema_version != SQLITE_SCHEMA_VERSION:
+        raise UnsupportedSchemaVersionError(
+            f"built pack sqlite_schema_version {schema_version} "
+            f"!= engine SQLITE_SCHEMA_VERSION {SQLITE_SCHEMA_VERSION}"
+        )
+
+    actual_artifact = "sha256:" + hashlib.sha256(pack_sqlite.read_bytes()).hexdigest()
+    if artifact_sha256 != actual_artifact:
+        raise PackHashMismatchError(
+            f"artifact_sha256 mismatch: manifest={artifact_sha256} computed={actual_artifact}",
+            file="pack.sqlite",
+        )
+    if expected_hash is not None and expected_hash != actual_artifact:
+        raise PackHashMismatchError(
+            f"expected_hash mismatch: caller={expected_hash} computed={actual_artifact}",
+            file="pack.sqlite",
+        )
+
+    if dictionary is None:
+        dictionary = _default_dictionary()
+    _check_compat(manifest, dictionary)
+
+    if manifest.synthetic and not allow_synthetic:
+        raise PackSyntheticNotAllowedError(
+            "pack is synthetic; load with allow_synthetic=True",
+            file="pack.toml",
+        )
+
+    _check_built_metadata(
+        pack_sqlite,
+        manifest,
+        schema_version=schema_version,
+        content_hash=content_hash,
+        built_by=built_by,
+    )
+
+    return SQLiteKnowledgeSet._build(
+        sqlite_path=pack_sqlite,
+        manifest=manifest,
+        pack_hash=content_hash,
+        dictionary_version=dictionary.version,
+        verified=True,
+    )
+
+
 def load_knowledge_set(
     path: str | Path,
     *,
@@ -557,8 +715,37 @@ def load_knowledge_set(
     dictionary: Dictionary | None = None,
     max_bytes: int = DEFAULT_MAX_BYTES,
 ) -> KnowledgeSet:
-    """Load a pack directory into an immutable KnowledgeSet."""
-    files = read_pack_bytes(Path(path), max_bytes=max_bytes)
+    """Load a pack directory into an immutable KnowledgeSet.
+
+    The pack kind is detected from directory contents:
+
+    - ``pack.sqlite`` + ``pack.toml`` (built pack) → SQLite backend.
+      ``expected_hash`` compares against ``artifact_sha256`` (the SQLite
+      file hash), because ``content_hash`` cannot be recomputed from the
+      built artifact alone.
+    - ``taxa.csv`` + ``pack.toml`` (source pack) → CSV backend.
+      ``expected_hash`` compares against ``content_hash``.
+
+    Exactly one of the two layouts must be present. Having both or neither
+    raises ``InvalidPackError``.
+    """
+    root = Path(path)
+    if not root.exists():
+        raise PackNotFoundError(f"pack directory not found: {root}")
+    if not root.is_dir():
+        raise InvalidPackError(f"not a directory: {root}", file=str(root))
+
+    kind = _detect_pack_kind(root)
+    if kind == "built":
+        return _load_built_pack(
+            root,
+            allow_synthetic=allow_synthetic,
+            expected_hash=expected_hash,
+            dictionary=dictionary,
+            max_bytes=max_bytes,
+        )
+
+    files = read_pack_bytes(root, max_bytes=max_bytes)
     return load_knowledge_set_from_files(
         files,
         allow_synthetic=allow_synthetic,
