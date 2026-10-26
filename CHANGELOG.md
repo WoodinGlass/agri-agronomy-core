@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `agri-core pack build --pack PATH --out DIR` validates a source pack
+  and writes `pack.sqlite` plus a built `pack.toml`. Prints
+  `content_hash` and `artifact_sha256` for the resulting artifact.
+  Refuses to run if DIR already contains `pack.sqlite` or `pack.toml`,
+  or if it looks like a source pack (contains `taxa.csv`).
+  `--update-source-hash` rewrites a stale or non-canonical source
+  `pack.toml` before building; without the flag a stale hash is
+  reported as `PACK_HASH_MISMATCH`. Keyword `sample` is rejected —
+  pass an explicit path.
 - `agri-core pack lock --pack PATH` regenerates `content_hash` in
   `pack.toml` atomically. Validates structurally before writing and
   is idempotent; comments and non-fixed key order are not preserved.
