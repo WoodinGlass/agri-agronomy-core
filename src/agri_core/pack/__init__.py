@@ -22,6 +22,7 @@ from agri_core.pack.errors import (
     UnsupportedSchemaVersionError,
 )
 from agri_core.pack.files import DEFAULT_MAX_BYTES, REQUIRED_TABLES, read_pack_bytes
+from agri_core.pack.knowledge_set import InMemoryKnowledgeSet, KnowledgeSet
 from agri_core.pack.loader import Pack, PackKind, load_pack, load_sample_pack
 from agri_core.pack.manifest import SUPPORTED_SCHEMA_VERSIONS, PackManifest
 from agri_core.pack.tables import (
@@ -50,7 +51,9 @@ __all__ = [
     "ColumnSpec",
     "ColumnType",
     "EngineTooOldError",
+    "InMemoryKnowledgeSet",
     "InvalidPackError",
+    "KnowledgeSet",
     "Pack",
     "PackDictionaryIncompatibleError",
     "PackDuplicateKeyError",
