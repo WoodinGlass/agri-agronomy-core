@@ -1,1 +1,3 @@
 taxon_id,hazard_code,severity,reason,as_of,authority,src,dataset_id
+T000000005,spore_allergy,warning,Synthetic allergen marker,2026-01-01,Synthetic test authority,S001,
+T000000008,thorn_injury,info,Synthetic thorn marker,2026-01-01,Synthetic test authority,S002,

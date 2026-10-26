@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+### Added
+
+- Sample pack now ships 8 synthetic taxa (one per base
+  archetype), 19 names (EN/ID/JA, one non-ASCII and one
+  comma+quote to exercise CSV quoting), 3 sources, 1 dataset,
+  2 hazards, and 20 facts covering 6 of the 8 fact value
+  shapes. T000000005 (fungal) has no facts file to exercise
+  empty `facts_for` behavior. All three sources S001-S003
+  are used across facts and hazards.
 ### Added
 
 - Dictionary `1.0.0` finalized (c-3b): `dictionary_version: 1.0.0`

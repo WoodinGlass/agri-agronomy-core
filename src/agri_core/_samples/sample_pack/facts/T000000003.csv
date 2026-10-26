@@ -1,0 +1,4 @@
+fact_id,taxon_id,parameter,phase,value,scope,provenance_kind,src,dataset_id,locator,evidence,status,reviewed_by,reviewed_at,superseded_by
+F00000000008,T000000003,air_temp_day,vegetative_year_1,"{""pts"":[5.0,15.0,22.0,30.0],""shape"":""trapezoid"",""unit"":""degree_Celsius""}",{},curated,S001,,Synthetic table 1,A,approved,test-reviewer,2026-01-01,
+F00000000009,T000000003,k2o_fertilizer_rate,,"{""max"":100.0,""min"":40.0,""shape"":""range"",""unit"":""kilogram/hectare""}","{""system"":""field""}",curated,S001,,Synthetic table 1,B,approved,test-reviewer,2026-01-01,
+F00000000010,T000000003,managed_cycle,,"{""shape"":""enum"",""value"":""multi_season""}",{},curated,S001|S002,,Synthetic table 1,A,approved,test-reviewer,2026-01-01,

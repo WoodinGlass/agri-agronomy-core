@@ -181,6 +181,8 @@ name = "agri-knowledge"
 version = "2026.10.0"
 schema_version = 1
 engine_min = "0.1.0"
+dictionary_min = "1.0.0"
+synthetic = false
 # Written by `agri-core build` (M6). sha256 of the pack's canonical content.
 content_hash = "sha256:..."
 ```

@@ -1,1 +1,2 @@
 dataset_id,name,version,license,checksum,url,locator,access_date
+D000000001,Synthetic reference table,1.0,CC0-1.0,sha256:0000000000000000000000000000000000000000000000000000000000000000,https://example.org/synthetic/dataset-1,,2026-01-01
