@@ -130,6 +130,53 @@ the SQLite file header records the writer's `SQLITE_VERSION_NUMBER`
 twice in the same job, with different `PYTHONHASHSEED`, `TZ`, `LANG`,
 and source path, and compare bytes.
 
+## Runtime connection model
+
+`SQLiteKnowledgeSet` opens a fresh connection for every method call:
+`sqlite3.connect(f"file:{path}?mode=ro&immutable=1", uri=True)`,
+then `PRAGMA query_only = ON` and `PRAGMA trusted_schema = OFF`,
+and closes it in a `finally` block. Nothing is cached across calls.
+
+Trade-offs:
+
+- **Thread safety for free.** No shared mutable state, no lock. The
+  `KnowledgeSet` Protocol promises thread-safe reads; per-call
+  connections deliver that without a design that can deadlock.
+- **~1 ms per call.** Opening a `mode=ro&immutable=1` connection is
+  cheap but not free. Resolvers that call `facts_for` many times in
+  a loop (M8 `resolve_fact`, M12 batch suitability) will pay this
+  cost per query. If the M9 performance budget fails, an alternative
+  is documented below as a v2 change.
+- **No connection lifetime hazards.** A shared connection would
+  need timeouts, cancellation, and cleanup on worker termination;
+  the per-call model sidesteps all of it.
+
+Alternatives considered for M6-2 (deferred unless M9 needs them):
+
+- Single shared connection with `check_same_thread=False` and a
+  `threading.Lock`. Faster reads, lock contention under load.
+- `threading.local()` pool with one connection per thread. Middle
+  ground; more state to reason about.
+
+## Row decoding
+
+Every row is decoded with `Model.model_validate(dict)` before being
+returned. `_row_to_dict` mirrors the writer in `pack/sqlite_schema.py`:
+
+- `list_str` cells are split on `|` (writer sorted them; reader
+  preserves the wire order, the model's `field_validator` re-sorts if
+  it cares).
+- `dict_str_str` and `json` cells are parsed with `json.loads`; the
+  writer used canonical JSON, so the reader gets sorted keys back.
+- Everything else is passed through (`str`, `int`, `float`,
+  `bool`-as-`0`/`1`, `date`-as-ISO-string); Pydantic converts.
+
+Cost: ~10-50 µs per row for `model_validate`. For sample-pack
+workloads this is negligible; for the 10 000-taxa budget, the M9
+performance test will decide whether a fast-path (`model_construct`
+plus manual coercion) is needed. It is not introduced now: correctness
+first, benchmark later.
+
 ## Alternatives considered
 
 - **Single `content_hash = sha256(pack.sqlite)`** — rejected: breaks
