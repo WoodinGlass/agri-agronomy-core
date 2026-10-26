@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shapes. T000000005 (fungal) has no facts file to exercise
   empty `facts_for` behavior. All three sources S001-S003
   are used across facts and hazards.
+- `docs/PACK_FORMAT.md` -- pack format reference: allowlist,
+  `pack.toml` fields, content-hash algorithm, load order, CSV codec,
+  table schemas, error codes, size limits, synthetic packs.
+- `docs/decisions/ADR-001-knowledge-set.md` -- why `KnowledgeSet` is
+  a Protocol and not a base class, and how M6's SQLite backend will
+  implement it.
+- README `Pack format` section now points at `docs/PACK_FORMAT.md`;
+  M5 milestone marked Done.
 ### Added
 
 - Dictionary `1.0.0` finalized (c-3b): `dictionary_version: 1.0.0`
