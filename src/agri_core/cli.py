@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import csv
+import io
+from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
 from typing import Annotated, NoReturn
@@ -11,12 +13,13 @@ import typer
 
 from agri_core import __version__
 from agri_core.pack import (
-    Pack,
     PackError,
-    load_pack,
-    load_sample_pack,
+    PackManifest,
+    load_knowledge_set_from_files,
+    parse_manifest_bytes,
+    read_pack_bytes,
 )
-from agri_core.registry import Finding, lint_csv_file
+from agri_core.registry import Finding, lint_csv_text
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -53,19 +56,28 @@ def _main(
     """agri-core command line."""
 
 
-def _resolve_pack(spec: str) -> Pack:
+def _resolve_pack_path(spec: str) -> Path:
+    if spec == "sample":
+        from importlib.resources import files as _files
+
+        return Path(str(_files("agri_core") / "_samples" / "sample_pack"))
+    return Path(spec)
+
+
+def _load_and_print(spec: str) -> tuple[Mapping[str, bytes], PackManifest]:
+    path = _resolve_pack_path(spec)
     try:
-        if spec == "sample":
-            return load_sample_pack()
-        return load_pack(spec)
+        files = read_pack_bytes(path)
+        manifest = parse_manifest_bytes(files["pack.toml"])
     except PackError as exc:
         typer.echo(f"error: {exc.code}: {exc}", err=True)
         raise typer.Exit(EXIT_PACK) from exc
 
-
-def _print_pack_line(pack: Pack) -> None:
-    kind = "sample" if pack.kind == "sample" else str(pack.root.resolve())
-    typer.echo(f"pack: {pack.manifest.name} {pack.manifest.version} ({kind})")
+    kind = "sample" if spec == "sample" else str(path.resolve())
+    typer.echo(f"pack: {manifest.name} {manifest.version} ({kind})")
+    if manifest.synthetic:
+        typer.echo("SYNTHETIC DATA", err=True)
+    return files, manifest
 
 
 def _emit_findings(findings: list[Finding]) -> tuple[int, int]:
@@ -81,19 +93,26 @@ def _emit_findings(findings: list[Finding]) -> tuple[int, int]:
     return errors, warnings
 
 
-def _count_commercial_use(sources_csv: Path) -> dict[str, int]:
+def _count_commercial_use(sources_bytes: bytes) -> dict[str, int]:
     counts = {"yes": 0, "no": 0, "unclear": 0}
-    if not sources_csv.is_file():
-        return counts
-    with sources_csv.open("r", encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            if not row or not any(v for v in row.values() if v):
-                continue
-            cu = (row.get("commercial_use") or "").strip().lower()
-            if cu in counts:
-                counts[cu] += 1
+    text = sources_bytes.decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(text))
+    for row in reader:
+        if not row or not any(v for v in row.values() if v):
+            continue
+        cu = (row.get("commercial_use") or "").strip().lower()
+        if cu in counts:
+            counts[cu] += 1
     return counts
+
+
+def _warn_if_unverified(manifest: PackManifest) -> None:
+    if manifest.content_hash is None:
+        typer.echo(
+            "warning: PACK_UNVERIFIED: no manifest content_hash and no "
+            "expected_hash; content not verified",
+            err=True,
+        )
 
 
 @app.command(name="lint-sources")
@@ -104,11 +123,12 @@ def lint_sources(
     ],
 ) -> None:
     """Check a pack's sources.csv for schema and consistency errors."""
-    p = _resolve_pack(pack)
-    _print_pack_line(p)
-    findings = lint_csv_file(p.sources_csv, today=date.today())
+    files, manifest = _load_and_print(pack)
+    _warn_if_unverified(manifest)
+    text = files["sources.csv"].decode("utf-8-sig")
+    findings = lint_csv_text(text, today=date.today(), filename="sources.csv")
     errors, warnings = _emit_findings(findings)
-    counts = _count_commercial_use(p.sources_csv)
+    counts = _count_commercial_use(files["sources.csv"])
     typer.echo(
         f"sources: {sum(counts.values())} "
         f"(yes: {counts['yes']}, no: {counts['no']}, unclear: {counts['unclear']})"
@@ -125,17 +145,34 @@ def validate(
         typer.Option("--pack", help="Path to a pack directory, or 'sample'."),
     ],
 ) -> None:
-    """Validate a pack: manifest and sources.csv."""
-    p = _resolve_pack(pack)
-    _print_pack_line(p)
-    findings = lint_csv_file(p.sources_csv, today=date.today())
+    """Validate a pack: manifest, sources, and structural integrity.
+
+    Inspection only; always accepts synthetic packs. The SYNTHETIC DATA
+    banner on stderr is the warning. Only calculation commands (M8+)
+    require an explicit opt-in for synthetic data.
+    """
+    files, manifest = _load_and_print(pack)
+    _warn_if_unverified(manifest)
+
+    text = files["sources.csv"].decode("utf-8-sig")
+    findings = lint_csv_text(text, today=date.today(), filename="sources.csv")
     errors, warnings = _emit_findings(findings)
-    counts = _count_commercial_use(p.sources_csv)
+    counts = _count_commercial_use(files["sources.csv"])
     typer.echo(
         f"sources: {sum(counts.values())} "
         f"(yes: {counts['yes']}, no: {counts['no']}, unclear: {counts['unclear']})"
     )
     typer.echo(f"errors: {errors}, warnings: {warnings}")
+
+    try:
+        load_knowledge_set_from_files(files, allow_synthetic=True)
+    except PackError as exc:
+        typer.echo(f"error: {exc.code}: {exc}", err=True)
+        for finding in getattr(exc, "findings", ()):
+            loc = f"{finding.file}:{finding.line}" if getattr(finding, "file", None) else "-"
+            typer.echo(f"  {finding.code} {loc}: {finding}", err=True)
+        raise typer.Exit(EXIT_PACK) from exc
+
     if errors:
         raise typer.Exit(EXIT_ERROR)
 

@@ -1,36 +1,578 @@
-"""Load a pack directory or the bundled sample pack."""
+"""Load a pack directory into an immutable KnowledgeSet."""
 
 from __future__ import annotations
 
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass
 from importlib.resources import files as _resource_files
 from pathlib import Path
 from typing import Literal
 
 from packaging.version import Version
+from pydantic import BaseModel
 
 from agri_core import __version__
+from agri_core.models.dataset import DatasetRow
+from agri_core.models.dictionary import Dictionary
+from agri_core.models.fact import (
+    EnumSetValue,
+    EnumValue,
+    FactRow,
+    RangeValue,
+    ScalarValue,
+    TrapezoidValue,
+)
+from agri_core.models.hazard import HazardRow
+from agri_core.models.name import NameRow
+from agri_core.models.taxon import TaxonRow
 from agri_core.pack.errors import (
     EngineTooOldError,
     InvalidPackError,
+    PackDictionaryIncompatibleError,
+    PackDuplicateKeyError,
+    PackEnumInvalidError,
+    PackError,
+    PackFeatureUnsupportedError,
+    PackFKViolationError,
+    PackHashMismatchError,
     PackNotFoundError,
+    PackPhaseInvalidError,
+    PackSafetyViolationError,
+    PackScopeInvalidError,
+    PackShapeMismatchError,
+    PackSyntheticNotAllowedError,
+    PackTableInvalidError,
+    PackUnitMismatchError,
+    PackUnknownParameterError,
+    PackValueOutOfRangeError,
     UnsupportedSchemaVersionError,
 )
+from agri_core.pack.files import DEFAULT_MAX_BYTES, read_pack_bytes
+from agri_core.pack.knowledge_set import InMemoryKnowledgeSet, KnowledgeSet
 from agri_core.pack.manifest import SUPPORTED_SCHEMA_VERSIONS, PackManifest
-from agri_core.pack.verify import verify_pack_hash
+from agri_core.pack.tables import TABLES, Table, read_table
+from agri_core.pack.verify import hash_pack_files
+from agri_core.registry.sources import SourceRow
 
 PackKind = Literal["sample", "directory"]
+
+_DEFAULT_DICTIONARY_SOURCE = "dictionary/parameters.core.yaml"
+_MAX_FINDINGS = 20
 
 
 @dataclass(frozen=True)
 class Pack:
-    """A loaded pack: manifest plus paths to its files."""
+    """Legacy Pack view. Slated for removal in M5-2b commit 7."""
 
     root: Path
     kind: PackKind
     manifest: PackManifest
     sources_csv: Path
+
+
+def _default_dictionary() -> Dictionary:
+    """Load the dictionary from packaged data, falling back to the repo source tree."""
+    try:
+        return Dictionary.load_packaged()
+    except (FileNotFoundError, OSError):
+        pass
+    repo_root = Path(__file__).resolve().parents[3]
+    source_path = repo_root / _DEFAULT_DICTIONARY_SOURCE
+    if not source_path.is_file():
+        raise PackError(
+            f"cannot load dictionary: packaged _dictionary/ missing and "
+            f"source fallback not found at {source_path}"
+        )
+    return Dictionary.load(source_path)
+
+
+def parse_manifest_bytes(pack_toml: bytes) -> PackManifest:
+    """Parse pack.toml bytes into a PackManifest; raise InvalidPackError on failure."""
+    try:
+        text = pack_toml.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise InvalidPackError(f"pack.toml is not valid UTF-8: {exc}", file="pack.toml") from exc
+    try:
+        data = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as exc:
+        raise InvalidPackError(f"pack.toml is not valid TOML: {exc}", file="pack.toml") from exc
+    try:
+        return PackManifest.model_validate(data)
+    except ValueError as exc:
+        raise InvalidPackError(f"pack.toml is invalid: {exc}", file="pack.toml") from exc
+
+
+def _check_compat(manifest: PackManifest, dictionary: Dictionary) -> None:
+    if manifest.schema_version not in SUPPORTED_SCHEMA_VERSIONS:
+        raise UnsupportedSchemaVersionError(
+            f"schema_version {manifest.schema_version} not in {sorted(SUPPORTED_SCHEMA_VERSIONS)}"
+        )
+    engine = Version(__version__).base_version
+    required_engine = Version(manifest.engine_min).base_version
+    if Version(engine) < Version(required_engine):
+        raise EngineTooOldError(
+            f"engine {engine} < required {required_engine} (pack needs newer engine)"
+        )
+    have = Version(dictionary.version).base_version
+    need = Version(manifest.dictionary_min).base_version
+    if Version(have).major != Version(need).major:
+        raise PackDictionaryIncompatibleError(
+            f"dictionary MAJOR mismatch: have {have}, manifest requires {need}",
+            key="dictionary_min",
+        )
+    if Version(have) < Version(need):
+        raise PackDictionaryIncompatibleError(
+            f"dictionary {have} < required {manifest.dictionary_min}",
+            key="dictionary_min",
+        )
+
+
+def _load_tables(files: Mapping[str, bytes]) -> dict[str, Table]:
+    tables: dict[str, Table] = {}
+    for name in ("taxa", "names", "hazards", "datasets", "sources"):
+        spec = TABLES[name]
+        assert spec.filename is not None
+        tables[name] = read_table(spec, files[spec.filename], source_name=spec.filename)
+    for relpath in sorted(files):
+        if not relpath.startswith("facts/"):
+            continue
+        tables[relpath] = read_table(TABLES["facts"], files[relpath], source_name=relpath)
+    return tables
+
+
+def _validate_rows(tables: Mapping[str, Table]) -> dict[str, list[object]]:
+    model_for: dict[str, type[BaseModel]] = {
+        "taxa": TaxonRow,
+        "names": NameRow,
+        "hazards": HazardRow,
+        "datasets": DatasetRow,
+        "sources": SourceRow,
+    }
+    out: dict[str, list[object]] = {
+        "taxa": [],
+        "names": [],
+        "facts": [],
+        "hazards": [],
+        "datasets": [],
+        "sources": [],
+    }
+    for name, model in model_for.items():
+        table = tables[name]
+        for row, line_num in zip(table.rows, table.line_numbers, strict=True):
+            try:
+                out[name].append(model.model_validate(dict(row)))
+            except ValueError as exc:
+                raise PackTableInvalidError(
+                    f"{name}.csv line {line_num}: {exc}",
+                    file=table.source_name,
+                    line=line_num,
+                ) from exc
+    for relpath, table in tables.items():
+        if not relpath.startswith("facts/"):
+            continue
+        for row, line_num in zip(table.rows, table.line_numbers, strict=True):
+            try:
+                out["facts"].append(FactRow.model_validate(dict(row)))
+            except ValueError as exc:
+                raise PackTableInvalidError(
+                    f"{relpath} line {line_num}: {exc}",
+                    file=relpath,
+                    line=line_num,
+                ) from exc
+    return out
+
+
+def _validate_structure(
+    rows: dict[str, list[object]],
+    tables: Mapping[str, Table],
+    dictionary: Dictionary,
+) -> list[PackError]:
+    findings: list[PackError] = []
+
+    def add(exc: PackError) -> None:
+        if len(findings) < _MAX_FINDINGS:
+            findings.append(exc)
+
+    taxa: list[TaxonRow] = rows["taxa"]  # type: ignore[assignment]
+    names: list[NameRow] = rows["names"]  # type: ignore[assignment]
+    facts: list[FactRow] = rows["facts"]  # type: ignore[assignment]
+    hazards: list[HazardRow] = rows["hazards"]  # type: ignore[assignment]
+    sources: list[SourceRow] = rows["sources"]  # type: ignore[assignment]
+    datasets: list[DatasetRow] = rows["datasets"]  # type: ignore[assignment]
+
+    seen_taxa: set[str] = set()
+    for t in taxa:
+        if t.taxon_id in seen_taxa:
+            add(PackDuplicateKeyError(f"duplicate taxon_id: {t.taxon_id}", key=t.taxon_id))
+        seen_taxa.add(t.taxon_id)
+
+    seen_facts: set[str] = set()
+    for f in facts:
+        if f.fact_id in seen_facts:
+            add(PackDuplicateKeyError(f"duplicate fact_id: {f.fact_id}", key=f.fact_id))
+        seen_facts.add(f.fact_id)
+
+    taxon_ids = {t.taxon_id for t in taxa}
+    source_ids = {s.id for s in sources}
+    dataset_ids = {d.dataset_id for d in datasets}
+    fact_ids = {f.fact_id for f in facts}
+    taxon_by_id = {t.taxon_id: t for t in taxa}
+
+    for t in taxa:
+        if t.parent_id is not None:
+            if t.parent_id == t.taxon_id:
+                add(
+                    PackFKViolationError(
+                        f"parent_id == taxon_id: {t.taxon_id}",
+                        key=t.taxon_id,
+                    )
+                )
+            elif t.parent_id not in taxon_ids:
+                add(
+                    PackFKViolationError(
+                        f"parent_id {t.parent_id} not in taxa",
+                        key=t.taxon_id,
+                    )
+                )
+
+    for n in names:
+        if n.taxon_id not in taxon_ids:
+            add(
+                PackFKViolationError(
+                    f"name.taxon_id {n.taxon_id} not in taxa",
+                    file="names.csv",
+                    key=n.taxon_id,
+                )
+            )
+        for s in n.src or []:
+            if s not in source_ids:
+                add(
+                    PackFKViolationError(
+                        f"name.src {s} not in sources",
+                        file="names.csv",
+                        key=s,
+                    )
+                )
+        if n.dataset_id is not None and n.dataset_id not in dataset_ids:
+            add(
+                PackFKViolationError(
+                    f"name.dataset_id {n.dataset_id} not in datasets",
+                    file="names.csv",
+                    key=n.dataset_id,
+                )
+            )
+
+    for h in hazards:
+        if h.taxon_id not in taxon_ids:
+            add(
+                PackFKViolationError(
+                    f"hazard.taxon_id {h.taxon_id} not in taxa",
+                    file="hazards.csv",
+                    key=h.taxon_id,
+                )
+            )
+        for s in h.src or []:
+            if s not in source_ids:
+                add(
+                    PackFKViolationError(
+                        f"hazard.src {s} not in sources",
+                        file="hazards.csv",
+                        key=s,
+                    )
+                )
+        if h.dataset_id is not None and h.dataset_id not in dataset_ids:
+            add(
+                PackFKViolationError(
+                    f"hazard.dataset_id {h.dataset_id} not in datasets",
+                    file="hazards.csv",
+                    key=h.dataset_id,
+                )
+            )
+
+    for f in facts:
+        if f.taxon_id not in taxon_ids:
+            add(
+                PackFKViolationError(
+                    f"fact.taxon_id {f.taxon_id} not in taxa",
+                    key=f.fact_id,
+                )
+            )
+            continue
+        for s in f.src or []:
+            if s not in source_ids:
+                add(
+                    PackFKViolationError(
+                        f"fact.src {s} not in sources",
+                        key=f.fact_id,
+                    )
+                )
+        if f.dataset_id is not None and f.dataset_id not in dataset_ids:
+            add(
+                PackFKViolationError(
+                    f"fact.dataset_id {f.dataset_id} not in datasets",
+                    key=f.fact_id,
+                )
+            )
+        if f.superseded_by is not None and f.superseded_by not in fact_ids:
+            add(
+                PackFKViolationError(
+                    f"fact.superseded_by {f.superseded_by} not in facts",
+                    key=f.fact_id,
+                )
+            )
+
+        p = dictionary.parameters.get(f.parameter)
+        if p is None:
+            add(
+                PackUnknownParameterError(
+                    f"fact.parameter {f.parameter!r} not in dictionary",
+                    key=f.fact_id,
+                )
+            )
+            continue
+
+        is_unknown = f.value.shape == "unknown"
+        if not is_unknown and p.shape != f.value.shape:
+            add(
+                PackShapeMismatchError(
+                    f"fact shape {f.value.shape!r} != parameter.shape {p.shape!r}",
+                    key=f.fact_id,
+                )
+            )
+
+        if (
+            isinstance(f.value, (ScalarValue, RangeValue, TrapezoidValue))
+            and p.unit is not None
+            and f.value.unit != p.unit
+        ):
+            add(
+                PackUnitMismatchError(
+                    f"fact unit {f.value.unit!r} != parameter unit {p.unit!r}",
+                    key=f.fact_id,
+                )
+            )
+
+        if p.physical_range is not None:
+            lo, hi = p.physical_range
+            v = f.value
+            if isinstance(v, ScalarValue):
+                if not (lo <= v.value <= hi):
+                    add(
+                        PackValueOutOfRangeError(
+                            f"value {v.value} outside physical_range [{lo}, {hi}]",
+                            key=f.fact_id,
+                        )
+                    )
+            elif isinstance(v, RangeValue):
+                if not (lo <= v.min <= hi) or not (lo <= v.max <= hi):
+                    add(
+                        PackValueOutOfRangeError(
+                            f"range [{v.min}, {v.max}] outside physical_range [{lo}, {hi}]",
+                            key=f.fact_id,
+                        )
+                    )
+            elif isinstance(v, TrapezoidValue) and not (lo <= min(v.pts) and max(v.pts) <= hi):
+                add(
+                    PackValueOutOfRangeError(
+                        f"trapezoid pts {v.pts} outside physical_range [{lo}, {hi}]",
+                        key=f.fact_id,
+                    )
+                )
+
+        if isinstance(f.value, EnumValue) and p.enum_values and f.value.value not in p.enum_values:
+            add(
+                PackEnumInvalidError(
+                    f"enum value {f.value.value!r} not in {p.enum_values}",
+                    key=f.fact_id,
+                )
+            )
+
+        if isinstance(f.value, EnumSetValue):
+            if p.enum_source == "phases:biological":
+                arch = taxon_by_id[f.taxon_id].archetype
+                allowed = dictionary.phases_by_archetype.get(arch)
+                if allowed is None:
+                    add(
+                        PackFeatureUnsupportedError(
+                            f"phases_by_archetype not loaded; cannot validate {f.parameter}",
+                            key=f.fact_id,
+                        )
+                    )
+                else:
+                    for val in f.value.values:
+                        if val not in allowed:
+                            add(
+                                PackEnumInvalidError(
+                                    f"enum_set value {val!r} not in {arch} phases {allowed}",
+                                    key=f.fact_id,
+                                )
+                            )
+            elif p.enum_values:
+                for val in f.value.values:
+                    if val not in p.enum_values:
+                        add(
+                            PackEnumInvalidError(
+                                f"enum_set value {val!r} not in {p.enum_values}",
+                                key=f.fact_id,
+                            )
+                        )
+
+        if p.phase_set == "none":
+            if f.phase is not None:
+                add(
+                    PackPhaseInvalidError(
+                        f"phase_set=none but phase={f.phase!r}",
+                        key=f.fact_id,
+                    )
+                )
+        elif p.phase_set == "kc":
+            if p.allowed_phases is None or f.phase not in p.allowed_phases:
+                add(
+                    PackPhaseInvalidError(
+                        f"phase {f.phase!r} not allowed for kc",
+                        key=f.fact_id,
+                    )
+                )
+        elif p.phase_set == "biological":
+            allowed = p.allowed_phases
+            if allowed is None:
+                arch = taxon_by_id[f.taxon_id].archetype
+                allowed = dictionary.phases_by_archetype.get(arch, [])
+            if f.phase not in allowed:
+                add(
+                    PackPhaseInvalidError(
+                        f"phase {f.phase!r} not in biological phases {allowed}",
+                        key=f.fact_id,
+                    )
+                )
+
+        allowed_scope = set(p.scope_keys or [])
+        extra = set(f.scope.keys()) - allowed_scope
+        if extra:
+            add(
+                PackScopeInvalidError(
+                    f"scope keys {sorted(extra)} not in {sorted(allowed_scope)}",
+                    key=f.fact_id,
+                )
+            )
+
+        if p.safety_class == "dose_cap" and f.status not in ("reviewed", "approved"):
+            add(
+                PackSafetyViolationError(
+                    f"safety_class=dose_cap requires reviewed/approved, got {f.status!r}",
+                    key=f.fact_id,
+                )
+            )
+
+    for relpath, table in tables.items():
+        if not relpath.startswith("facts/"):
+            continue
+        expected_tid = relpath[len("facts/") : -len(".csv")]
+        for row, line_num in zip(table.rows, table.line_numbers, strict=True):
+            if row["taxon_id"] != expected_tid:
+                add(
+                    PackFKViolationError(
+                        f"row in {relpath} has taxon_id={row['taxon_id']!r}, "
+                        f"expected {expected_tid!r}",
+                        file=relpath,
+                        line=line_num,
+                    )
+                )
+
+    return findings
+
+
+def load_knowledge_set_from_files(
+    files: Mapping[str, bytes],
+    *,
+    allow_synthetic: bool = False,
+    expected_hash: str | None = None,
+    dictionary: Dictionary | None = None,
+) -> KnowledgeSet:
+    """Load a KnowledgeSet from an in-memory allowlist dict (read_pack_bytes output)."""
+    if dictionary is None:
+        dictionary = _default_dictionary()
+
+    manifest = parse_manifest_bytes(files["pack.toml"])
+
+    actual = hash_pack_files(files)
+    if manifest.content_hash is not None and manifest.content_hash != actual:
+        raise PackHashMismatchError(
+            f"content_hash mismatch: manifest={manifest.content_hash} "
+            f"computed={actual}. If you changed this pack, run "
+            f"`agri-core pack lock`.",
+            file="pack.toml",
+        )
+    if expected_hash is not None and expected_hash != actual:
+        raise PackHashMismatchError(
+            f"expected_hash mismatch: caller={expected_hash} computed={actual}",
+            file="pack.toml",
+        )
+    verified = manifest.content_hash is not None or expected_hash is not None
+
+    _check_compat(manifest, dictionary)
+
+    if manifest.synthetic and not allow_synthetic:
+        raise PackSyntheticNotAllowedError(
+            "pack is synthetic; load with allow_synthetic=True",
+            file="pack.toml",
+        )
+
+    adv_bytes = files.get("advisories.csv")
+    if adv_bytes is not None and adv_bytes.strip():
+        raise PackFeatureUnsupportedError(
+            "advisories.csv has non-whitespace content; unsupported until M8",
+            file="advisories.csv",
+        )
+
+    tables = _load_tables(files)
+    rows = _validate_rows(tables)
+
+    findings = _validate_structure(rows, tables, dictionary)
+    if findings:
+        first = findings[0]
+        raise type(first)(
+            str(first),
+            file=first.file,
+            line=first.line,
+            key=first.key,
+            findings=tuple(findings),
+        )
+
+    return InMemoryKnowledgeSet.from_rows(
+        manifest=manifest,
+        pack_hash=actual,
+        dictionary_version=dictionary.version,
+        verified=verified,
+        taxa=rows["taxa"],  # type: ignore[arg-type]
+        names=rows["names"],  # type: ignore[arg-type]
+        facts=rows["facts"],  # type: ignore[arg-type]
+        hazards=rows["hazards"],  # type: ignore[arg-type]
+        sources=rows["sources"],  # type: ignore[arg-type]
+        datasets=rows["datasets"],  # type: ignore[arg-type]
+    )
+
+
+def load_knowledge_set(
+    path: str | Path,
+    *,
+    allow_synthetic: bool = False,
+    expected_hash: str | None = None,
+    dictionary: Dictionary | None = None,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+) -> KnowledgeSet:
+    """Load a pack directory into an immutable KnowledgeSet."""
+    files = read_pack_bytes(Path(path), max_bytes=max_bytes)
+    return load_knowledge_set_from_files(
+        files,
+        allow_synthetic=allow_synthetic,
+        expected_hash=expected_hash,
+        dictionary=dictionary,
+    )
+
+
+# --- legacy loaders (removed in commit 7) --------------------------------
 
 
 def _read_manifest(pack_dir: Path) -> PackManifest:
@@ -48,20 +590,11 @@ def _read_manifest(pack_dir: Path) -> PackManifest:
         raise InvalidPackError(f"pack.toml is invalid: {exc}") from exc
 
 
-def _check_compat(manifest: PackManifest) -> None:
-    if manifest.schema_version not in SUPPORTED_SCHEMA_VERSIONS:
-        raise UnsupportedSchemaVersionError(
-            f"schema_version {manifest.schema_version} not in {sorted(SUPPORTED_SCHEMA_VERSIONS)}"
-        )
-    engine = Version(__version__).base_version
-    required = Version(manifest.engine_min).base_version
-    if Version(engine) < Version(required):
-        raise EngineTooOldError(f"engine {engine} < required {required} (pack needs newer engine)")
-
-
 def _finish(root: Path, kind: PackKind, *, verify_hash: bool = True) -> Pack:
+    from agri_core.pack.verify import verify_pack_hash
+
     manifest = _read_manifest(root)
-    _check_compat(manifest)
+    _check_compat(manifest, _default_dictionary())
     if verify_hash:
         verify_pack_hash(root, manifest)
     sources_csv = root / "sources.csv"
@@ -71,7 +604,7 @@ def _finish(root: Path, kind: PackKind, *, verify_hash: bool = True) -> Pack:
 
 
 def load_pack(path: str | Path, *, verify_hash: bool = True) -> Pack:
-    """Load a pack from an explicit directory. The directory must contain pack.toml."""
+    """Deprecated: use load_knowledge_set. Removed in commit 7."""
     root = Path(path)
     if not root.is_dir():
         raise PackNotFoundError(f"pack directory not found: {root}")
@@ -79,8 +612,19 @@ def load_pack(path: str | Path, *, verify_hash: bool = True) -> Pack:
 
 
 def load_sample_pack(*, verify_hash: bool = True) -> Pack:
-    """Load the sample pack shipped inside the installed package."""
+    """Deprecated: use load_knowledge_set. Removed in commit 7."""
     root = Path(str(_resource_files("agri_core") / "_samples" / "sample_pack"))
     if not root.is_dir():
-        raise PackNotFoundError("sample pack missing from installed package (broken installation)")
+        raise PackNotFoundError("sample pack missing from installed package")
     return _finish(root, kind="sample", verify_hash=verify_hash)
+
+
+__all__ = [
+    "Pack",
+    "PackKind",
+    "load_knowledge_set",
+    "load_knowledge_set_from_files",
+    "load_pack",
+    "load_sample_pack",
+    "parse_manifest_bytes",
+]

@@ -109,3 +109,31 @@ def test_invalid_param_shape_raises() -> None:
         Dictionary._from_data(
             _dict_data(params={"x": _param("x", shape="trapezoid", physical_range=None, unit="pH")})
         )
+
+
+# ---- M5-2b: phases_by_archetype loading -------------------------------
+
+
+def test_real_dictionary_has_phases_by_archetype() -> None:
+    from pathlib import Path as _Path
+
+    from agri_core.models.dictionary import Dictionary
+
+    dict_path = _Path(__file__).resolve().parents[2] / "dictionary" / "parameters.core.yaml"
+    d = Dictionary.load(dict_path)
+    assert len(d.phases_by_archetype) == 8
+    assert "aquatic" in d.phases_by_archetype
+    assert "vegetative" in d.phases_by_archetype["aquatic"]
+
+
+def test_load_without_vocab_yields_empty_phases(tmp_path) -> None:
+    import yaml
+
+    from agri_core.models.dictionary import Dictionary
+
+    (tmp_path / "parameters.core.yaml").write_text(
+        yaml.safe_dump({"dictionary_version": "1.0.0", "parameters": {}}),
+        encoding="utf-8",
+    )
+    d = Dictionary.load(tmp_path / "parameters.core.yaml")
+    assert d.phases_by_archetype == {}
