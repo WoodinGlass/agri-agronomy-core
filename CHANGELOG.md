@@ -29,6 +29,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   implement it.
 - README `Pack format` section now points at `docs/PACK_FORMAT.md`;
   M5 milestone marked Done.
+- `pack/sqlite_schema.py`: deterministic SQLite build from pack CSV
+  bytes. DDL pinned by `DDL_SHA256`; `WITHOUT ROWID` for all tables
+  (benchmarked within 10% of rowid on the hottest query at 100k
+  facts); indexes created after bulk insert; `VACUUM INTO` via
+  `TemporaryDirectory`; `application_id=0x61677269` ("agri"),
+  `user_version=1`; sqlite >= 3.27 required for `VACUUM INTO`.
+- `pack/toml_writer.py`: deterministic TOML serializer for built
+  manifests, iterating `PackManifest.model_fields`.
+- `PackManifest` gains `artifact_sha256`, `sqlite_schema_version`,
+  `built_by` (all-or-none; source manifests must not declare them).
+- ADR-002: two-hash model (`content_hash` semantic,
+  `artifact_sha256` file integrity), DDL pinning, `WITHOUT ROWID`
+  benchmark, cross-version SQLite caveat.
 ### Added
 
 - Dictionary `1.0.0` finalized (c-3b): `dictionary_version: 1.0.0`

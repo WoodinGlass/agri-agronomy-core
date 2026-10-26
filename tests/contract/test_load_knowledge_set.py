@@ -721,3 +721,24 @@ def test_sample_pack_tampered_raises(tmp_path: Path) -> None:
     sources.write_bytes(sources.read_bytes() + b"S999,x,CC0-1.0,yes,2026-01-01,x\n")
     with pytest.raises(PackHashMismatchError):
         load_knowledge_set(tampered, allow_synthetic=True, dictionary=_DICT)
+
+
+# ---- M6-1: source pack must not declare build-only fields ------------
+
+
+def test_source_pack_with_build_fields_raises(tmp_path: Path) -> None:
+    from agri_core.pack import PackError
+
+    toml_with_build = (
+        'name = "test"\n'
+        'version = "1.0.0"\n'
+        "schema_version = 1\n"
+        'engine_min = "0.0.0"\n'
+        'dictionary_min = "1.0.0"\n'
+        'artifact_sha256 = "sha256:' + "a" * 64 + '"\n'
+        "sqlite_schema_version = 1\n"
+        'built_by = "agri-core 0.0.0"\n'
+    )
+    _write_pack(tmp_path, toml_override=toml_with_build)
+    with pytest.raises(PackError, match="declares build-only fields"):
+        load_knowledge_set(tmp_path, dictionary=_DICT)
