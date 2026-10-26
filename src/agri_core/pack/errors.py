@@ -93,3 +93,19 @@ class PackDictionaryIncompatibleError(PackError):
 
 class PackSyntheticNotAllowedError(PackError):
     code = "PACK_SYNTHETIC_NOT_ALLOWED"
+
+
+class PackValueOutOfRangeError(PackError):
+    code = "PACK_VALUE_OUT_OF_RANGE"
+
+
+class PackEnumInvalidError(PackError):
+    code = "PACK_ENUM_INVALID"
+
+
+class PackUnitMismatchError(PackError):
+    code = "PACK_UNIT_MISMATCH"
+
+
+class PackSafetyViolationError(PackError):
+    code = "PACK_SAFETY_VIOLATION"

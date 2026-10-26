@@ -5,10 +5,13 @@ from __future__ import annotations
 import hashlib
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 from pydantic import BaseModel, ConfigDict, field_validator
+
+if TYPE_CHECKING:
+    from importlib.resources.abc import Traversable
 
 from agri_core.models.canonical import canonical_json
 from agri_core.models.parameter import ParameterDef, check_semver
@@ -27,6 +30,7 @@ class Dictionary(BaseModel):
 
     version: str
     parameters: dict[str, ParameterDef]
+    phases_by_archetype: dict[str, list[str]] = {}
 
     @field_validator("version")
     @classmethod
@@ -35,23 +39,33 @@ class Dictionary(BaseModel):
 
     @classmethod
     def load(cls, path: Path) -> Dictionary:
-        """Load from an explicit path."""
+        """Load from an explicit path.
+
+        Also reads sibling ``vocab/phases_by_archetype.yaml`` if present.
+        """
         text = path.read_text(encoding="utf-8")
         data = yaml.safe_load(text)
-        return cls._from_data(data)
+        phases = _try_load_phases_by_archetype(path.parent / "vocab" / "phases_by_archetype.yaml")
+        return cls._from_data(data, phases_by_archetype=phases)
 
     @classmethod
     def load_packaged(cls) -> Dictionary:
         """Load the dictionary bundled inside the installed package."""
         from importlib.resources import files as _files
 
-        pkg = _files("agri_core") / "_dictionary" / "parameters.core.yaml"
-        text = pkg.read_text(encoding="utf-8")
+        pkg_dir = _files("agri_core") / "_dictionary"
+        text = (pkg_dir / "parameters.core.yaml").read_text(encoding="utf-8")
         data = yaml.safe_load(text)
-        return cls._from_data(data)
+        phases = _try_load_phases_by_archetype(pkg_dir / "vocab" / "phases_by_archetype.yaml")
+        return cls._from_data(data, phases_by_archetype=phases)
 
     @classmethod
-    def _from_data(cls, data: dict[str, Any]) -> Dictionary:
+    def _from_data(
+        cls,
+        data: dict[str, Any],
+        *,
+        phases_by_archetype: dict[str, list[str]] | None = None,
+    ) -> Dictionary:
         params: dict[str, ParameterDef] = {}
         raw_params = data.get("parameters") or {}
         for key, raw in raw_params.items():
@@ -61,7 +75,11 @@ class Dictionary(BaseModel):
                 raise ValueError(f"parameter key {key!r} duplicated")
             merged = {"key": key, **raw}
             params[key] = ParameterDef.model_validate(merged)
-        return cls(version=data["dictionary_version"], parameters=params)
+        return cls(
+            version=data["dictionary_version"],
+            parameters=params,
+            phases_by_archetype=phases_by_archetype or {},
+        )
 
     def lookup(self, key: str) -> ParameterDef:
         if key not in self.parameters:
@@ -85,6 +103,24 @@ class Dictionary(BaseModel):
             key: self.parameters[key].model_dump(mode="json") for key in sorted(self.parameters)
         }
         return hashlib.sha256(canonical_json(payload)).hexdigest()
+
+
+def _try_load_phases_by_archetype(
+    path: Path | Traversable,
+) -> dict[str, list[str]]:
+    """Load {archetype: [phases]} from a phases_by_archetype.yaml, or {} if missing."""
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError):
+        return {}
+    raw = data.get("phases_by_archetype") or {}
+    out: dict[str, list[str]] = {}
+    for arch, entry in raw.items():
+        if isinstance(entry, dict) and "phases" in entry:
+            phases = entry["phases"]
+            if isinstance(phases, list):
+                out[arch] = list(phases)
+    return out
 
 
 def load_bundle_from_root(root: Path) -> dict[str, Any]:

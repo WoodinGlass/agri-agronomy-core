@@ -125,3 +125,49 @@ def test_lint_sources_broken_exit_1(tmp_path: Path) -> None:
     root = _make_pack(tmp_path, (FIXTURES / "broken.csv").read_bytes())
     result = CliRunner().invoke(app, ["lint-sources", "--pack", str(root)])
     assert result.exit_code == 1
+
+
+# ---- M5-2b: banner + warning to stderr --------------------------------
+
+
+def test_validate_synthetic_banner_on_stderr() -> None:
+    result = CliRunner().invoke(app, ["validate", "--pack", "sample"])
+    assert result.exit_code == 0, result.stdout
+    assert "SYNTHETIC DATA" in result.stderr
+
+
+def test_validate_unverified_warning_on_stderr(tmp_path: Path) -> None:
+    root = _make_pack(tmp_path, _header_bytes())
+    pt = root / "pack.toml"
+    text = pt.read_text(encoding="utf-8")
+    lines = [ln for ln in text.splitlines() if not ln.startswith("content_hash")]
+    pt.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    result = CliRunner().invoke(app, ["validate", "--pack", str(root)])
+    assert result.exit_code == 0, result.stdout
+    assert "PACK_UNVERIFIED" in result.stderr
+
+
+def test_validate_verified_silent_stderr(tmp_path: Path) -> None:
+    root = _make_pack(tmp_path, _header_bytes())
+    result = CliRunner().invoke(app, ["validate", "--pack", str(root)])
+    assert result.exit_code == 0, result.stdout
+    assert "PACK_UNVERIFIED" not in result.stderr
+    assert "SYNTHETIC DATA" not in result.stderr
+
+
+def test_lint_sources_ignores_structural_errors(tmp_path: Path) -> None:
+    root = _make_pack(tmp_path, (FIXTURES / "broken.csv").read_bytes())
+    result = CliRunner().invoke(app, ["lint-sources", "--pack", str(root)])
+    assert result.exit_code == 1
+    assert result.exit_code != 3
+
+
+def test_validate_sample_by_path_succeeds() -> None:
+    from pathlib import Path as _Path
+
+    sample_path = (
+        _Path(__file__).resolve().parents[2] / "src" / "agri_core" / "_samples" / "sample_pack"
+    )
+    result = CliRunner().invoke(app, ["validate", "--pack", str(sample_path)])
+    assert result.exit_code == 0, result.stdout + result.stderr
+    assert "SYNTHETIC DATA" in result.stderr

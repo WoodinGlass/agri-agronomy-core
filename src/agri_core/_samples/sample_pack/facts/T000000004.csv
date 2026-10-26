@@ -1,4 +1,4 @@
 fact_id,taxon_id,parameter,phase,value,scope,provenance_kind,src,dataset_id,locator,evidence,status,reviewed_by,reviewed_at,superseded_by
 F00000000011,T000000004,soil_ec,,"{""pts"":[0.5,1.0,1.5,2.5],""shape"":""trapezoid"",""unit"":""decisiemens/meter""}","{""system"":""container""}",curated,S001,,Synthetic table 1,A,approved,test-reviewer,2026-01-01,
-F00000000012,T000000004,moisture_band,,"{""pts"":[30.0,60.0,80.0,95.0],""shape"":""trapezoid"",""unit"":""percent""}","{""system"":""container""}",curated,S001,,Synthetic table 1,B,approved,test-reviewer,2026-01-01,
+F00000000012,T000000004,moisture_band,,"{""pts"":[30.0,60.0,80.0,95.0],""shape"":""trapezoid"",""unit"":""percent""}",{},curated,S001,,Synthetic table 1,B,approved,test-reviewer,2026-01-01,
 F00000000013,T000000004,water_temp_max,,"{""reason"":""Water temperature max not recorded for this synthetic epiphyte taxon."",""shape"":""unknown""}",{},curated,S001,,Synthetic table 1,C,approved,test-reviewer,2026-01-01,
