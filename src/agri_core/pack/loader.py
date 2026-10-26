@@ -494,7 +494,7 @@ def load_knowledge_set_from_files(
         or manifest.sqlite_schema_version is not None
         or manifest.built_by is not None
     ):
-        raise PackError(
+        raise InvalidPackError(
             "source pack.toml declares build-only fields "
             "(artifact_sha256 / sqlite_schema_version / built_by); "
             "these appear only in built manifests. Did you copy a built "
