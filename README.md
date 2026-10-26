@@ -8,6 +8,9 @@ Every number comes from a verified knowledge pack, never from a language model.<
   <img src="https://img.shields.io/badge/status-pre--release-orange" alt="Status">
   <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue" alt="Python">
   <img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License">
+  <img src="https://img.shields.io/badge/mypy-strict-blue" alt="mypy">
+  <img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen" alt="pre-commit">
+  <img src="https://img.shields.io/github/last-commit/WoodinGlass/agri-agronomy-core" alt="Last commit">
 </p>
 
 > **Pre-release.** Interfaces, the pack format and the JSON Schemas may change until `v0.1.0` is tagged. This project provides a calculation engine and a data contract; it is not professional agronomic advice. Read [Safety and limitations](#safety-and-limitations) before relying on any output.
@@ -16,7 +19,7 @@ Every number comes from a verified knowledge pack, never from a language model.<
 
 `agri-agronomy-core` is two things:
 
-1. **A data contract.** JSON Schemas, a parameter dictionary, a pack format (CSV tables compiled into a verified SQLite pack) and a deterministic fact-resolution policy. The contract lives here. The data lives in [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge).
+1. **A data contract.** JSON Schemas, a parameter dictionary, a pack format (CSV tables, hashed at lock time and verified at load) and a deterministic fact-resolution policy. The contract lives here. The data lives in [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge).
 2. **A calculation engine.** Pure-Python functions that read a knowledge pack and compute climate indices, threshold checks, irrigation, fertilizer amounts, growing-media recipes, site suitability and propagation plans.
 
 The engine covers vegetables, fruit, staple carbohydrates, fodder (grown for feed, not rations), ornamental plants and cultivated fungi. Rare species are carried as conservation attributes. "Agronomy" is used loosely to mean cultivation.
@@ -42,7 +45,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 
 1. **Numbers come from data and tested code, never from a language model.** The engine may explain a result; it must not invent one.
 2. **Refuse rather than guess.** Every calculation returns an `Outcome`. Missing input gives `insufficient_input`. Missing data gives `unknown`. An ambiguous taxon name gives `ambiguous`. A question that does not apply gives `not_applicable`. A legal or regulatory question gives `refer_to_authority`. There are no silent defaults, and expected "cannot answer" cases are never exceptions.
-3. **The pack is the source of truth.** Every fact carries a `fact_id`, a status, an evidence grade, a scope and a source. Every `Result` records which fact IDs it used, the engine version, and the pack version and hash.
+3. **The pack is the source of truth.** Every fact carries a `fact_id`, a status, an evidence grade, a scope and a source. Every `Result` records which fact IDs it used, the pack version and pack hash, and the source IDs behind the values.
 4. **Deterministic fact resolution.** The policy is fixed: filter by status ≥ the caller's minimum and by the license gate; match scope (empty key = wildcard, a filled key must cover the given context; a context not given is never considered a match); order by scope specificity, status, evidence, then `fact_id`. Conflicting equal-ranked facts raise a `FACT_CONFLICT` warning and are returned as alternatives. No matching fact gives `unknown`; the engine never borrows a value from another taxon or region.
 5. **Pure and repeatable.** No I/O in calculators and no hidden clock: dates are arguments. The same input against the same pack always gives the same output.
 6. **Immutable, explicit state.** A loaded pack is a `KnowledgeSet`: immutable, thread-safe, created by the caller. No singletons, hidden caches, current-directory lookups or environment-variable reads.
@@ -58,14 +61,14 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 | # | Area | What it does | Target | Status |
 |---|------|--------------|--------|--------|
 | 1 | Data contract | JSON Schemas for `outcome`, `source`, `taxon`, `name`, `fact`, `hazard`, `parameter`, `dataset`, `manifest`. Core dictionary (`parameters.core.yaml`) with physical ranges, `applies_to`, tier requirements, phases per archetype, safety-class taxonomy and an append-only lock. | M2–M4 | Done |
-| 2 | Pack lifecycle | `scaffold`, `build` (CSV → SQLite + manifest, reproducible), `load` (verify hash), `validate`, `diff`, `coverage`. | M5–M7 | In progress |
+| 2 | Pack lifecycle | `load` (hash-verified, eager `KnowledgeSet`) in M5; `scaffold`, `build` (CSV → SQLite + manifest, reproducible) in M6; full `validate`, `diff`, `coverage` in M7. | M5–M7 | In progress |
 | 3 | Registry | `resolve_taxon(name, country?, language?)` returns `ok`, `ambiguous` or `unknown`. `resolve_fact` applies the deterministic resolution policy. `meta()` reports engine version, pack version, `schema_version` and pack hash. | M8 | Not started |
 | 4 | Climate | Vapor pressure deficit (VPD), growing degree days (GDD), daily light integral (DLI) and reference evapotranspiration (ET0: FAO-56 Penman–Monteith, with a Hargreaves–Samani fallback). Temperature estimate from elevation. | M10 | Not started |
 | 5 | Thresholds and stages | Four-point trapezoid checks that return `optimal`, `suboptimal` or `critical`. Stage resolver from planting age and GDD; perennials driven by dated events supplied by the caller. | M10 | Not started |
 | 6 | Irrigation, fertilizer, media and water | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. Every mode declares the parameters it requires; missing → `unknown` or `insufficient_input`. | M11 | Not started |
 | 7 | Suitability and propagation | Single and batch site suitability with `suitable`/`marginal`/`unsuitable` and per-factor reasons; dated propagation plans. | M12 | Not started |
 | 8 | Exports | `tool_schemas.json` (function-calling schemas with `taxon_id`, `country`, `system`), `edge_thresholds.json` per site, `review_sheet.csv` per tier. | M13 | Not started |
-| 9 | Command line | `lint-sources` and a basic `validate` ship in M0; `scaffold` and `build` in M6; full `validate`, `diff` and `coverage` in M7; `show` in M8; `calc` in M11; `export` in M13. | M0, M6–M13 | In progress |
+| 9 | Command line | `lint-sources` and a basic `validate` ship in M0; `pack lock` in M5; `scaffold` and `build` in M6; full `validate`, `diff` and `coverage` in M7; `show` in M8; `calc` in M11; `export` in M13. | M0, M5–M13 | In progress |
 
 ## Quick start
 
@@ -100,17 +103,17 @@ from pathlib import Path
 
 from agri_core import registry
 from agri_core.climate import vpd
-from agri_core.pack import load_pack
+from agri_core.pack import load_knowledge_set
 
 # Load a pack explicitly. No current-directory lookup, no environment variables.
-pack = load_pack(Path("/data/agri-knowledge/packs/2026.10.0"))
+pack = load_knowledge_set(Path("/data/agri-knowledge/packs/2026.10.0"))
 
 # Resolve a taxon by name. Returns ok, ambiguous or unknown.
 taxon = registry.resolve_taxon("tomato", country="ID", pack=pack)
 if taxon.status != "ok":
     print(taxon.status)  # "ambiguous" or "unknown"
 
-# Every result carries the fact IDs, engine version, pack version and hash.
+# Every result carries the fact IDs, pack version, pack hash and source IDs.
 r = vpd(temp_c=28.0, rh_pct=65.0)
 if r.status == "ok":
     print(r.value, r.unit)  # about 1.32 kPa
@@ -125,6 +128,7 @@ else:
 agri-core --help
 agri-core validate --pack sample           # manifest + sources (facts in M7)
 agri-core lint-sources --pack sample       # sources.csv checks
+agri-core pack lock --pack src/agri_core/_samples/sample_pack   # regenerate content_hash
 ```
 
 ## Output contract
@@ -159,7 +163,7 @@ The word `unknown` appears at three levels: a fact whose value is marked unknown
 
 ## Pack format
 
-A pack is a directory with a manifest and CSV tables. `agri-core build` (planned for M6) will compile it into a verified SQLite file plus a manifest that records hashes.
+A pack is a directory with a manifest and CSV tables. `agri-core build` (planned for M6) will compile it into a verified SQLite file plus a manifest that records hashes. `docs/PACK_FORMAT.md` is the reference for the format as it stands today.
 
 ```
 <pack>/
@@ -394,7 +398,7 @@ If you use the engine in research or in a product, cite this repository with the
 | **M6** Build | Not started | `scaffold` (opaque taxon IDs, never reused) plus `build` (CSV → SQLite + manifest, reproducible). | Wheel and pack build reproducibly (identical SHA-256 twice). |
 | **M7** Validate, diff, coverage, license gate | Not started | Trapezoid order, scope validity, unit resolution, duplicate detection, tier derivation (T0–T3), `diff` report, `coverage`, license gate. | Sample pack passes validate with 0 errors; `diff` matches fixtures; coverage assigns tiers; license gate rejects NC + `commercial_use=yes`. |
 | **M8** `resolve_taxon` and `resolve_fact` | Not started | Deterministic resolution per the fixed policy; `show` CLI. | `resolve_taxon` p95 ≤ 5 ms; resolution tests match fixtures. |
-| **M9** Offline, performance, docs, tag `v0.1.0` | Not started | Socket-blocking pytest plugin, performance budget tests, `docs/` skeleton (`REVIEW_GUIDE`, `PACK_FORMAT`, `DICTIONARY`, `RESOLUTION_POLICY`, `SAFETY`, `ADDING_A_TAXON`). | Every test passes with network blocked; performance budget met; tag `v0.1.0`. |
+| **M9** Offline, performance, docs, tag `v0.1.0` | Not started | Socket-blocking pytest plugin, performance budget tests, and the remaining `docs/` skeleton (`DICTIONARY`, `RESOLUTION_POLICY`, `SAFETY`, `ADDING_A_TAXON`; `PACK_FORMAT` and `REVIEW_GUIDE` ship in M5). | Every test passes with network blocked; performance budget met; tag `v0.1.0`. |
 | **M10** Climate, thresholds and stages | Not started | VPD, GDD, DLI, ET0 with fallback, temperature from elevation, threshold checks, stage resolver. | Golden tests pass; phases resolve per archetype; perennials use caller-supplied events. |
 | **M11** Irrigation, fertilizer, media and water | Not started | Registry of irrigation modes (`container_band`, `field_etc`, `paddy_awd`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. | `v0.1.0` passes against the sample pack and against `agri-knowledge` `v0.1.0`; irrigation results match scenario fixtures. |
 | **M12** Suitability and propagation | Not started | Single and batch site suitability, per-factor reasons, hazard flags, dated propagation plans. | Batch mode within the performance budget; scenario tests including an `unsuitable` case. |
@@ -471,8 +475,9 @@ agri-agronomy-core/
 │                            #   stages, systems, environments, uses, traits, organism_groups,
 │                            #   climate_zones, growth_habits, establishment_states,
 │                            #   yield_targets, scope_keys, modules, safety_classes
-├─ docs/                     # ADDING_A_TAXON, DICTIONARY, PACK_FORMAT, RESOLUTION_POLICY,
-│                            #   REVIEW_GUIDE, SAFETY, ADR
+├─ docs/                     # PACK_FORMAT.md, REVIEW_GUIDE.md (present);
+│                            #   ADDING_A_TAXON, DICTIONARY, RESOLUTION_POLICY, SAFETY (M9)
+│  ├─ decisions/             # ADR-001-knowledge-set.md
 │  └─ design/                # plant_wishlist_v4.csv, plant_wishlist_v4_rationale.md,
 │                            #   plant_wishlist_v4_migration.md
 ├─ notebooks/                # Colab quickstart (from v0.2.0), executed in CI
