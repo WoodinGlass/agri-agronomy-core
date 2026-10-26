@@ -169,7 +169,8 @@ A pack is a directory with a manifest and CSV tables. `agri-core build` (planned
 │                        #   one row per fact: fact_id, taxon_id, parameter, phase, value, scope, src, evidence, status
 ├─ hazards.csv            # hazard flags per taxon or scope
 ├─ names.csv              # aliases per taxon: taxon_id, name, language, kind
-├─ pack.toml              # manifest: name, version, schema_version, engine_min, content_hash
+├─ pack.toml              # manifest: name, version, schema_version, engine_min,
+│                        #   dictionary_min, synthetic, content_hash
 ├─ sources.csv            # one row per source: id, url, license, commercial_use, access_date, citation
 └─ taxa.csv               # one row per taxon: taxon_id, rank, scientific_name, parent_id
 ```
@@ -183,7 +184,8 @@ schema_version = 1
 engine_min = "0.1.0"
 dictionary_min = "1.0.0"
 synthetic = false
-# Written by `agri-core build` (M6). sha256 of the pack's canonical content.
+# Regenerate with `agri-core pack lock --pack PATH`. sha256 of the pack's
+# canonical content; see docs/PACK_FORMAT.md for the algorithm.
 content_hash = "sha256:..."
 ```
 
@@ -388,7 +390,7 @@ If you use the engine in research or in a product, cite this repository with the
 | **M2** Contract models | Done | `Outcome` (7 statuses), `Result`, row models (`taxon`, `name`, `fact`, `hazard`, `dataset`, `source`), identifier primitives (Crockford base32), `ParameterDef` v1.0.0, `PhaseSet`, `ScopeKey`. | Drift tests, frozen / extra-forbid invariants, and identifier pattern tests pass. |
 | **M3** Row JSON schemas | Done | JSON schemas for the 6 row models and the 8-shape `FactValue` union, generated from the Pydantic models. | Drift tests green; `EnumSetValue` in `FactValue` tested; `$defs` checked. |
 | **M4** Core dictionary 1.0.0 | Done | 31 parameters at `dictionary_version: 1.0.0`, `dictionary.lock` (append-only), `history/1.0.0.json`, `classify_change` for SemVer, safety-class taxonomy. | Lock hash verified against the running dictionary; `introduced_in` matches first snapshot; `test_semver_compat` infrastructure ready. |
-| **M5** Loader and sample pack | In progress | `compute_pack_hash` / `verify_pack_hash`; `load_knowledge_set(path)`; immutable `KnowledgeSet`; sample pack with 8 synthetic taxa, one per initial archetype (`annual`, `aquatic`, `biennial`, `epiphyte`, `fungal`, `geophyte`, `herbaceous_perennial`, `woody_perennial`), without real agronomic data. | Hash determinism and mismatch tests pass; sample pack loads cleanly; foreign keys on `taxon_id`, `parameter`, `src` verified. |
+| **M5** Loader and sample pack | Done | `compute_pack_hash` / `verify_pack_hash`; `load_knowledge_set(path)`; immutable `KnowledgeSet`; sample pack with 8 synthetic taxa, one per initial archetype (`annual`, `aquatic`, `biennial`, `epiphyte`, `fungal`, `geophyte`, `herbaceous_perennial`, `woody_perennial`), without real agronomic data. | Hash determinism and mismatch tests pass; sample pack loads cleanly; foreign keys on `taxon_id`, `parameter`, `src` verified. |
 | **M6** Build | Not started | `scaffold` (opaque taxon IDs, never reused) plus `build` (CSV → SQLite + manifest, reproducible). | Wheel and pack build reproducibly (identical SHA-256 twice). |
 | **M7** Validate, diff, coverage, license gate | Not started | Trapezoid order, scope validity, unit resolution, duplicate detection, tier derivation (T0–T3), `diff` report, `coverage`, license gate. | Sample pack passes validate with 0 errors; `diff` matches fixtures; coverage assigns tiers; license gate rejects NC + `commercial_use=yes`. |
 | **M8** `resolve_taxon` and `resolve_fact` | Not started | Deterministic resolution per the fixed policy; `show` CLI. | `resolve_taxon` p95 ≤ 5 ms; resolution tests match fixtures. |
