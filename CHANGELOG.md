@@ -113,6 +113,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `physical_range` required for numeric shapes, `applies_to.organism_groups`
   required, `enum_source` added, `scope_keys` added.
 
+### Removed
+
+- `Pack`, `PackKind`, `load_pack()`, and `load_sample_pack()` are removed
+  from `agri_core.pack`. Use `load_knowledge_set(path)` for a full pack
+  load, or `load_knowledge_set_from_files(files)` when the caller already
+  has the allowlist bytes (for example from `read_pack_bytes`). Pre-1.0;
+  no released API depended on the removed names.
+
 ## [0.0.0] - 2026-10-17
 
 - Repository created.

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 import pytest
@@ -14,8 +13,6 @@ from agri_core.pack import (
     PackTableInvalidError,
     compute_pack_hash,
     hash_pack_files,
-    load_pack,
-    load_sample_pack,
     read_pack_bytes,
     verify_pack_hash,
     verify_pack_hash_full,
@@ -272,38 +269,3 @@ def test_verify_full_both_match_verified(tmp_path: Path) -> None:
 
 
 # ---- load_pack integration --------------------------------------------
-
-
-def test_load_pack_rejects_tampered_hash(tmp_path: Path) -> None:
-    _write_pack(tmp_path)
-    digest = compute_pack_hash(tmp_path)
-    _write_pack(tmp_path, content_hash=digest)
-    (tmp_path / "sources.csv").write_bytes(
-        _HEADERS["sources.csv"] + b"S001,x,CC0-1.0,yes,2026-01-01,x\n"
-    )
-    with pytest.raises(PackHashMismatchError, match="mismatch"):
-        load_pack(tmp_path)
-
-
-def test_load_pack_allows_dev_mode_without_verification(tmp_path: Path) -> None:
-    _write_pack(tmp_path)
-    with pytest.raises(InvalidPackError, match="missing content_hash"):
-        load_pack(tmp_path)
-    p = load_pack(tmp_path, verify_hash=False)
-    assert p.manifest.name == "minimal"
-
-
-def test_load_sample_pack_verifies_hash() -> None:
-    pack = load_sample_pack()
-    assert pack.manifest.content_hash is not None
-    assert pack.manifest.content_hash.startswith("sha256:")
-
-
-def test_sample_pack_tamper_rejected(tmp_path: Path) -> None:
-    pack = load_sample_pack()
-    shutil.copytree(pack.root, tmp_path / "tampered")
-    (tmp_path / "tampered" / "sources.csv").write_bytes(
-        _HEADERS["sources.csv"] + b"S001,x,CC0-1.0,yes,2026-01-01,x\n"
-    )
-    with pytest.raises(PackHashMismatchError, match="mismatch"):
-        load_pack(tmp_path / "tampered")

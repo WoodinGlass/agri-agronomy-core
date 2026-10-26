@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import tomllib
 from collections.abc import Mapping
-from dataclasses import dataclass
-from importlib.resources import files as _resource_files
 from pathlib import Path
-from typing import Literal
 
 from packaging.version import Version
 from pydantic import BaseModel
@@ -36,7 +33,6 @@ from agri_core.pack.errors import (
     PackFeatureUnsupportedError,
     PackFKViolationError,
     PackHashMismatchError,
-    PackNotFoundError,
     PackPhaseInvalidError,
     PackSafetyViolationError,
     PackScopeInvalidError,
@@ -55,20 +51,8 @@ from agri_core.pack.tables import TABLES, Table, read_table
 from agri_core.pack.verify import hash_pack_files
 from agri_core.registry.sources import SourceRow
 
-PackKind = Literal["sample", "directory"]
-
 _DEFAULT_DICTIONARY_SOURCE = "dictionary/parameters.core.yaml"
 _MAX_FINDINGS = 20
-
-
-@dataclass(frozen=True)
-class Pack:
-    """Legacy Pack view. Slated for removal in M5-2b commit 7."""
-
-    root: Path
-    kind: PackKind
-    manifest: PackManifest
-    sources_csv: Path
 
 
 def _default_dictionary() -> Dictionary:
@@ -572,59 +556,8 @@ def load_knowledge_set(
     )
 
 
-# --- legacy loaders (removed in commit 7) --------------------------------
-
-
-def _read_manifest(pack_dir: Path) -> PackManifest:
-    manifest_path = pack_dir / "pack.toml"
-    if not manifest_path.is_file():
-        raise InvalidPackError(f"pack.toml not found in {pack_dir}")
-    try:
-        with manifest_path.open("rb") as f:
-            raw = tomllib.load(f)
-    except tomllib.TOMLDecodeError as exc:
-        raise InvalidPackError(f"pack.toml is not valid TOML: {exc}") from exc
-    try:
-        return PackManifest.model_validate(raw)
-    except ValueError as exc:
-        raise InvalidPackError(f"pack.toml is invalid: {exc}") from exc
-
-
-def _finish(root: Path, kind: PackKind, *, verify_hash: bool = True) -> Pack:
-    from agri_core.pack.verify import verify_pack_hash
-
-    manifest = _read_manifest(root)
-    _check_compat(manifest, _default_dictionary())
-    if verify_hash:
-        verify_pack_hash(root, manifest)
-    sources_csv = root / "sources.csv"
-    if not sources_csv.is_file():
-        raise InvalidPackError(f"sources.csv not found in {root}")
-    return Pack(root=root, kind=kind, manifest=manifest, sources_csv=sources_csv)
-
-
-def load_pack(path: str | Path, *, verify_hash: bool = True) -> Pack:
-    """Deprecated: use load_knowledge_set. Removed in commit 7."""
-    root = Path(path)
-    if not root.is_dir():
-        raise PackNotFoundError(f"pack directory not found: {root}")
-    return _finish(root, kind="directory", verify_hash=verify_hash)
-
-
-def load_sample_pack(*, verify_hash: bool = True) -> Pack:
-    """Deprecated: use load_knowledge_set. Removed in commit 7."""
-    root = Path(str(_resource_files("agri_core") / "_samples" / "sample_pack"))
-    if not root.is_dir():
-        raise PackNotFoundError("sample pack missing from installed package")
-    return _finish(root, kind="sample", verify_hash=verify_hash)
-
-
 __all__ = [
-    "Pack",
-    "PackKind",
     "load_knowledge_set",
     "load_knowledge_set_from_files",
-    "load_pack",
-    "load_sample_pack",
     "parse_manifest_bytes",
 ]

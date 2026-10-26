@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from datetime import date
 from pathlib import Path
 
@@ -664,3 +665,59 @@ def test_from_files_no_disk_read(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(Path, "read_text", boom)
     ks = load_knowledge_set_from_files(files, dictionary=_DICT)
     assert [t.taxon_id for t in ks.taxa()] == ["T000000001"]
+
+
+# ---- ported from test_pack_loader.py and test_pack_hash.py -------------
+
+
+def test_missing_pack_toml_raises(tmp_path: Path) -> None:
+    _write_pack(tmp_path)
+    (tmp_path / "pack.toml").unlink()
+    with pytest.raises(InvalidPackError, match=r"pack\.toml"):
+        load_knowledge_set(tmp_path, dictionary=_DICT)
+
+
+def test_missing_sources_raises(tmp_path: Path) -> None:
+    _write_pack(tmp_path)
+    (tmp_path / "sources.csv").unlink()
+    with pytest.raises(InvalidPackError, match=r"sources\.csv"):
+        load_knowledge_set(tmp_path, dictionary=_DICT)
+
+
+def test_invalid_manifest_fields_raises(tmp_path: Path) -> None:
+    _write_pack(
+        tmp_path,
+        toml_override=(
+            'name = "UPPER"\n'
+            'version = "1.0.0"\n'
+            "schema_version = 1\n"
+            'engine_min = "0.0.0"\n'
+            'dictionary_min = "1.0.0"\n'
+        ),
+    )
+    with pytest.raises(InvalidPackError):
+        load_knowledge_set(tmp_path, dictionary=_DICT)
+
+
+def test_invalid_manifest_version_raises(tmp_path: Path) -> None:
+    _write_pack(
+        tmp_path,
+        toml_override=(
+            'name = "test"\n'
+            'version = "1.0"\n'
+            "schema_version = 1\n"
+            'engine_min = "0.0.0"\n'
+            'dictionary_min = "1.0.0"\n'
+        ),
+    )
+    with pytest.raises(InvalidPackError):
+        load_knowledge_set(tmp_path, dictionary=_DICT)
+
+
+def test_sample_pack_tampered_raises(tmp_path: Path) -> None:
+    tampered = tmp_path / "tampered"
+    shutil.copytree(_SAMPLE, tampered)
+    sources = tampered / "sources.csv"
+    sources.write_bytes(sources.read_bytes() + b"S999,x,CC0-1.0,yes,2026-01-01,x\n")
+    with pytest.raises(PackHashMismatchError):
+        load_knowledge_set(tampered, allow_synthetic=True, dictionary=_DICT)
