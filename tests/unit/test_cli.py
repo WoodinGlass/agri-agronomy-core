@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 from agri_core import __version__
 from agri_core.cli import app
 from agri_core.pack import compute_pack_hash
+from agri_core.pack.tables import TABLES
 
 pytestmark = pytest.mark.unit
 
@@ -18,6 +19,15 @@ FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "sources"
 
 def _header_bytes() -> bytes:
     return b"id,url,license,commercial_use,access_date,citation\n"
+
+
+_HEADER_BY_TABLE: dict[str, str] = {
+    "taxa": "taxon_id,rank,scientific_name,accepted_name,organism_group,"
+    "archetype,uses,traits,parent_id,external_ids,src,dataset_id\n",
+    "names": "taxon_id,name,language,script,kind,preferred,src,dataset_id\n",
+    "hazards": "taxon_id,hazard_code,severity,reason,as_of,authority,src,dataset_id\n",
+    "datasets": "dataset_id,name,version,license,checksum,url,locator,access_date\n",
+}
 
 
 def _make_pack(
@@ -38,6 +48,10 @@ def _make_pack(
         f'engine_min = "{engine_min}"\n'
     )
     (root / "pack.toml").write_text(body, encoding="utf-8")
+    for table, header in _HEADER_BY_TABLE.items():
+        spec = TABLES[table]
+        assert spec.filename is not None
+        (root / spec.filename).write_text(header, encoding="utf-8")
     (root / "sources.csv").write_bytes(sources_content)
     digest = compute_pack_hash(root)
     (root / "pack.toml").write_text(body + f'content_hash = "{digest}"\n', encoding="utf-8")

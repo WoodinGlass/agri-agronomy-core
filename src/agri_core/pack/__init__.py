@@ -21,6 +21,7 @@ from agri_core.pack.errors import (
     PackUnknownParameterError,
     UnsupportedSchemaVersionError,
 )
+from agri_core.pack.files import DEFAULT_MAX_BYTES, REQUIRED_TABLES, read_pack_bytes
 from agri_core.pack.loader import Pack, PackKind, load_pack, load_sample_pack
 from agri_core.pack.manifest import SUPPORTED_SCHEMA_VERSIONS, PackManifest
 from agri_core.pack.tables import (
@@ -33,10 +34,17 @@ from agri_core.pack.tables import (
     read_table,
     write_table,
 )
-from agri_core.pack.verify import compute_pack_hash, verify_pack_hash
+from agri_core.pack.verify import (
+    compute_pack_hash,
+    hash_pack_files,
+    verify_pack_hash,
+    verify_pack_hash_full,
+)
 
 __all__ = [
     "ADVISORIES_FILENAME",
+    "DEFAULT_MAX_BYTES",
+    "REQUIRED_TABLES",
     "SUPPORTED_SCHEMA_VERSIONS",
     "TABLES",
     "ColumnSpec",
@@ -64,9 +72,12 @@ __all__ = [
     "TableSpec",
     "UnsupportedSchemaVersionError",
     "compute_pack_hash",
+    "hash_pack_files",
     "load_pack",
     "load_sample_pack",
+    "read_pack_bytes",
     "read_table",
     "verify_pack_hash",
+    "verify_pack_hash_full",
     "write_table",
 ]

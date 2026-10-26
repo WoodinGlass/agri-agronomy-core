@@ -2,4 +2,4 @@ name = "sample"
 version = "0.1.0"
 schema_version = 1
 engine_min = "0.0.0"
-content_hash = "sha256:4194347a2bc73b06ec64e4f40a8d483b290824ff4d27d690d03ccc01f3bfea93"
+content_hash = "sha256:c0e9eae382a5b42f220a7cdac58a876136f5c12402b01f1499bfd364126afb67"
