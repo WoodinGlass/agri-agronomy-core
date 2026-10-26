@@ -2,6 +2,31 @@
   "additionalProperties": false,
   "description": "Parsed ``pack.toml``.",
   "properties": {
+    "artifact_sha256": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Artifact Sha256"
+    },
+    "built_by": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Built By"
+    },
     "content_hash": {
       "anyOf": [
         {
@@ -30,6 +55,19 @@
       "minimum": 1,
       "title": "Schema Version",
       "type": "integer"
+    },
+    "sqlite_schema_version": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sqlite Schema Version"
     },
     "synthetic": {
       "default": false,

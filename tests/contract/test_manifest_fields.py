@@ -64,3 +64,71 @@ def test_full_manifest_validates() -> None:
     assert m.dictionary_min == "1.0.0"
     assert m.content_hash is None
     assert m.synthetic is False
+
+
+# ---- build fields (M6-1): all-or-none, patterns, types ----------------
+
+
+def test_build_fields_all_or_none_zero() -> None:
+    # source manifest: no build fields -> valid
+    m = PackManifest.model_validate(_base())
+    assert m.artifact_sha256 is None
+    assert m.sqlite_schema_version is None
+    assert m.built_by is None
+
+
+def test_build_fields_all_or_none_all() -> None:
+    data = _base()
+    data["content_hash"] = "sha256:" + "a" * 64
+    data["artifact_sha256"] = "sha256:" + "b" * 64
+    data["sqlite_schema_version"] = 1
+    data["built_by"] = "agri-core 0.0.0"
+    m = PackManifest.model_validate(data)
+    assert m.artifact_sha256 is not None
+    assert m.sqlite_schema_version == 1
+    assert m.built_by is not None
+
+
+@pytest.mark.parametrize(
+    "partial_fields",
+    [
+        {"artifact_sha256": "sha256:" + "a" * 64},
+        {"sqlite_schema_version": 1},
+        {"built_by": "agri-core 0.0.0"},
+        {"artifact_sha256": "sha256:" + "a" * 64, "sqlite_schema_version": 1},
+        {"artifact_sha256": "sha256:" + "a" * 64, "built_by": "agri-core 0.0.0"},
+        {"sqlite_schema_version": 1, "built_by": "agri-core 0.0.0"},
+    ],
+)
+def test_build_fields_partial_raises(partial_fields: dict[str, object]) -> None:
+    data = _base()
+    data.update(partial_fields)
+    with pytest.raises(ValidationError, match=r"all set .* or all None"):
+        PackManifest.model_validate(data)
+
+
+def test_artifact_sha256_pattern_enforced() -> None:
+    data = _base()
+    data["artifact_sha256"] = "sha256:not-hex"
+    data["sqlite_schema_version"] = 1
+    data["built_by"] = "agri-core 0.0.0"
+    with pytest.raises(ValidationError, match="artifact_sha256"):
+        PackManifest.model_validate(data)
+
+
+def test_sqlite_schema_version_strict_and_ge_1() -> None:
+    data = _base()
+    data["artifact_sha256"] = "sha256:" + "a" * 64
+    data["sqlite_schema_version"] = 0
+    data["built_by"] = "agri-core 0.0.0"
+    with pytest.raises(ValidationError, match="sqlite_schema_version"):
+        PackManifest.model_validate(data)
+
+
+def test_built_by_min_length_1() -> None:
+    data = _base()
+    data["artifact_sha256"] = "sha256:" + "a" * 64
+    data["sqlite_schema_version"] = 1
+    data["built_by"] = ""
+    with pytest.raises(ValidationError, match="built_by"):
+        PackManifest.model_validate(data)

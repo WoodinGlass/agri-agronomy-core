@@ -479,6 +479,17 @@ def load_knowledge_set_from_files(
         dictionary = _default_dictionary()
 
     manifest = parse_manifest_bytes(files["pack.toml"])
+    if (
+        manifest.artifact_sha256 is not None
+        or manifest.sqlite_schema_version is not None
+        or manifest.built_by is not None
+    ):
+        raise PackError(
+            "source pack.toml declares build-only fields "
+            "(artifact_sha256 / sqlite_schema_version / built_by); "
+            "these appear only in built manifests. Did you copy a built "
+            "pack.toml onto a source tree?"
+        )
 
     actual = hash_pack_files(files)
     if manifest.content_hash is not None and manifest.content_hash != actual:
