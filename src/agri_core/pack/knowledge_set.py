@@ -79,7 +79,12 @@ class KnowledgeSet(Protocol):
         """Return the dataset row; ``KeyError`` if unknown."""
 
 
-@dataclass(frozen=True, slots=True, init=False)
+# Do not add slots=True: on Python 3.10/3.11, @dataclass(slots=True)
+# with frozen=True rebuilds the class and breaks super().__setattr__,
+# so immutability checks raise TypeError instead of FrozenInstanceError.
+# Slots save ~150 bytes per instance; there is exactly one
+# InMemoryKnowledgeSet per loaded pack, so the cost is negligible.
+@dataclass(frozen=True, init=False)
 class InMemoryKnowledgeSet:
     """Frozen, eager InMemoryKnowledgeSet (see ``KnowledgeSet``).
 
