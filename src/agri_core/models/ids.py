@@ -24,12 +24,13 @@ CROCKFORD_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 CROCKFORD_CHARS = "0-9A-HJKMNP-TV-Z"
 """Regex character class matching one Crockford base32 character."""
 
-_TAXON_ID_PATTERN = rf"^T[{CROCKFORD_CHARS}]{{9}}$"
+TAXON_ID_PATTERN = rf"^T[{CROCKFORD_CHARS}]{{9}}$"
+"""Public regex for the TaxonId shape: T + 9 Crockford base32 chars."""
 _FACT_ID_PATTERN = rf"^F[{CROCKFORD_CHARS}]{{11,}}$"
 _DATASET_ID_PATTERN = rf"^D[{CROCKFORD_CHARS}]{{9}}$"
 _SOURCE_ID_PATTERN = r"^S\d{3,}$"
 
-TaxonId = Annotated[str, Field(pattern=_TAXON_ID_PATTERN)]
+TaxonId = Annotated[str, Field(pattern=TAXON_ID_PATTERN)]
 """Taxon identifier: 'T' followed by exactly 9 Crockford base32 characters."""
 
 FactId = Annotated[str, Field(pattern=_FACT_ID_PATTERN)]
@@ -44,6 +45,7 @@ SourceId = Annotated[str, Field(pattern=_SOURCE_ID_PATTERN)]
 __all__ = [
     "CROCKFORD_ALPHABET",
     "CROCKFORD_CHARS",
+    "TAXON_ID_PATTERN",
     "DatasetId",
     "FactId",
     "SourceId",
