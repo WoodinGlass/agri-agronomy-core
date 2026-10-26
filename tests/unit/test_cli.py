@@ -46,6 +46,7 @@ def _make_pack(
         f'version = "{version}"\n'
         f"schema_version = {schema_version}\n"
         f'engine_min = "{engine_min}"\n'
+        f'dictionary_min = "1.0.0"\n'
     )
     (root / "pack.toml").write_text(body, encoding="utf-8")
     for table, header in _HEADER_BY_TABLE.items():

@@ -14,6 +14,10 @@
       "default": null,
       "title": "Content Hash"
     },
+    "dictionary_min": {
+      "title": "Dictionary Min",
+      "type": "string"
+    },
     "engine_min": {
       "title": "Engine Min",
       "type": "string"
@@ -27,6 +31,11 @@
       "title": "Schema Version",
       "type": "integer"
     },
+    "synthetic": {
+      "default": false,
+      "title": "Synthetic",
+      "type": "boolean"
+    },
     "version": {
       "title": "Version",
       "type": "string"
@@ -36,7 +45,8 @@
     "name",
     "version",
     "schema_version",
-    "engine_min"
+    "engine_min",
+    "dictionary_min"
   ],
   "title": "PackManifest",
   "type": "object"

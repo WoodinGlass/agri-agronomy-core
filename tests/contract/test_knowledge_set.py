@@ -115,6 +115,7 @@ def _make_ks(
             "version": "1.0.0",
             "schema_version": 1,
             "engine_min": "0.0.0",
+            "dictionary_min": "1.0.0",
         }
     )
     return InMemoryKnowledgeSet.from_rows(

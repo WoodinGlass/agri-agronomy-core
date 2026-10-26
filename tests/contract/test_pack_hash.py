@@ -34,14 +34,26 @@ _HEADERS = {
     "sources.csv": (b"id,url,license,commercial_use,access_date,citation\n"),
 }
 
-_MINIMAL_TOML = b'name = "minimal"\nversion = "1.0.0"\nschema_version = 1\nengine_min = "0.0.0"\n'
+_MINIMAL_TOML = (
+    b'name = "minimal"\n'
+    b'version = "1.0.0"\n'
+    b"schema_version = 1\n"
+    b'engine_min = "0.0.0"\n'
+    b'dictionary_min = "1.0.0"\n'
+)
 
 # Golden vector: independent of production fixtures, locks the algorithm.
 _GOLDEN_FILES: dict[str, bytes] = {
-    "pack.toml": (b'name = "gold"\nversion = "1.0.0"\nschema_version = 1\nengine_min = "0.0.0"\n'),
+    "pack.toml": (
+        b'name = "gold"\n'
+        b'version = "1.0.0"\n'
+        b"schema_version = 1\n"
+        b'engine_min = "0.0.0"\n'
+        b'dictionary_min = "1.0.0"\n'
+    ),
     "sources.csv": b"id,url,license,commercial_use,access_date,citation\n",
 }
-_GOLDEN_HASH = "sha256:6a785b0148f6f23bcb5865265c21d57c965aa9221e7fe2628b7420ef9bee7d01"
+_GOLDEN_HASH = "sha256:365f6caeac8285eddce8e9662d04c544f8e2e9bbbe48ff77c0f74b32093a767b"
 
 
 # ---- helpers -----------------------------------------------------------
@@ -72,6 +84,7 @@ def _manifest(content_hash: str | None) -> PackManifest:
         "version": "1.0.0",
         "schema_version": 1,
         "engine_min": "0.0.0",
+        "dictionary_min": "1.0.0",
     }
     if content_hash is not None:
         data["content_hash"] = content_hash
