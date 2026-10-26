@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `agri-core pack lock --pack PATH` regenerates `content_hash` in
+  `pack.toml` atomically. Validates structurally before writing and
+  is idempotent; comments and non-fixed key order are not preserved.
+  Keyword `sample` is rejected — pass an explicit path.
 - Sample pack now ships 8 synthetic taxa (one per base
   archetype), 19 names (EN/ID/JA, one non-ASCII and one
   comma+quote to exercise CSV quoting), 3 sources, 1 dataset,
