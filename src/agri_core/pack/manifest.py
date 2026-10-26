@@ -33,7 +33,9 @@ class PackManifest(BaseModel):
     version: str
     schema_version: int = Field(strict=True, ge=1)
     engine_min: str
+    dictionary_min: str
     content_hash: str | None = None
+    synthetic: bool = False
 
     @field_validator("name")
     @classmethod
@@ -51,6 +53,11 @@ class PackManifest(BaseModel):
     @classmethod
     def _engine_ok(cls, v: str) -> str:
         return _check_semver3(v, "engine_min")
+
+    @field_validator("dictionary_min")
+    @classmethod
+    def _dictionary_min_ok(cls, v: str) -> str:
+        return _check_semver3(v, "dictionary_min")
 
     @field_validator("content_hash")
     @classmethod

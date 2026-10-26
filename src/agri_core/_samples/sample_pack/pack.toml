@@ -2,4 +2,6 @@ name = "sample"
 version = "0.1.0"
 schema_version = 1
 engine_min = "0.0.0"
-content_hash = "sha256:c0e9eae382a5b42f220a7cdac58a876136f5c12402b01f1499bfd364126afb67"
+dictionary_min = "1.0.0"
+synthetic = true
+content_hash = "sha256:8a4a998656aea2cdd3369b856c4d2e536e6ef09520a7fe743fd4a575015a0078"
