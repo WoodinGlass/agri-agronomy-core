@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import io
+import json
+import os
 from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
@@ -15,6 +18,8 @@ from agri_core import __version__
 from agri_core.pack import (
     PackError,
     PackManifest,
+    compute_pack_hash,
+    hash_pack_files,
     load_knowledge_set_from_files,
     parse_manifest_bytes,
     read_pack_bytes,
@@ -33,6 +38,14 @@ app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
 )
+
+pack_app = typer.Typer(
+    name="pack",
+    help="Pack maintenance commands.",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(pack_app, name="pack")
 
 
 def _print_version(value: bool) -> None:
@@ -175,6 +188,82 @@ def validate(
 
     if errors:
         raise typer.Exit(EXIT_ERROR)
+
+
+def _render_pack_toml(manifest: PackManifest, content_hash: str) -> str:
+    """Render pack.toml with a fixed key order (comments are not preserved)."""
+    lines = [
+        f"name = {json.dumps(manifest.name)}",
+        f"version = {json.dumps(manifest.version)}",
+        f"schema_version = {manifest.schema_version}",
+        f"engine_min = {json.dumps(manifest.engine_min)}",
+        f"dictionary_min = {json.dumps(manifest.dictionary_min)}",
+        f"synthetic = {'true' if manifest.synthetic else 'false'}",
+        f"content_hash = {json.dumps(content_hash)}",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+@pack_app.command(name="lock")
+def pack_lock(
+    pack: Annotated[
+        str,
+        typer.Option(
+            "--pack",
+            help="Path to a pack directory (explicit path only; 'sample' is rejected).",
+        ),
+    ],
+) -> None:
+    """Rewrite pack.toml with the correct content_hash (comments not preserved)."""
+    if pack == "sample":
+        typer.echo(
+            "error: pack lock requires an explicit path; 'sample' is not "
+            "allowed. Pass the path, e.g. src/agri_core/_samples/sample_pack.",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
+
+    path = Path(pack)
+    try:
+        files = read_pack_bytes(path)
+        manifest = parse_manifest_bytes(files["pack.toml"])
+        load_knowledge_set_from_files(files, allow_synthetic=True)
+    except PackError as exc:
+        typer.echo(f"error: {exc.code}: {exc}", err=True)
+        for finding in getattr(exc, "findings", ()):
+            loc = f"{finding.file}:{finding.line}" if getattr(finding, "file", None) else "-"
+            typer.echo(f"  {finding.code} {loc}: {finding}", err=True)
+        raise typer.Exit(EXIT_PACK) from exc
+
+    # Compute the hash from the content we are about to write, not from the
+    # current pack.toml (which may lack fields such as `synthetic` that
+    # _render_pack_toml normalizes in).
+    content_without_hash = _render_pack_toml(manifest, "")
+    files_with_new_toml = dict(files)
+    files_with_new_toml["pack.toml"] = content_without_hash.encode("utf-8")
+    new_hash = hash_pack_files(files_with_new_toml)
+    content = _render_pack_toml(manifest, new_hash)
+
+    target = path / "pack.toml"
+    tmp = path / "pack.toml.tmp"
+    try:
+        tmp.write_text(content, encoding="utf-8")
+        os.replace(tmp, target)
+    except OSError as exc:
+        typer.echo(f"error: OSError: {exc}", err=True)
+        with contextlib.suppress(OSError):
+            tmp.unlink(missing_ok=True)
+        raise typer.Exit(EXIT_UNEXPECTED) from exc
+
+    verify_hash = compute_pack_hash(path)
+    if verify_hash != new_hash:
+        typer.echo(
+            f"error: post-write hash mismatch: expected {new_hash}, got {verify_hash}",
+            err=True,
+        )
+        raise typer.Exit(EXIT_UNEXPECTED)
+
+    typer.echo(f"wrote content_hash = {new_hash}")
 
 
 def main() -> NoReturn:

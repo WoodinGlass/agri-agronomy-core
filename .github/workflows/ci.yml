@@ -50,6 +50,10 @@ jobs:
           echo "$out" | grep -E '^pack: sample [0-9]+\.[0-9]+\.[0-9]+ \(sample\)$'
       - name: agri-core lint-sources
         run: agri-core lint-sources --pack sample
+      - name: Pack lock sample is up to date
+        run: |
+          agri-core pack lock --pack src/agri_core/_samples/sample_pack
+          git diff --exit-code src/agri_core/_samples/sample_pack/pack.toml
 
   latest:
     name: Latest (py${{ matrix.python-version }})
