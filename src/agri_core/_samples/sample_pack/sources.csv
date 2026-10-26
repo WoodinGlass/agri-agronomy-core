@@ -1,1 +1,4 @@
 id,url,license,commercial_use,access_date,citation
+S001,https://example.org/synthetic/s001,CC0-1.0,yes,2026-01-01,Synthetic source A
+S002,https://example.org/synthetic/s002,CC0-1.0,yes,2026-01-01,Synthetic source B
+S003,https://example.org/synthetic/s003,CC0-1.0,yes,2026-01-01,Synthetic source C

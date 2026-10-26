@@ -1,0 +1,3 @@
+fact_id,taxon_id,parameter,phase,value,scope,provenance_kind,src,dataset_id,locator,evidence,status,reviewed_by,reviewed_at,superseded_by
+F00000000014,T000000006,soil_ph,,"{""pts"":[5.0,6.5,7.0,8.0],""shape"":""trapezoid"",""unit"":""pH""}",{},curated,S001,,Synthetic table 1,A,approved,test-reviewer,2026-01-01,
+F00000000015,T000000006,soil_ec,,"{""pts"":[0.5,1.0,2.0,3.0],""shape"":""trapezoid"",""unit"":""decisiemens/meter""}",{},curated,S001|S003,,Synthetic table 1,B,approved,test-reviewer,2026-01-01,

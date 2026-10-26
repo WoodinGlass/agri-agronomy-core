@@ -1,0 +1,4 @@
+fact_id,taxon_id,parameter,phase,value,scope,provenance_kind,src,dataset_id,locator,evidence,status,reviewed_by,reviewed_at,superseded_by
+F00000000016,T000000007,soil_ph,,"{""pts"":[5.5,6.5,7.0,7.5],""shape"":""trapezoid"",""unit"":""pH""}",{},curated,S001,,Synthetic table 1,B,approved,test-reviewer,2026-01-01,
+F00000000017,T000000007,kc,midseason,"{""shape"":""scalar"",""unit"":""dimensionless"",""value"":0.85}","{""system"":""field""}",curated,S001,,Synthetic table 1,A,approved,test-reviewer,2026-01-01,
+F00000000018,T000000007,kc_stage_length,midseason,"{""shape"":""scalar"",""unit"":""day"",""value"":30.0}","{""system"":""field""}",curated,S001,,Synthetic table 1,B,approved,test-reviewer,2026-01-01,

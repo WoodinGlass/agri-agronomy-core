@@ -1,0 +1,4 @@
+fact_id,taxon_id,parameter,phase,value,scope,provenance_kind,src,dataset_id,locator,evidence,status,reviewed_by,reviewed_at,superseded_by
+F00000000001,T000000001,soil_ph,,"{""pts"":[4.5,6.0,7.0,8.5],""shape"":""trapezoid"",""unit"":""pH""}","{""system"":""field""}",curated,S001,,Synthetic table 1,A,approved,test-reviewer,2026-01-01,
+F00000000002,T000000001,gdd_base,,"{""shape"":""scalar"",""unit"":""degree_Celsius"",""value"":8.0}",{},curated,S001,,Synthetic table 1,B,approved,test-reviewer,2026-01-01,
+F00000000003,T000000001,n_fertilizer_rate,,"{""max"":150.0,""min"":50.0,""shape"":""range"",""unit"":""kilogram/hectare""}","{""system"":""field""}",curated,S001,,Synthetic table 1,B,approved,test-reviewer,2026-01-01,
