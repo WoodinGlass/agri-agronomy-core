@@ -68,7 +68,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 | 6 | Irrigation, fertilizer, media and water | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. Every mode declares the parameters it requires; missing → `unknown` or `insufficient_input`. | M11 | Not started |
 | 7 | Suitability and propagation | Single and batch site suitability with `suitable`/`marginal`/`unsuitable` and per-factor reasons; dated propagation plans. | M12 | Not started |
 | 8 | Exports | `tool_schemas.json` (function-calling schemas with `taxon_id`, `country`, `system`), `edge_thresholds.json` per site, `review_sheet.csv` per tier. | M13 | Not started |
-| 9 | Command line | `lint-sources` and a basic `validate` ship in M0; `pack lock` in M5; `scaffold` and `build` in M6; full `validate`, `diff` and `coverage` in M7; `show` in M8; `calc` in M11; `export` in M13. | M0, M5–M13 | In progress |
+| 9 | Command line | `lint-sources` and a basic `validate` ship in M0; `pack lock` in M5; `pack scaffold` and `pack build` in M6; full `validate`, `diff` and `coverage` in M7; `show` in M8; `calc` in M11; `export` in M13. | M0, M5–M13 | In progress |
 
 ## Quick start
 
@@ -129,6 +129,7 @@ agri-core --help
 agri-core validate --pack sample           # manifest + sources (facts in M7)
 agri-core lint-sources --pack sample       # sources.csv checks
 agri-core pack lock --pack src/agri_core/_samples/sample_pack   # regenerate content_hash
+agri-core pack scaffold --pack PATH --scientific-name NAME --archetype annual --use vegetable  # add a taxon
 agri-core pack build --pack src/agri_core/_samples/sample_pack --out build/  # build SQLite
 ```
 
@@ -164,7 +165,7 @@ The word `unknown` appears at three levels: a fact whose value is marked unknown
 
 ## Pack format
 
-A pack is a directory with a manifest and CSV tables. `agri-core pack build` will compile it into a verified SQLite file plus a manifest that records hashes. `docs/PACK_FORMAT.md` is the reference for the format as it stands today.
+A pack is a directory with a manifest and CSV tables. `agri-core pack build` compiles it into a verified SQLite file plus a manifest that records hashes. `docs/PACK_FORMAT.md` is the reference for the format as it stands today, including the built-pack SQLite section.
 
 ```
 <pack>/
@@ -396,7 +397,7 @@ If you use the engine in research or in a product, cite this repository with the
 | **M3** Row JSON schemas | Done | JSON schemas for the 6 row models and the 8-shape `FactValue` union, generated from the Pydantic models. | Drift tests green; `EnumSetValue` in `FactValue` tested; `$defs` checked. |
 | **M4** Core dictionary 1.0.0 | Done | 31 parameters at `dictionary_version: 1.0.0`, `dictionary.lock` (append-only), `history/1.0.0.json`, `classify_change` for SemVer, safety-class taxonomy. | Lock hash verified against the running dictionary; `introduced_in` matches first snapshot; `test_semver_compat` infrastructure ready. |
 | **M5** Loader and sample pack | Done | `compute_pack_hash` / `verify_pack_hash`; `load_knowledge_set(path)`; immutable `KnowledgeSet`; sample pack with 8 synthetic taxa, one per initial archetype (`annual`, `aquatic`, `biennial`, `epiphyte`, `fungal`, `geophyte`, `herbaceous_perennial`, `woody_perennial`), without real agronomic data. | Hash determinism and mismatch tests pass; sample pack loads cleanly; foreign keys on `taxon_id`, `parameter`, `src` verified. |
-| **M6** Build | Not started | `scaffold` (opaque taxon IDs, never reused) plus `build` (CSV → SQLite + manifest, reproducible). | Wheel and pack build reproducibly (identical SHA-256 twice). |
+| **M6** Build | Done | `scaffold` (opaque taxon IDs, never reused) plus `build` (CSV → SQLite + manifest, reproducible). | Wheel and pack build reproducibly (identical SHA-256 twice). |
 | **M7** Validate, diff, coverage, license gate | Not started | Trapezoid order, scope validity, unit resolution, duplicate detection, tier derivation (T0–T3), `diff` report, `coverage`, license gate. | Sample pack passes validate with 0 errors; `diff` matches fixtures; coverage assigns tiers; license gate rejects NC + `commercial_use=yes`. |
 | **M8** `resolve_taxon` and `resolve_fact` | Not started | Deterministic resolution per the fixed policy; `show` CLI. | `resolve_taxon` p95 ≤ 5 ms; resolution tests match fixtures. |
 | **M9** Offline, performance, docs, tag `v0.1.0` | Not started | Socket-blocking pytest plugin, performance budget tests, and the remaining `docs/` skeleton (`DICTIONARY`, `RESOLUTION_POLICY`, `SAFETY`, `ADDING_A_TAXON`; `PACK_FORMAT` and `REVIEW_GUIDE` ship in M5). | Every test passes with network blocked; performance budget met; tag `v0.1.0`. |
@@ -478,7 +479,7 @@ agri-agronomy-core/
 │                            #   yield_targets, scope_keys, modules, safety_classes
 ├─ docs/                     # PACK_FORMAT.md, REVIEW_GUIDE.md (present);
 │                            #   ADDING_A_TAXON, DICTIONARY, RESOLUTION_POLICY, SAFETY (M9)
-│  ├─ decisions/             # ADR-001-knowledge-set.md
+│  ├─ decisions/             # ADR-001-knowledge-set.md, ADR-002-build-and-hash.md
 │  └─ design/                # plant_wishlist_v4.csv, plant_wishlist_v4_rationale.md,
 │                            #   plant_wishlist_v4_migration.md
 ├─ notebooks/                # Colab quickstart (from v0.2.0), executed in CI
