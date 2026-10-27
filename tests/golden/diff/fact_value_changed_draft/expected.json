@@ -1,0 +1,25 @@
+{
+  "facts_added": [],
+  "facts_changed": [
+    {
+      "classification": "acceptable",
+      "fact_id": "F00000000002",
+      "fields_changed": [
+        "value"
+      ],
+      "new_status": "draft",
+      "old_status": "draft"
+    }
+  ],
+  "facts_removed": [],
+  "identical": false,
+  "new_pack_hash": "<new_pack_hash>",
+  "ok": true,
+  "old_pack_hash": "<old_pack_hash>",
+  "taxa": {
+    "added": [],
+    "changed": [],
+    "removed": []
+  },
+  "violations": []
+}
