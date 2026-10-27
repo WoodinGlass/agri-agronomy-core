@@ -69,6 +69,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sha256(`pack.sqlite`), `content_hash` vs `metadata.content_hash`,
   and `PRAGMA user_version` vs `manifest.sqlite_schema_version`
   plus 8 metadata rows vs `pack.toml` fields.
+- Wheel builds are verified to be reproducible in CI: the
+  `build-wheel` job builds the wheel a second time (into `dist2/`)
+  with `SOURCE_DATE_EPOCH=0`, compares `sha256sum` of both wheels,
+  and fails the job on mismatch. The second wheel is uploaded as
+  artifact `wheel-mismatch` on reproducibility failure for post-mortem.
+- `docs/PACK_FORMAT.md` gains a `Built packs (SQLite)` section:
+  on-disk layout, SQLite schema (6 data tables + `metadata`, all
+  `WITHOUT ROWID`, `application_id=0x61677269`, `user_version=1`,
+  `DDL_SHA256` pin, SQLite >= 3.27 for `VACUUM INTO`), the three
+  build-only manifest fields, the two-hash model (`content_hash`
+  semantic vs `artifact_sha256` file integrity), three-layer load
+  verification, and row encoding. Cross-links `ADR-002`.
 
 ### Added
 
