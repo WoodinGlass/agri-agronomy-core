@@ -116,6 +116,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Superseded facts are excluded from the duplicate check. FK for
   `superseded_by` remains `PACK_FK_VIOLATION` at load time. 8 new
   contract tests.
+- `tests/contract/test_finding_registry.py`: registry-vs-docs
+  drift test. Every `PackError` subclass code and every `Finding`
+  code emitted by a rule in `pack/validate.py` must appear in
+  `PACK_FORMAT.md §Error code reference`; every code in the docs
+  (except `PACK_ERROR`, the base class) must have an
+  implementation. New codes cannot land without a doc line, and
+  doc lines cannot be added without an implementation. 4 new
+  contract tests.
 
 ### Added
 
