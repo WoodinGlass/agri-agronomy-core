@@ -23,6 +23,7 @@ from agri_core.pack import (
     read_pack_bytes,
 )
 from agri_core.pack.build import build_pack, render_source_manifest
+from agri_core.pack.scaffold import scaffold_taxon
 from agri_core.pack.validate import validate_pack
 from agri_core.registry import Finding, lint_csv_text
 
@@ -314,6 +315,95 @@ def pack_build(
     typer.echo(f"built: {result.out_dir}")
     typer.echo(f"content_hash: {result.content_hash}")
     typer.echo(f"artifact_sha256: {result.artifact_sha256}")
+
+
+@pack_app.command(name="scaffold")
+def pack_scaffold(
+    pack: Annotated[
+        str,
+        typer.Option(
+            "--pack",
+            help=("Path to a source pack directory (explicit path only; 'sample' is rejected)."),
+        ),
+    ],
+    scientific_name: Annotated[
+        str,
+        typer.Option("--scientific-name", help="Scientific name for the new taxon."),
+    ],
+    archetype: Annotated[
+        str,
+        typer.Option(
+            "--archetype",
+            help="Archetype (annual, biennial, ..., fungal; see dictionary/vocab).",
+        ),
+    ],
+    use: Annotated[
+        list[str],
+        typer.Option(
+            "--use",
+            help="Use category (repeatable; at least one required).",
+        ),
+    ],
+    src: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--src",
+            help=("Source id (repeatable). Default: first id from sources.csv."),
+        ),
+    ] = None,
+    rank: Annotated[
+        str,
+        typer.Option("--rank", help="Taxon rank."),
+    ] = "species",
+) -> None:
+    """Scaffold a new taxon (adds a taxa.csv row and a facts file)."""
+    if pack == "sample":
+        typer.echo(
+            "error: pack scaffold requires an explicit path; 'sample' is not "
+            "allowed. Pass the path, e.g. src/agri_core/_samples/sample_pack.",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
+
+    source = Path(pack)
+    if not scientific_name.strip():
+        typer.echo("error: --scientific-name must not be empty", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    if not use:
+        typer.echo(
+            "error: --use is required (at least one use category)",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
+
+    try:
+        result = scaffold_taxon(
+            source,
+            scientific_name=scientific_name,
+            archetype=archetype,
+            rank=rank,
+            uses=tuple(use),
+            srcs=tuple(src) if src else None,
+        )
+    except PackError as exc:
+        typer.echo(f"error: {exc.code}: {exc}", err=True)
+        for finding in getattr(exc, "findings", ()):
+            loc = f"{finding.file}:{finding.line}" if getattr(finding, "file", None) else "-"
+            typer.echo(f"  {finding.code} {loc}: {finding}", err=True)
+        raise typer.Exit(EXIT_PACK) from exc
+    except OSError as exc:
+        typer.echo(f"error: OSError: {exc}", err=True)
+        raise typer.Exit(EXIT_UNEXPECTED) from exc
+
+    typer.echo(f"scaffolded: {result.taxon_id}")
+    typer.echo(f"source: {result.source}")
+    typer.echo(f"facts: {result.facts_path}")
+    if result.content_hash_stale:
+        typer.echo(
+            "warning: source pack.toml declares content_hash; it is now stale. "
+            "Run `agri-core pack lock --pack PATH` to update.",
+            err=True,
+        )
 
 
 def main() -> NoReturn:
