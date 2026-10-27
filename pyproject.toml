@@ -106,7 +106,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-addopts = "-ra --strict-markers --strict-config --cov=agri_core --cov-report=term-missing --cov-fail-under=90"
+addopts = "-ra --strict-markers --strict-config --cov=agri_core --cov-report=term-missing"
 testpaths = ["tests"]
 filterwarnings = [
     "error",
@@ -132,6 +132,7 @@ source = ["agri_core"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
+precision = 2
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",

@@ -1,4 +1,4 @@
-.PHONY: install install-dev lint format typecheck test check precommit audit build smoke clean
+.PHONY: install install-dev lint format typecheck test coverage check precommit audit build smoke clean
 
 install:
 	pip install -e .
@@ -24,7 +24,11 @@ typecheck:
 test:
 	pytest
 
-check: lint typecheck test
+coverage:
+	pytest
+	coverage report --fail-under=90 --skip-covered
+
+check: lint typecheck coverage
 
 precommit:
 	pre-commit run --all-files
