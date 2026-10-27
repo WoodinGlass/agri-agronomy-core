@@ -311,6 +311,16 @@ M7 rules (run by `agri-core validate` after structural load):
   `PACK_TRAPEZOID_DEGENERATE`.
 - Range `min <= max` is enforced at load by `RangeValue._check_order`
   (`PACK_TABLE_INVALID`); there is no separate M7 rule for range.
+- **`superseded_by` invariants.** FK existence is enforced at load
+  (`PACK_FK_VIOLATION`). A fact cannot supersede itself
+  (`PACK_SUPERSEDED_SELF`). Cycles in the chain are rejected
+  (`PACK_SUPERSEDED_CYCLE`, one finding per cycle anchored at the
+  smallest `fact_id`).
+- **Fact key duplicates.** Two live facts with identical
+  `(taxon_id, parameter, phase, canonical_scope)` and different
+  `value` are rejected (`PACK_FACT_KEY_DUPLICATE`). Same key with
+  same value across different `src` is corroboration, not a
+  duplicate. Superseded facts are excluded.
 
 Not yet validated (M7): `tier_required`, safety `toxicity_limit` and
 `regulatory` semantics, license gate for `commercial_use`.
@@ -390,6 +400,9 @@ all is accepted.
 | `PACK_UNIT_MISMATCH` | fact unit differs from parameter unit |
 | `PACK_SAFETY_VIOLATION` | `dose_cap` parameter not reviewed/approved |
 | `PACK_TRAPEZOID_DEGENERATE` | trapezoid `pts[0] == pts[-1]`; use `scalar` |
+| `PACK_SUPERSEDED_SELF` | `superseded_by` points to the fact itself |
+| `PACK_SUPERSEDED_CYCLE` | cycle in `superseded_by` chain (anchor = min `fact_id`) |
+| `PACK_FACT_KEY_DUPLICATE` | two live facts share `(taxon, parameter, phase, canonical_scope)` with different values |
 
 ## Size limit
 
