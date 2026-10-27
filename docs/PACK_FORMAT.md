@@ -301,6 +301,17 @@ then raised as the first finding with `.findings` attached):
 A fact with `value.shape = unknown` skips every value-level check
 (`unit`, `physical_range`, `enum`, `enum_set`); it is exempt by design.
 
+M7 rules (run by `agri-core validate` after structural load):
+
+- **Non-degenerate trapezoid.** A `trapezoid` fact must have
+  `pts[0] < pts[-1]`. The model already enforces `a <= b <= c <= d`
+  at load; this rule rejects collapsed trapezoids where all four
+  points are equal (`abs_min == abs_max`), which have no
+  suboptimal zone. Use `shape=scalar` instead. Code:
+  `PACK_TRAPEZOID_DEGENERATE`.
+- Range `min <= max` is enforced at load by `RangeValue._check_order`
+  (`PACK_TABLE_INVALID`); there is no separate M7 rule for range.
+
 Not yet validated (M7): `tier_required`, safety `toxicity_limit` and
 `regulatory` semantics, license gate for `commercial_use`.
 
@@ -378,6 +389,7 @@ all is accepted.
 | `PACK_ENUM_INVALID` | enum/enum_set value not allowed |
 | `PACK_UNIT_MISMATCH` | fact unit differs from parameter unit |
 | `PACK_SAFETY_VIOLATION` | `dose_cap` parameter not reviewed/approved |
+| `PACK_TRAPEZOID_DEGENERATE` | trapezoid `pts[0] == pts[-1]`; use `scalar` |
 
 ## Size limit
 

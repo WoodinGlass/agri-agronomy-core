@@ -78,6 +78,19 @@ No rule for "safety-critical requires commercial source" — not in README.
 Taxon metadata changes (name, archetype, uses, etc.) are reported but
 do not exit 1; only taxon *removal* is a violation.
 
+## Decision — Trapezoid degenerate check (added M7-2)
+
+`PACK_TRAPEZOID_DEGENERATE` fires when a trapezoid's `pts[0] == pts[-1]`.
+The model already enforces `a <= b <= c <= d` at load
+(`TrapezoidValue._check_order`). If additionally `a == d`, all four
+points are equal and the "trapezoid" has no suboptimal zone; that is a
+scalar with no tolerance band. The finding message says "use scalar".
+
+Range `min <= max` is enforced by `RangeValue._check_order` at load;
+violating packs fail `PACK_TABLE_INVALID` before any M7 rule can run.
+**No M7 rule for range exists.** This is recorded here so a future
+contributor does not add a redundant check.
+
 ## Consequences
 
 - `RULES` is a `tuple[RuleFn, ...]` in `pack/validate.py`. Adding a rule
