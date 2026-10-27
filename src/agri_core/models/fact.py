@@ -177,7 +177,7 @@ class FactRow(BaseModel):
     locator: str | None = None
     evidence: EvidenceGrade
     status: FactStatus
-    reviewed_by: str | None = None
+    reviewed_by: list[str] | None = None
     reviewed_at: date | None = None
     superseded_by: FactId | None = None
 
@@ -188,12 +188,23 @@ class FactRow(BaseModel):
             raise ValueError("phase must be non-empty if provided")
         return v
 
-    @field_validator("reviewed_by")
+    @field_validator("reviewed_by", mode="before")
     @classmethod
-    def _check_reviewed_by(cls, v: str | None) -> str | None:
-        if v is not None and not v:
+    def _check_reviewed_by(cls, v: object) -> list[str] | None:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v = [v]
+        if not isinstance(v, list):
+            raise ValueError(
+                f"reviewed_by must be a list of strings or None, got {type(v).__name__}"
+            )
+        if not v:
             raise ValueError("reviewed_by must be non-empty if provided")
-        return v
+        for item in v:
+            if not isinstance(item, str) or not item:
+                raise ValueError("reviewed_by items must be non-empty strings")
+        return sorted(set(v))
 
     @model_validator(mode="after")
     def _check_cross_rules(self) -> FactRow:

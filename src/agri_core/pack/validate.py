@@ -17,7 +17,7 @@ from agri_core.models.finding import (
 )
 from agri_core.pack.errors import PackError
 from agri_core.pack.knowledge_set import KnowledgeSet
-from agri_core.pack.loader import load_knowledge_set_from_files
+from agri_core.pack.loader import _default_dictionary, load_knowledge_set_from_files
 from agri_core.pack.tables import TABLES, read_table
 from agri_core.registry.sources import (
     is_nc_license,
@@ -33,12 +33,12 @@ __all__ = [
 ]
 
 
-RuleFn = Callable[[KnowledgeSet, Mapping[str, bytes]], Iterable[Finding]]
+RuleFn = Callable[[KnowledgeSet, Mapping[str, bytes], Dictionary], Iterable[Finding]]
 """A pure validation rule. Runs only after a successful structural load."""
 
 
 def check_trapezoid_not_degenerate(
-    ks: KnowledgeSet, files: Mapping[str, bytes]
+    ks: KnowledgeSet, files: Mapping[str, bytes], dictionary: Dictionary
 ) -> Iterable[Finding]:
     """Flag trapezoids where ``pts[0] == pts[-1]`` (a collapsed trapezoid).
 
@@ -69,7 +69,9 @@ def check_trapezoid_not_degenerate(
             )
 
 
-def check_superseded_self(ks: KnowledgeSet, files: Mapping[str, bytes]) -> Iterable[Finding]:
+def check_superseded_self(
+    ks: KnowledgeSet, files: Mapping[str, bytes], dictionary: Dictionary
+) -> Iterable[Finding]:
     """Flag facts that reference themselves via ``superseded_by``."""
     for fact in ks.facts():
         if fact.superseded_by == fact.fact_id:
@@ -88,7 +90,9 @@ def check_superseded_self(ks: KnowledgeSet, files: Mapping[str, bytes]) -> Itera
             )
 
 
-def check_superseded_cycle(ks: KnowledgeSet, files: Mapping[str, bytes]) -> Iterable[Finding]:
+def check_superseded_cycle(
+    ks: KnowledgeSet, files: Mapping[str, bytes], dictionary: Dictionary
+) -> Iterable[Finding]:
     """Detect cycles in the ``superseded_by`` chain (excluding self-loops).
 
     ``superseded_by`` is a single pointer per fact, so chains are simple
@@ -137,7 +141,9 @@ def check_superseded_cycle(ks: KnowledgeSet, files: Mapping[str, bytes]) -> Iter
             visited.add(p)
 
 
-def check_fact_key_duplicate(ks: KnowledgeSet, files: Mapping[str, bytes]) -> Iterable[Finding]:
+def check_fact_key_duplicate(
+    ks: KnowledgeSet, files: Mapping[str, bytes], dictionary: Dictionary
+) -> Iterable[Finding]:
     """Flag live facts with identical fact keys **and different values**.
 
     Fact key = ``(taxon_id, parameter, phase, canonical_scope)``.
@@ -176,7 +182,7 @@ def check_fact_key_duplicate(ks: KnowledgeSet, files: Mapping[str, bytes]) -> It
 
 
 def check_license_source_nc_commercial(
-    ks: KnowledgeSet, files: Mapping[str, bytes]
+    ks: KnowledgeSet, files: Mapping[str, bytes], dictionary: Dictionary
 ) -> Iterable[Finding]:
     """Flag non-commercial sources marked ``commercial_use=yes``.
 
@@ -200,7 +206,9 @@ def check_license_source_nc_commercial(
             )
 
 
-def check_license_dataset_sa_nd(ks: KnowledgeSet, files: Mapping[str, bytes]) -> Iterable[Finding]:
+def check_license_dataset_sa_nd(
+    ks: KnowledgeSet, files: Mapping[str, bytes], dictionary: Dictionary
+) -> Iterable[Finding]:
     """Flag SA/ND datasets that any fact references.
 
     ShareAlike and NoDerivatives forbid redistribution of derived values
@@ -228,6 +236,42 @@ def check_license_dataset_sa_nd(ks: KnowledgeSet, files: Mapping[str, bytes]) ->
             )
 
 
+def check_safety_double_review(
+    ks: KnowledgeSet, files: Mapping[str, bytes], dictionary: Dictionary
+) -> Iterable[Finding]:
+    """Flag safety-critical facts at ``approved`` with <2 distinct reviewers.
+
+    README: ``approved`` requires two independent reviews for
+    safety-critical parameters. A safety-critical fact at ``reviewed``
+    (single reviewer) is permitted; the double-review requirement only
+    applies at ``approved``.
+    """
+    for fact in ks.facts():
+        param = dictionary.parameters.get(fact.parameter)
+        if param is None or param.safety_class == "none":
+            continue
+        if fact.status != "approved":
+            continue
+        n = len(fact.reviewed_by or [])
+        if n < 2:
+            yield Finding(
+                code="PACK_SAFETY_DOUBLE_REVIEW_MISSING",
+                severity=FindingSeverity.ERROR,
+                message=(
+                    f"fact {fact.fact_id} is safety-critical "
+                    f"(safety_class={param.safety_class}) and approved "
+                    f"but has {n} reviewer(s); approved safety-critical "
+                    f"facts require >=2 distinct reviewers"
+                ),
+                location=FindingLocation(
+                    taxon_id=fact.taxon_id,
+                    fact_id=fact.fact_id,
+                    parameter=fact.parameter,
+                    phase=fact.phase,
+                ),
+            )
+
+
 RULES: tuple[RuleFn, ...] = (
     check_trapezoid_not_degenerate,
     check_superseded_self,
@@ -235,6 +279,7 @@ RULES: tuple[RuleFn, ...] = (
     check_fact_key_duplicate,
     check_license_source_nc_commercial,
     check_license_dataset_sa_nd,
+    check_safety_double_review,
 )
 """Registered rules. Explicit tuple, not auto-import.
 
@@ -331,6 +376,8 @@ def validate_pack_report(
     M7-4 will extend this to also run ``license_gate``; M7-2..M7-4 append
     rule functions to ``RULES``. Callers see one function, one return type.
     """
+    if dictionary is None:
+        dictionary = _default_dictionary()
     try:
         ks = load_knowledge_set_from_files(
             files,
@@ -345,7 +392,7 @@ def validate_pack_report(
 
     findings: list[Finding] = []
     for rule in RULES:
-        findings.extend(rule(ks, files))
+        findings.extend(rule(ks, files, dictionary))
     findings.sort(key=_sort_key)
     return ValidationReport(findings=tuple(findings)), ks
 
@@ -370,9 +417,11 @@ def validate_pack(
         expected_hash=expected_hash,
         dictionary=dictionary,
     )
+    if dictionary is None:
+        dictionary = _default_dictionary()
     findings: list[Finding] = []
     for rule in RULES:
-        findings.extend(rule(ks, files))
+        findings.extend(rule(ks, files, dictionary))
     errors = [f for f in findings if f.severity == FindingSeverity.ERROR]
     if errors:
         first = errors[0]

@@ -162,7 +162,7 @@ def test_phase_empty_rejected() -> None:
 
 
 def test_reviewed_by_empty_rejected() -> None:
-    with pytest.raises(ValidationError, match="reviewed_by must be non-empty"):
+    with pytest.raises(ValidationError, match="reviewed_by items must be non-empty"):
         FactRow(**_base(reviewed_by=""))
 
 

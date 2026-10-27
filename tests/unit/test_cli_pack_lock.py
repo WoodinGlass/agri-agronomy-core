@@ -146,7 +146,7 @@ def test_pack_lock_rejects_broken_pack(tmp_path: Path) -> None:
         "locator": "t",
         "evidence": "A",
         "status": "approved",
-        "reviewed_by": "r",
+        "reviewed_by": ["r"],
         "reviewed_at": date(2026, 1, 1),
         "superseded_by": None,
     }
