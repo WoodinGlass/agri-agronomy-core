@@ -82,11 +82,16 @@ No rule for "safety-critical requires commercial source" — not in README.
 
 `diff` classifies fact field changes into two buckets:
 
-- **Violation** — `value`, `scope`, `parameter`, `taxon_id`, `phase`.
-  Change requires a new `fact_id` + `superseded_by`. Status does not
-  matter (draft and reviewed facts are treated identically).
+- **Violation** — `value`, `scope`, `parameter`, `taxon_id`, `phase`
+  **but only when the OLD fact was `reviewed` or `approved`**. Once
+  a fact is reviewed, its content is frozen; any change requires a
+  new `fact_id` with `superseded_by` on the old one. `draft` and
+  `imported` facts are still under editorial control; their content
+  fields may change in place.
 - **Acceptable** — `status`, `evidence`, `reviewed_by`, `reviewed_at`,
-  `locator`, `superseded_by`, `src`, `dataset_id`, `provenance_kind`.
+  `locator`, `superseded_by`, `src`, `dataset_id`, `provenance_kind`;
+  **and all content fields when the OLD status was `draft` or
+  `imported`**.
 
 Taxon metadata changes (name, archetype, uses, etc.) are reported but
 do not exit 1; only taxon *removal* is a violation.

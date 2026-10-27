@@ -5,7 +5,10 @@ invariants from M6:
 
 - Fact IDs are never reused. A fact whose ``value``, ``scope``,
   ``parameter``, ``taxon_id`` or ``phase`` changes must be a new
-  ``fact_id`` with ``superseded_by`` pointing at the old one.
+  ``fact_id`` with ``superseded_by`` pointing at the old one —
+  **unless the old status was ``draft`` or ``imported``**: those
+  are still under editorial control and their content fields may
+  change in place.
 - Facts and taxa are never deleted. Removing one is a violation.
 - Status, evidence, review metadata, source references, and the
   ``superseded_by`` pointer may change in place.
@@ -50,6 +53,29 @@ _ACCEPTABLE_FIELDS: frozenset[str] = frozenset(
     }
 )
 _VIOLATION_FIELDS: frozenset[str] = frozenset({"value", "scope", "parameter", "taxon_id", "phase"})
+
+
+_REVIEWED_STATUSES: frozenset[str] = frozenset({"reviewed", "approved"})
+"""Statuses at which a fact's content is frozen. Once a fact reaches one
+of these, changing content fields requires a new ``fact_id`` +
+``superseded_by``. ``draft`` and ``imported`` facts remain editable."""
+
+
+def _classify_fact_change(old_status: str, changed: tuple[str, ...]) -> FactChangeClass:
+    """Classify a fact change as violation or acceptable.
+
+    A change to ``value``, ``scope``, ``parameter``, ``taxon_id``, or
+    ``phase`` is a violation only if the OLD status was ``reviewed`` or
+    ``approved``. Once a fact is reviewed its content is frozen, and
+    changing it requires a new ``fact_id`` with ``superseded_by``.
+    ``draft`` and ``imported`` facts are still under editorial control;
+    their content fields may change in place.
+    """
+    if old_status not in _REVIEWED_STATUSES:
+        return FactChangeClass.ACCEPTABLE
+    if any(f in _VIOLATION_FIELDS for f in changed):
+        return FactChangeClass.VIOLATION
+    return FactChangeClass.ACCEPTABLE
 
 
 class FactChangeClass(StrEnum):
@@ -156,11 +182,7 @@ def diff_packs(old: KnowledgeSet, new: KnowledgeSet) -> DiffReport:
         changed = _diff_fact_fields(of, nf)
         if not changed:
             continue
-        classification = (
-            FactChangeClass.VIOLATION
-            if any(f in _VIOLATION_FIELDS for f in changed)
-            else FactChangeClass.ACCEPTABLE
-        )
+        classification = _classify_fact_change(str(of.status), changed)
         facts_changed.append(
             FactChange(
                 fact_id=fid,

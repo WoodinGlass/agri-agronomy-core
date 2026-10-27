@@ -206,6 +206,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `coverage report --fail-under=90`) instead of `test`, and
   `make coverage` is a new target. `pytest` alone is still
   available and does not gate on coverage.
+- `agri-core diff` is now status-aware for fact content changes.
+  Changes to `value`, `scope`, `parameter`, `taxon_id`, or `phase`
+  are violations only when the OLD fact was `reviewed` or
+  `approved`. `draft` and `imported` facts may be edited in place
+  without supersession. Fields that remain acceptable in place
+  regardless of status: `status`, `evidence`, `reviewed_by`,
+  `reviewed_at`, `locator`, `superseded_by`, `src`, `dataset_id`,
+  `provenance_kind`.
 
 ### Removed
 
