@@ -100,6 +100,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   differences to exit 1 for CI. `DiffReport` is JSON-safe and
   deterministic; fact changes are classified per field (violation vs
   acceptable). 16 new contract tests.
+- `PACK_TRAPEZOID_DEGENERATE` validation rule: trapezoid facts must
+  have `pts[0] < pts[-1]`. The model already enforces
+  `a <= b <= c <= d`; this rule additionally rejects collapsed
+  trapezoids where all four points are equal. Range `min <= max` is
+  already enforced at load and gets no separate rule. 5 new contract
+  tests.
 
 ### Added
 

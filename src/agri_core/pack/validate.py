@@ -7,6 +7,7 @@ from collections.abc import Callable, Iterable, Mapping
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from agri_core.models.dictionary import Dictionary
+from agri_core.models.fact import TrapezoidValue
 from agri_core.models.finding import (
     REPORT_VERSION,
     Finding,
@@ -28,7 +29,40 @@ __all__ = [
 RuleFn = Callable[[KnowledgeSet, Mapping[str, bytes]], Iterable[Finding]]
 """A pure validation rule. Runs only after a successful structural load."""
 
-RULES: tuple[RuleFn, ...] = ()
+
+def check_trapezoid_not_degenerate(
+    ks: KnowledgeSet, files: Mapping[str, bytes]
+) -> Iterable[Finding]:
+    """Flag trapezoids where ``pts[0] == pts[-1]`` (a collapsed trapezoid).
+
+    The model already enforces ``a <= b <= c <= d``. If additionally
+    ``a == d``, then ``a == b == c == d``: the "trapezoid" has no
+    suboptimal zone and does not express a threshold. That is a scalar
+    in disguise; use ``shape=scalar``.
+    """
+    for fact in ks.facts():
+        value = fact.value
+        if not isinstance(value, TrapezoidValue):
+            continue
+        if value.pts[0] == value.pts[-1]:
+            yield Finding(
+                code="PACK_TRAPEZOID_DEGENERATE",
+                severity=FindingSeverity.ERROR,
+                message=(
+                    f"trapezoid has pts[0] == pts[-1] == {value.pts[0]}; "
+                    f"a non-degenerate trapezoid needs abs_min < abs_max "
+                    f"(pts={value.pts})"
+                ),
+                location=FindingLocation(
+                    taxon_id=fact.taxon_id,
+                    fact_id=fact.fact_id,
+                    parameter=fact.parameter,
+                    phase=fact.phase,
+                ),
+            )
+
+
+RULES: tuple[RuleFn, ...] = (check_trapezoid_not_degenerate,)
 """Registered rules. Explicit tuple, not auto-import.
 
 M7-1 ships empty. M7-2..M7-4 append. Review sees exactly what runs and
