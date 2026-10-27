@@ -131,6 +131,7 @@ agri-core lint-sources --pack sample       # sources.csv checks
 agri-core pack lock --pack src/agri_core/_samples/sample_pack   # regenerate content_hash
 agri-core pack scaffold --pack PATH --scientific-name NAME --archetype annual --use vegetable  # add a taxon
 agri-core pack build --pack src/agri_core/_samples/sample_pack --out build/  # build SQLite
+agri-core coverage --pack sample          # tier distribution + per-taxon coverage
 ```
 
 ## Output contract

@@ -158,6 +158,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rule `PACK_SAFETY_DOUBLE_REVIEW_MISSING` fires for a
   safety-critical fact that is `approved` with <2 reviewers.
   `RuleFn` signature extended with a `dictionary` argument.
+- `agri-core coverage --pack PATH [--tier T0|T1|T2|T3 ...] [--json] [--verbose]`
+  reports tier distribution and per-taxon coverage. Uses
+  `pack.tiers.derive_all_tiers`; the summary always counts every
+  taxon in the pack, while `--tier` (exact, repeatable) filters
+  only the detail rows. `--json` emits `{pack, summary, taxa}`
+  for programmatic use. Default truncates each list to 3 entries
+  plus `(+N more)`; `--verbose` shows full lists. Exit 3 on any
+  `PackError`. 12 new unit tests.
+
 
 
 
