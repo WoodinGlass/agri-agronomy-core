@@ -354,6 +354,118 @@ useful for testing. Loading it requires `allow_synthetic=True`:
 - Any future calculation command must require the caller to opt in
   explicitly.
 
+## Built packs (SQLite)
+
+A source pack can be compiled into a **built pack** — a single SQLite
+file plus a manifest that pins both the source content and the artifact.
+This is the format `agri-core pack build` produces, and the one
+`load_knowledge_set(path)` loads when `path` contains `pack.sqlite` and
+`pack.toml` (see "Load order"). See
+`docs/decisions/ADR-002-build-and-hash.md` for the rationale.
+
+### Layout
+
+```text
+<pack>/
+├─ pack.sqlite    # the built artifact
+└─ pack.toml      # manifest with build-only fields
+```
+
+`taxa.csv` and friends are **not** present in a built pack. Having both
+`pack.sqlite` and `taxa.csv` in the same directory raises
+`PACK_INVALID` (`_detect_pack_kind`).
+
+### SQLite schema
+
+The artifact is a normal SQLite database with six data tables plus a
+`metadata` table, all `WITHOUT ROWID`:
+
+| Table | Primary key | Notes |
+|---|---|---|
+| `taxa` | `taxon_id` | |
+| `names` | `(taxon_id, name, language, script, kind)` | |
+| `facts` | `fact_id` | |
+| `hazards` | `(taxon_id, hazard_code)` | |
+| `datasets` | `dataset_id` | |
+| `sources` | `id` | |
+| `metadata` | `key` | 8 key/value rows; mirrors `pack.toml` (see below) |
+
+Two indexes are created after bulk insert:
+`idx_facts_taxon_param` on `facts(taxon_id, parameter)`, and
+`idx_facts_parameter` on `facts(parameter)`.
+
+The database is written with `PRAGMA page_size = 4096`,
+`PRAGMA application_id = 0x61677269` ("agri"), and
+`PRAGMA user_version = 1` (the built schema version, exposed in
+`pack/sqlite_schema.py` as `SQLITE_SCHEMA_VERSION`).
+
+The exact DDL is pinned by `DDL_SHA256` in `pack/sqlite_schema.py`;
+changing the DDL requires bumping `SQLITE_SCHEMA_VERSION` **and**
+updating the pin in `tests/contract/test_sqlite_build.py`. `WITHOUT
+ROWID` is used for every table; the schema was benchmarked within 10%
+of a rowid equivalent on the hottest query at 100k facts (ADR-002).
+
+The writer requires SQLite >= 3.27 because `VACUUM INTO` is used to
+produce a deterministic artifact. Loading a built pack does **not**
+require that version.
+
+### `pack.toml` (built)
+
+A built manifest is a source manifest **plus** three all-or-none fields.
+Source manifests must not declare them; loading a source pack whose
+`pack.toml` carries any of these raises `PACK_INVALID`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `artifact_sha256` | `sha256:<64 hex>` | sha256 of the `pack.sqlite` bytes |
+| `sqlite_schema_version` | integer >= 1 | currently `1`; must equal `PRAGMA user_version` |
+| `built_by` | non-empty string | e.g. `agri-core 0.1.0` |
+
+`content_hash` and `synthetic` are inherited from the source manifest
+and keep their meaning: `content_hash` pins the source bytes that went
+into the build, `synthetic` is a policy gate.
+
+### Two-hash model
+
+A built pack carries two independent hashes (ADR-002):
+
+- **`content_hash`** — the hash from the source pack. It pins the
+  semantic content. It is not recomputable from `pack.sqlite` alone:
+  SQLite row encoding (pipe-joined lists, canonical JSON, ISO dates)
+  differs from the CSV bytes and this layer does not reverse it.
+- **`artifact_sha256`** — the sha256 of `pack.sqlite`. It pins the
+  physical artifact and is recomputable from the file on disk without
+  reading `pack.toml`.
+
+`load_knowledge_set` on a built pack returns a `KnowledgeSet` whose
+`pack_hash` is `content_hash` (for provenance consistency across source
+and built packs) and whose `verified` is always `True`: built packs
+cannot be unverified, because both hashes are mandatory.
+
+### Built-pack load verification
+
+`load_knowledge_set` on a built pack checks three layers before
+returning a `KnowledgeSet`:
+
+1. **Artifact integrity.** `artifact_sha256` from `pack.toml` must
+   equal `sha256(pack.sqlite)` on disk. Mismatch raises
+   `PACK_HASH_MISMATCH`.
+2. **Schema version.** `PRAGMA user_version` in `pack.sqlite` must
+   equal `manifest.sqlite_schema_version` and equal the running
+   engine's `SQLITE_SCHEMA_VERSION`. Mismatch raises
+   `PACK_SCHEMA_UNSUPPORTED`.
+3. **Cross-store consistency.** The `metadata` table in `pack.sqlite`
+   must contain eight rows (`name`, `version`, `schema_version`,
+   `engine_min`, `dictionary_min`, `synthetic`, `content_hash`,
+   `built_by`) whose values match the manifest fields. Mismatch
+   raises `PACK_INVALID`.
+
+Row values read back through Pydantic row models use the same SQLite
+encoding the writer applied: `list_str` as `|`-joined sorted items,
+`dict_str_str` and `json` as canonical JSON, `date` as ISO-8601,
+`bool` as `0`/`1`. `pack/knowledge_set.py::_row_to_dict` is the single
+place that knows this encoding.
+
 ## References
 
 - `docs/decisions/ADR-001-knowledge-set.md` -- why `KnowledgeSet` is a
