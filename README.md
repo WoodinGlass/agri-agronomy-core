@@ -61,7 +61,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 | # | Area | What it does | Target | Status |
 |---|------|--------------|--------|--------|
 | 1 | Data contract | JSON Schemas for `outcome`, `source`, `taxon`, `name`, `fact`, `hazard`, `parameter`, `dataset`, `manifest`. Core dictionary (`parameters.core.yaml`) with physical ranges, `applies_to`, tier requirements, phases per archetype, safety-class taxonomy and an append-only lock. | M2–M4 | Done |
-| 2 | Pack lifecycle | `load` (hash-verified, eager `KnowledgeSet`) in M5; `scaffold`, `build` (CSV → SQLite + manifest, reproducible) in M6; full `validate`, `diff`, `coverage` in M7. | M5–M7 | In progress |
+| 2 | Pack lifecycle | `load` (hash-verified, eager `KnowledgeSet`) in M5; `scaffold`, `build` (CSV → SQLite + manifest, reproducible) in M6; full `validate`, `diff`, `coverage` in M7. | M5–M7 | Done |
 | 3 | Registry | `resolve_taxon(name, country?, language?)` returns `ok`, `ambiguous` or `unknown`. `resolve_fact` applies the deterministic resolution policy. `meta()` reports engine version, pack version, `schema_version` and pack hash. | M8 | Not started |
 | 4 | Climate | Vapor pressure deficit (VPD), growing degree days (GDD), daily light integral (DLI) and reference evapotranspiration (ET0: FAO-56 Penman–Monteith, with a Hargreaves–Samani fallback). Temperature estimate from elevation. | M10 | Not started |
 | 5 | Thresholds and stages | Four-point trapezoid checks that return `optimal`, `suboptimal` or `critical`. Stage resolver from planting age and GDD; perennials driven by dated events supplied by the caller. | M10 | Not started |
@@ -126,12 +126,13 @@ else:
 
 ```bash
 agri-core --help
-agri-core validate --pack sample           # manifest + sources (facts in M7)
+agri-core validate --pack sample [--json] [--strict]   # manifest + sources + structural rules (M7)
 agri-core lint-sources --pack sample       # sources.csv checks
 agri-core pack lock --pack src/agri_core/_samples/sample_pack   # regenerate content_hash
 agri-core pack scaffold --pack PATH --scientific-name NAME --archetype annual --use vegetable  # add a taxon
 agri-core pack build --pack src/agri_core/_samples/sample_pack --out build/  # build SQLite
 agri-core coverage --pack sample          # tier distribution + per-taxon coverage
+agri-core diff --old A --new B [--json] [--exit-code]  # compare two packs
 ```
 
 ## Output contract
@@ -215,11 +216,11 @@ Each fact is one value at one scope. The engine resolves facts deterministically
 ### Statuses and tiers
 
 - **Statuses** move from `imported` (bulk import from a licensed dataset) to `draft` (entered, not yet checked) to `reviewed` (matched to its citation by a maintainer) to `approved` (signed off by a domain expert).
-- **Tiers are derived, not declared.** `validate` and `coverage` compute:
-  - **T0** identity only (name, rank, parent).
-  - **T1** at least one `imported` fact.
-  - **T2** every core parameter for the taxon's `use` / `archetype` is `reviewed` or `approved`, or explicitly unknown with a reason.
-  - **T3** every core parameter is `approved`, and safety-critical parameters have been double-reviewed.
+- **Tiers are derived, not declared.** `agri-core coverage` computes them (see `docs/decisions/ADR-003-tiers-license-duplicates.md`):
+  - **T0** identity only (name, rank, parent); no live facts.
+  - **T1** at least one live fact at any status (`imported`, `draft`, `reviewed`, `approved`).
+  - **T2** every `tier_required` parameter that matches the taxon's `applies_to` (organism group, archetype, uses) has a live fact at status ≥ `reviewed`, or `value.shape == unknown` with status ≥ `reviewed`. Phase-bearing parameters require all their phases; `applies_to.systems` parameters are excluded from tier (they appear in `TierResult.system_gaps`). Weakest-link per fact.
+  - **T3** T2 + every `tier_required` parameter is `approved` + every safety-critical fact is `approved` with ≥2 distinct reviewers in `reviewed_by`.
 
 ### Safety-critical parameters
 
@@ -274,7 +275,7 @@ Adding a **core** parameter is a minor engine release. Adding an **extension** p
 
 ## Taxa and identifiers
 
-- Taxon IDs will be created by `agri-core scaffold` (M6) and are opaque (Crockford base32 with a `T` prefix, ten characters). They are never reused.
+- Taxon IDs are created by `agri-core scaffold` (M6) and are opaque (Crockford base32 with a `T` prefix, ten characters). They are never reused.
 - Scientific names may change without changing the ID.
 - `rank` is one of `cultivar_group`, `genus`, `hybrid`, `species`.
 - `parent_id` is for navigation only; it does not imply inheritance of facts. Values never flow from parent to child automatically.
@@ -399,7 +400,7 @@ If you use the engine in research or in a product, cite this repository with the
 | **M4** Core dictionary 1.0.0 | Done | 31 parameters at `dictionary_version: 1.0.0`, `dictionary.lock` (append-only), `history/1.0.0.json`, `classify_change` for SemVer, safety-class taxonomy. | Lock hash verified against the running dictionary; `introduced_in` matches first snapshot; `test_semver_compat` infrastructure ready. |
 | **M5** Loader and sample pack | Done | `compute_pack_hash` / `verify_pack_hash`; `load_knowledge_set(path)`; immutable `KnowledgeSet`; sample pack with 8 synthetic taxa, one per initial archetype (`annual`, `aquatic`, `biennial`, `epiphyte`, `fungal`, `geophyte`, `herbaceous_perennial`, `woody_perennial`), without real agronomic data. | Hash determinism and mismatch tests pass; sample pack loads cleanly; foreign keys on `taxon_id`, `parameter`, `src` verified. |
 | **M6** Build | Done | `scaffold` (opaque taxon IDs, never reused) plus `build` (CSV → SQLite + manifest, reproducible). | Wheel and pack build reproducibly (identical SHA-256 twice). |
-| **M7** Validate, diff, coverage, license gate | Not started | Trapezoid order, scope validity, unit resolution, duplicate detection, tier derivation (T0–T3), `diff` report, `coverage`, license gate. | Sample pack passes validate with 0 errors; `diff` matches fixtures; coverage assigns tiers; license gate rejects NC + `commercial_use=yes`. |
+| **M7** Validate, diff, coverage, license gate | Done | Trapezoid order, scope validity, unit resolution, duplicate detection, tier derivation (T0–T3), `diff` report, `coverage`, license gate. | Sample pack passes validate with 0 errors; `diff` matches fixtures; coverage assigns tiers; license gate rejects NC + `commercial_use=yes`. |
 | **M8** `resolve_taxon` and `resolve_fact` | Not started | Deterministic resolution per the fixed policy; `show` CLI. | `resolve_taxon` p95 ≤ 5 ms; resolution tests match fixtures. |
 | **M9** Offline, performance, docs, tag `v0.1.0` | Not started | Socket-blocking pytest plugin, performance budget tests, and the remaining `docs/` skeleton (`DICTIONARY`, `RESOLUTION_POLICY`, `SAFETY`, `ADDING_A_TAXON`; `PACK_FORMAT` and `REVIEW_GUIDE` ship in M5). | Every test passes with network blocked; performance budget met; tag `v0.1.0`. |
 | **M10** Climate, thresholds and stages | Not started | VPD, GDD, DLI, ET0 with fallback, temperature from elevation, threshold checks, stage resolver. | Golden tests pass; phases resolve per archetype; perennials use caller-supplied events. |
