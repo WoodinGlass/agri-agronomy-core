@@ -327,6 +327,26 @@ M7-2..M7-4 will append codes; each new code is listed here and in
 `1` and increments only on a breaking change to the Finding or
 ValidationReport schema.
 
+## Pack identity invariants
+
+Fact IDs and taxon IDs are never reused. `agri-core diff` enforces
+three invariants when comparing two packs:
+
+- **Fact IDs are never removed.** A fact that is obsolete is marked
+  with `superseded_by`, not deleted.
+- **Taxon IDs are never removed** for the same reason.
+- **Fact IDs are never reused for different content.** If a fact's
+  `value`, `scope`, `parameter`, `taxon_id`, or `phase` changes, the
+  change must be a new `fact_id` with `superseded_by` on the old one.
+
+Acceptable in-place changes for an existing `fact_id`: `status`,
+`evidence`, `reviewed_by`, `reviewed_at`, `locator`, `superseded_by`,
+`src`, `dataset_id`, `provenance_kind`.
+
+A change that violates an invariant is reported as `fact_id_reused`,
+`fact_removed`, or `taxon_removed`. `agri-core diff` exits 1 for any
+violation, regardless of `--exit-code`.
+
 ## Advisories
 
 `advisories.csv` is reserved. Until M8, any non-whitespace content

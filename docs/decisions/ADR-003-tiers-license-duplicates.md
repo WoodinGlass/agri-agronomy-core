@@ -65,6 +65,19 @@ No rule for "safety-critical requires commercial source" — not in README.
   also promotes normal differences to exit 1.
 - `coverage`: 0 informational; 3 unreadable pack.
 
+## Decision — Fact field classification for diff (added M7-6)
+
+`diff` classifies fact field changes into two buckets:
+
+- **Violation** — `value`, `scope`, `parameter`, `taxon_id`, `phase`.
+  Change requires a new `fact_id` + `superseded_by`. Status does not
+  matter (draft and reviewed facts are treated identically).
+- **Acceptable** — `status`, `evidence`, `reviewed_by`, `reviewed_at`,
+  `locator`, `superseded_by`, `src`, `dataset_id`, `provenance_kind`.
+
+Taxon metadata changes (name, archetype, uses, etc.) are reported but
+do not exit 1; only taxon *removal* is a violation.
+
 ## Consequences
 
 - `RULES` is a `tuple[RuleFn, ...]` in `pack/validate.py`. Adding a rule

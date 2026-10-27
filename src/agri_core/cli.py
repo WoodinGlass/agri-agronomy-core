@@ -18,7 +18,9 @@ from agri_core.pack import (
     PackError,
     PackManifest,
     compute_pack_hash,
+    diff_packs,
     hash_pack_files,
+    load_knowledge_set,
     parse_manifest_bytes,
     read_pack_bytes,
 )
@@ -404,6 +406,65 @@ def pack_scaffold(
             "Run `agri-core pack lock --pack PATH` to update.",
             err=True,
         )
+
+
+@app.command(name="diff")
+def diff(
+    old: Annotated[str, typer.Option("--old", help="Old pack directory or 'sample'.")],
+    new: Annotated[str, typer.Option("--new", help="New pack directory or 'sample'.")],
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Emit a JSON DiffReport instead of text."),
+    ] = False,
+    exit_code: Annotated[
+        bool,
+        typer.Option(
+            "--exit-code",
+            help="Exit 1 on any difference, not only on violations.",
+        ),
+    ] = False,
+) -> None:
+    """Compare two packs. Violations exit 1; normal diffs exit 0 by default."""
+    old_path = _resolve_pack_path(old)
+    new_path = _resolve_pack_path(new)
+    try:
+        old_ks = load_knowledge_set(old_path, allow_synthetic=True)
+        new_ks = load_knowledge_set(new_path, allow_synthetic=True)
+    except PackError as exc:
+        typer.echo(f"error: {exc.code}: {exc}", err=True)
+        raise typer.Exit(EXIT_PACK) from exc
+
+    report = diff_packs(old_ks, new_ks)
+
+    if json_output:
+        typer.echo(report.model_dump_json(indent=2))
+    else:
+        typer.echo(f"hashes: {report.old_pack_hash} -> {report.new_pack_hash}")
+        typer.echo(
+            f"taxa: added {len(report.taxa.added)}, "
+            f"removed {len(report.taxa.removed)}, "
+            f"changed {len(report.taxa.changed)}"
+        )
+        typer.echo(
+            f"facts: added {len(report.facts_added)}, "
+            f"removed {len(report.facts_removed)}, "
+            f"changed {len(report.facts_changed)}"
+        )
+        for change in report.facts_changed:
+            typer.echo(
+                f"  {change.fact_id}: {change.classification} [{', '.join(change.fields_changed)}]"
+            )
+        if report.violations:
+            typer.echo(f"violations: {len(report.violations)}")
+            for v in report.violations:
+                typer.echo(f"  {v.kind} {v.entity_id}: {v.message}", err=True)
+        elif report.identical:
+            typer.echo("no differences")
+
+    if report.violations:
+        raise typer.Exit(EXIT_ERROR)
+    if exit_code and not report.identical:
+        raise typer.Exit(EXIT_ERROR)
 
 
 def main() -> NoReturn:
