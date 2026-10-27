@@ -451,10 +451,10 @@ def _validate_structure(
                 )
             )
 
-        if p.safety_class == "dose_cap" and f.status not in ("reviewed", "approved"):
+        if p.safety_class != "none" and f.status not in ("reviewed", "approved"):
             add(
                 PackSafetyViolationError(
-                    f"safety_class=dose_cap requires reviewed/approved, got {f.status!r}",
+                    f"safety_class={p.safety_class} requires reviewed/approved, got {f.status!r}",
                     key=f.fact_id,
                 )
             )
