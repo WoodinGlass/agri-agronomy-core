@@ -43,6 +43,11 @@ from agri_core.pack.tables import (
     read_table,
     write_table,
 )
+from agri_core.pack.validate import (
+    ValidationReport,
+    validate_pack,
+    validate_pack_report,
+)
 from agri_core.pack.verify import (
     compute_pack_hash,
     hash_pack_files,
@@ -84,6 +89,7 @@ __all__ = [
     "Table",
     "TableSpec",
     "UnsupportedSchemaVersionError",
+    "ValidationReport",
     "compute_pack_hash",
     "hash_pack_files",
     "load_knowledge_set",
@@ -91,6 +97,8 @@ __all__ = [
     "parse_manifest_bytes",
     "read_pack_bytes",
     "read_table",
+    "validate_pack",
+    "validate_pack_report",
     "verify_pack_hash",
     "verify_pack_hash_full",
     "write_table",

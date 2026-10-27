@@ -304,6 +304,29 @@ A fact with `value.shape = unknown` skips every value-level check
 Not yet validated (M7): `tier_required`, safety `toxicity_limit` and
 `regulatory` semantics, license gate for `commercial_use`.
 
+## Validation findings
+
+Since M7-1, `agri-core validate` and `validate_pack_report` return a
+`ValidationReport`: an ordered tuple of `Finding` values with stable
+codes, a severity (`error` / `warning`), a message, and an optional
+location.
+
+Findings are data, not exceptions. A pack that cannot be *loaded*
+(structural failure) still produces a report with `ok = false`, but
+`knowledge_set` is `None`. A pack that loads but fails an M7 rule
+produces a report with `ok = false` and a non-`None` `knowledge_set`.
+
+Codes are grouped by source:
+
+- `PACK_*` — engine validation (structural + rules). Full list in
+  `## Error code reference`.
+- `SRC###` — source-row and license-gate findings.
+
+M7-2..M7-4 will append codes; each new code is listed here and in
+`## Error code reference` in the same PR. `REPORT_VERSION` starts at
+`1` and increments only on a breaking change to the Finding or
+ValidationReport schema.
+
 ## Advisories
 
 `advisories.csv` is reserved. Until M8, any non-whitespace content
