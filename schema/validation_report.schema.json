@@ -1,0 +1,162 @@
+{
+  "$defs": {
+    "Finding": {
+      "additionalProperties": false,
+      "description": "One finding from validation.\n\nCodes are stable; messages are not. A finding is data, not an\nexception, so it can be serialized, sorted, deduplicated.",
+      "properties": {
+        "code": {
+          "pattern": "^[A-Z][A-Z0-9_]{2,}$",
+          "title": "Code",
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/FindingLocation"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/FindingSeverity"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "message"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "FindingLocation": {
+      "additionalProperties": false,
+      "description": "Where a finding points. All fields optional; at least one recommended.",
+      "properties": {
+        "fact_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fact Id"
+        },
+        "file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "File"
+        },
+        "key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key"
+        },
+        "line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Line"
+        },
+        "parameter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parameter"
+        },
+        "phase": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phase"
+        },
+        "taxon_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Taxon Id"
+        }
+      },
+      "title": "FindingLocation",
+      "type": "object"
+    },
+    "FindingSeverity": {
+      "description": "Severity of a validation finding.",
+      "enum": [
+        "error",
+        "warning"
+      ],
+      "title": "FindingSeverity",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Result of validate_pack_report().\n\nFindings only. ``ok`` is computed from them. The KnowledgeSet is\nreturned separately so the report stays JSON-safe.",
+  "properties": {
+    "findings": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "ok": {
+      "readOnly": true,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "report_version": {
+      "default": 1,
+      "title": "Report Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "ok"
+  ],
+  "title": "ValidationReport",
+  "type": "object"
+}
