@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import re
 import shutil
 import tomllib
@@ -232,3 +234,91 @@ def test_build_prints_content_hash_even_without_flag(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.stdout + result.stderr
     assert "content_hash: sha256:" in result.stdout
     assert "artifact_sha256: sha256:" in result.stdout
+
+
+def _mutate_fact_cell(src: Path, taxon_file: str, fact_id: str, **changes: str) -> None:
+    """Replace cells in the matching fact row via csv roundtrip (quoting-safe)."""
+    fp = src / "facts" / taxon_file
+    reader = csv.reader(io.StringIO(fp.read_text(encoding="utf-8")))
+    rows = list(reader)
+    header = rows[0]
+    idx = {col: header.index(col) for col in changes}
+    for row in rows[1:]:
+        if row[0] == fact_id:
+            for name, value in changes.items():
+                row[idx[name]] = value
+            break
+    buf = io.StringIO()
+    csv.writer(buf, lineterminator="\n").writerows(rows)
+    fp.write_text(buf.getvalue(), encoding="utf-8")
+
+
+def _add_fact_row(src: Path, taxon_file: str, row: dict[str, str]) -> None:
+    """Append a fact row to a taxon facts file (missing cols -> empty)."""
+    fp = src / "facts" / taxon_file
+    reader = csv.reader(io.StringIO(fp.read_text(encoding="utf-8")))
+    rows = list(reader)
+    header = rows[0]
+    rows.append([row.get(col, "") for col in header])
+    buf = io.StringIO()
+    csv.writer(buf, lineterminator="\n").writerows(rows)
+    fp.write_text(buf.getvalue(), encoding="utf-8")
+
+
+def test_build_rejects_trapezoid_degenerate(tmp_path: Path) -> None:
+    """Wiring check: `build_pack` propagates M7-2 rule errors as PackError -> exit 3."""
+    src = _sample_source(tmp_path, strip_hash=True)
+    _mutate_fact_cell(
+        src,
+        "T000000001.csv",
+        "F00000000001",
+        value='{"pts":[5.0,5.0,5.0,5.0],"shape":"trapezoid","unit":"pH"}',
+    )
+    result = CliRunner().invoke(
+        app, ["pack", "build", "--pack", str(src), "--out", str(tmp_path / "out")]
+    )
+    assert result.exit_code == 3
+    assert "PACK_TRAPEZOID_DEGENERATE" in result.stderr
+    assert not (tmp_path / "out" / "pack.sqlite").exists()
+
+
+def test_build_rejects_fact_key_duplicate(tmp_path: Path) -> None:
+    """Wiring check: `build_pack` propagates M7-3 duplicate rule errors."""
+    src = _sample_source(tmp_path, strip_hash=True)
+    _add_fact_row(
+        src,
+        "T000000001.csv",
+        {
+            "fact_id": "F99999999999",
+            "taxon_id": "T000000001",
+            "parameter": "gdd_base",
+            "value": '{"shape":"scalar","unit":"degree_Celsius","value":9.0}',
+            "scope": "{}",
+            "provenance_kind": "curated",
+            "src": "S001",
+            "locator": "x",
+            "evidence": "A",
+            "status": "approved",
+            "reviewed_by": "test-reviewer",
+            "reviewed_at": "2026-01-01",
+        },
+    )
+    result = CliRunner().invoke(
+        app, ["pack", "build", "--pack", str(src), "--out", str(tmp_path / "out")]
+    )
+    assert result.exit_code == 3
+    assert "PACK_FACT_KEY_DUPLICATE" in result.stderr
+    assert not (tmp_path / "out" / "pack.sqlite").exists()
+
+
+def test_build_rejects_superseded_cycle(tmp_path: Path) -> None:
+    """Wiring check: `build_pack` propagates M7-3 cycle rule errors."""
+    src = _sample_source(tmp_path, strip_hash=True)
+    _mutate_fact_cell(src, "T000000001.csv", "F00000000001", superseded_by="F00000000002")
+    _mutate_fact_cell(src, "T000000001.csv", "F00000000002", superseded_by="F00000000001")
+    result = CliRunner().invoke(
+        app, ["pack", "build", "--pack", str(src), "--out", str(tmp_path / "out")]
+    )
+    assert result.exit_code == 3
+    assert "PACK_SUPERSEDED_CYCLE" in result.stderr
+    assert not (tmp_path / "out" / "pack.sqlite").exists()
