@@ -86,3 +86,29 @@ For every fact proposed for `approved`:
 - [ ] If the fact touches a species subject to CITES, Permen LHK
       106/2018 or IUCN CR/EN/VU, the pathway is documented in
       `docs/design/plant_wishlist_v4_rationale.md`.
+## Tier derivation (T0–T3)
+
+Tiers measure how complete and how reviewed a taxon's data is. They
+are derived by `agri-core coverage` (and `pack.tiers.derive_tier`),
+never declared in the pack. See ADR-003 for the design.
+
+| Tier | Meaning | Reached when |
+|---|---|---|
+| **T0** | Identity only | Taxon in `taxa.csv`, no live facts |
+| **T1** | Has data | >=1 live fact at any status (`imported`/`draft`/`reviewed`/`approved`) |
+| **T2** | Reviewed core | All `tier_required=True` parameters at >= `reviewed` (weakest-link per fact); phase-bearing params require all phases; `unknown`-with-reason counts only at >= `reviewed` |
+| **T3** | Approved + safety-checked | T2 + all `tier_required=True` params `approved` + every safety-critical fact `approved` with >=2 distinct reviewers |
+
+**What T2/T3 do NOT certify**: parameters with `applies_to.systems`
+(irrigation modes, media, fertilizer products scoped to a growing
+system). These appear in `TierResult.system_gaps` and are shown by
+`coverage`, but they never gate the tier. A T3 taxon can be missing
+every irrigation fact — that is expected.
+
+**Review checklist for a T3 promotion**:
+
+1. Every `tier_required=True` parameter has a live `approved` fact.
+2. Safety-critical facts (dose caps) are `approved` and have two
+   distinct reviewers in `reviewed_by`.
+3. No superseded fact holds the only copy of a required value.
+4. `agri-core validate` exits 0; `agri-core coverage` shows T3.

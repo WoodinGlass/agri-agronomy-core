@@ -112,7 +112,7 @@ def _fact(
         "locator": "table 1",
         "evidence": "A",
         "status": status,
-        "reviewed_by": "r" if reviewed else None,
+        "reviewed_by": ["r"] if reviewed else None,
         "reviewed_at": date(2026, 1, 1) if reviewed else None,
         "superseded_by": None,
     }

@@ -117,7 +117,7 @@ TABLES: Mapping[str, TableSpec] = MappingProxyType(
                 ColumnSpec("locator", "str", nullable=True),
                 ColumnSpec("evidence", "str"),
                 ColumnSpec("status", "str"),
-                ColumnSpec("reviewed_by", "str", nullable=True),
+                ColumnSpec("reviewed_by", "list_str", nullable=True),
                 ColumnSpec("reviewed_at", "date", nullable=True),
                 ColumnSpec("superseded_by", "str", nullable=True),
             ),

@@ -2,33 +2,56 @@
 
 Status: Accepted (M7-1). Updated as M7 sub-cells land.
 
-## Decision — Tiers
+## Decision — Tiers (finalized M7-5)
 
-- **T0** — identity only. Taxon present in `taxa.csv`, no facts.
-- **T1** — at least one fact of any status. `imported < draft < reviewed
-  < approved`. T1 does **not** skip `draft`; any fact counts.
-- **T2** — every parameter with `tier_required = true` is present at
-  status >= `reviewed` **or** present with `value.shape = unknown` and
-  status >= `reviewed`. Weak-link per fact: minimum status across the
-  taxon's current facts per parameter (and per phase, see below) wins.
-- **T3** — T2 + every `tier_required = true` parameter is `approved` +
-  every safety-critical fact is `approved` with at least two independent
-  reviewers, encoded as a comma-separated list in the existing
-  `reviewed_by` TEXT column.
+Tiers are **derived**, not declared. `pack/tiers.py` computes:
 
-Notes:
+- **T0** — identity only. Taxon exists; no live (non-superseded) facts.
+- **T1** — at least one live fact at any status (`imported`, `draft`,
+  `reviewed`, `approved`). `draft` is **not** excluded; the status
+  ordering is `imported < draft < reviewed < approved`.
+- **T2** — every parameter with `tier_required=True` that matches the
+  taxon (by `applies_to.organism_groups`, `archetypes`, `uses`) has a
+  live fact at status >= `reviewed`. Parameters with
+  `applies_to.systems` are **excluded** from tier (see below).
+  Phase-bearing parameters (`phase_set != "none"`) require **all**
+  phases in `allowed_phases` or, if `allowed_phases` is `None`, **all**
+  phases in `phases_by_archetype[taxon.archetype]`. Partial phase
+  coverage fails. `value.shape == unknown` counts only if
+  status >= `reviewed`.
+- **T3** — T2 + every `tier_required=True` parameter is `approved` +
+  every safety-critical fact (`safety_class != "none"`) is `approved`
+  with **>=2 distinct reviewers** (encoded as an ordered `list[str]`
+  in the `reviewed_by` column). T3 is unreachable for a taxon whose
+  safety-critical facts are `reviewed` (single reviewer) — the T3
+  check fails accordingly, and rule `PACK_SAFETY_DOUBLE_REVIEW_MISSING`
+  additionally fires as an error (fail-closed).
 
-- `applies_to.systems` is not counted for tiers. `TierResult` carries
-  `system_gaps`: parameters whose `applies_to.systems` is non-empty and
-  that are absent from the taxon's facts. `coverage` displays
-  `system_gaps` but does not use them in the tier calculation.
-- Phase coverage requires **all** phases in `allowed_phases` ∩
-  `phases_by_archetype[archetype]` to be present at the required status.
-  Partial phase coverage fails.
-- **Deviation from README:** README says "every core parameter"; this ADR
-  restricts T2/T3 to `tier_required = true` (5 of 31 parameters) because
-  "every core parameter" is unreachable in practice and the flag exists
-  precisely for this purpose. `REVIEW_GUIDE.md` will be updated in M7-5.
+**Weakest-link per fact.** For each `(parameter, phase)`, the minimum
+status across all live facts determines coverage. Fact rows are
+iterated in sorted `fact_id` order; row order in the CSV does not
+affect the result.
+
+**System-scoped parameters.** `applies_to.systems` is not a property
+of a taxon, so parameters like `kc`, `root_depth`, `awd_reflood_depth`,
+and `n_max_per_application` are **never** counted for tier. A taxon
+can be T3 without any irrigation fact. This is by design; `TierResult`
+carries `system_gaps` (matching system-scoped params with no live
+fact) so `agri-core coverage` can surface the omission. T2/T3 does
+**not** certify system-scoped parameters.
+
+**`reviewed_by` is `list[str] | None`.** Single reviewer encodes as
+one element; `"|".join(sorted(items))` is byte-identical to a single
+string for the 1-reviewer case, so no CSV migration is needed. Two
+reviewers encode as `"a|b"`. Model canonicalizes to `sorted(set(v))`
+so reorderings do not appear as diffs.
+
+**Deviation from README.** README says "every core parameter is
+approved" for T3. This ADR restricts T3 to `tier_required=True`
+parameters (5 of 31) plus safety-critical facts; "every core
+parameter" is unreachable in practice and would prevent any taxon
+from ever reaching T3. `REVIEW_GUIDE.md` documents the final
+definition.
 
 ## Decision — License gate (finalized M7-4)
 

@@ -210,7 +210,7 @@ Column list and PK for each table. Column order is exact.
 | `locator` | str | yes | |
 | `evidence` | enum `A`/`B`/`C`/`D` | no | |
 | `status` | enum `imported`/`draft`/`reviewed`/`approved` | no | |
-| `reviewed_by` | str | yes | |
+| `reviewed_by` | list_str | yes | | `\|`-joined; >=2 distinct required for safety-critical `approved` |
 | `reviewed_at` | date | yes | |
 | `superseded_by` | `FactId` | yes | |
 
@@ -330,6 +330,12 @@ M7 rules (run by `agri-core validate` after structural load):
   `CC-BY-NC-SA-*`, `CC-BY-NC-ND-*`) that is referenced by any fact
   is an error (`PACK_LICENSE_DATASET_SA_ND`). Unreferenced datasets
   are not flagged.
+- **Safety-critical double-review.** A fact whose `parameter` has
+  `safety_class != "none"` and whose `status == "approved"` must
+  have `len(reviewed_by) >= 2` distinct reviewers
+  (`PACK_SAFETY_DOUBLE_REVIEW_MISSING`). A safety-critical fact at
+  `reviewed` (single reviewer) is permitted; the double-review
+  requirement applies only at `approved`.
 
 Not yet validated (M7): `tier_required`, safety `toxicity_limit` and
 `regulatory` semantics, license gate for `commercial_use`.
@@ -417,6 +423,7 @@ all is accepted.
 | `PACK_FACT_KEY_DUPLICATE` | two live facts share `(taxon, parameter, phase, canonical_scope)` with different values |
 | `PACK_LICENSE_NC_COMMERCIAL` | NC source with `commercial_use=yes` |
 | `PACK_LICENSE_DATASET_SA_ND` | SA/ND dataset referenced by a fact |
+| `PACK_SAFETY_DOUBLE_REVIEW_MISSING` | safety-critical fact at `approved` with <2 reviewers |
 
 ## Size limit
 

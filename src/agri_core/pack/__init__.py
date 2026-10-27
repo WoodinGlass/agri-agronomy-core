@@ -51,6 +51,12 @@ from agri_core.pack.tables import (
     read_table,
     write_table,
 )
+from agri_core.pack.tiers import (
+    Tier,
+    TierResult,
+    derive_all_tiers,
+    derive_tier,
+)
 from agri_core.pack.validate import (
     ValidationReport,
     validate_pack,
@@ -101,9 +107,13 @@ __all__ = [
     "Table",
     "TableSpec",
     "TaxaDiff",
+    "Tier",
+    "TierResult",
     "UnsupportedSchemaVersionError",
     "ValidationReport",
     "compute_pack_hash",
+    "derive_all_tiers",
+    "derive_tier",
     "diff_packs",
     "hash_pack_files",
     "load_knowledge_set",

@@ -141,6 +141,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   registry meta-test. A rule without a fixture is untested dead
   code, so this makes "add a rule, add a fixture" a mechanical
   requirement.
+- Tier derivation for taxa: `pack/tiers.py` exposes `Tier` (T0–T3),
+  `TierResult` (tier + required/missing params + `system_gaps` +
+  detail), `derive_tier`, and `derive_all_tiers`. Tiers are
+  derived from fact coverage: T0 = no live facts, T1 = >=1 fact
+  (any status), T2 = all `tier_required=True` params >= `reviewed`
+  (weak-link, phase coverage required), T3 = T2 + all such params
+  `approved` + every safety-critical fact `approved` with >=2
+  distinct reviewers. Parameters with `applies_to.systems` never
+  gate tier; they appear in `system_gaps` for `coverage` (M7-7)
+  to display. See ADR-003.
+- `FactRow.reviewed_by` is now `list[str] | None` (was
+  `str | None`), encoded as `list_str` in CSV. Single reviewer is
+  byte-identical to before; two reviewers encoded as `a|b`; model
+  canonicalizes to sorted unique. No CSV migration needed. New
+  rule `PACK_SAFETY_DOUBLE_REVIEW_MISSING` fires for a
+  safety-critical fact that is `approved` with <2 reviewers.
+  `RuleFn` signature extended with a `dictionary` argument.
+
 
 
 ### Added
