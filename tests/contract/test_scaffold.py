@@ -13,7 +13,7 @@ from typer.testing import CliRunner
 
 from agri_core.cli import app
 from agri_core.models.ids import TAXON_ID_PATTERN
-from agri_core.pack import TABLES, load_knowledge_set, write_table
+from agri_core.pack import TABLES, PackError, load_knowledge_set, write_table
 from agri_core.pack.tables import read_table
 
 pytestmark = pytest.mark.contract
@@ -213,3 +213,239 @@ def test_scaffold_collision_exhausted_raises(
     r = _invoke(_scaffold_args(src))
     assert r.exit_code == 3
     assert "cannot generate unique taxon_id" in r.stderr
+
+
+# ===== Coverage: _load_vocab / _vocab_keys / infer_organism_group =====
+
+
+class _FakeTraversable:
+    """Minimal importlib.resources.Traversable stand-in for tests."""
+
+    def __init__(self, base: Path) -> None:
+        self._base = base
+
+    def __truediv__(self, other: str) -> _FakeTraversable:
+        return _FakeTraversable(self._base / other)
+
+    def is_file(self) -> bool:
+        return self._base.is_file()
+
+    def read_text(self, encoding: str = "utf-8") -> str:
+        return self._base.read_text(encoding=encoding)
+
+
+class _NoFileTraversable:
+    """Traversable that claims nothing is a file (forces repo fallback)."""
+
+    def __truediv__(self, _other: str) -> _NoFileTraversable:
+        return self
+
+    def is_file(self) -> bool:
+        return False
+
+    def read_text(self, encoding: str = "utf-8") -> str:  # pragma: no cover
+        raise AssertionError("should not be called")
+
+
+class _FakeYamlNonMapping:
+    @staticmethod
+    def safe_load(_text: str) -> object:
+        return ["not", "a", "mapping"]
+
+
+def test_load_vocab_packaged_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agri_core.pack import scaffold as mod
+
+    target = tmp_path / "_dictionary" / "vocab" / "archetypes.yaml"
+    target.parent.mkdir(parents=True)
+    target.write_text("archetypes:\n  annual:\n    description: x\n", encoding="utf-8")
+    monkeypatch.setattr(mod, "pkg_files", lambda _name: _FakeTraversable(tmp_path))
+    data = mod._load_vocab("archetypes")
+    assert "annual" in data["archetypes"]
+
+
+def test_load_vocab_packaged_non_mapping(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agri_core.pack import scaffold as mod
+
+    target = tmp_path / "_dictionary" / "vocab" / "archetypes.yaml"
+    target.parent.mkdir(parents=True)
+    target.write_text("- not\n- a mapping\n", encoding="utf-8")
+    monkeypatch.setattr(mod, "pkg_files", lambda _name: _FakeTraversable(tmp_path))
+    with pytest.raises(PackError, match=r"not a mapping"):
+        mod._load_vocab("archetypes")
+
+
+def test_load_vocab_packaged_raises_falls_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agri_core.pack import scaffold as mod
+
+    def raising(_name: str) -> object:
+        raise FileNotFoundError("simulated")
+
+    monkeypatch.setattr(mod, "pkg_files", raising)
+    data = mod._load_vocab("archetypes")
+    assert "annual" in data["archetypes"]
+
+
+def test_load_vocab_repo_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agri_core.pack import scaffold as mod
+
+    monkeypatch.setattr(mod, "pkg_files", lambda _name: _NoFileTraversable())
+    with pytest.raises(PackError, match=r"not found"):
+        mod._load_vocab("definitely_not_a_real_vocab_xyz")
+
+
+def test_load_vocab_repo_non_mapping(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agri_core.pack import scaffold as mod
+
+    monkeypatch.setattr(mod, "pkg_files", lambda _name: _NoFileTraversable())
+    monkeypatch.setattr(mod, "yaml", _FakeYamlNonMapping)
+    with pytest.raises(PackError, match=r"not a mapping"):
+        mod._load_vocab("archetypes")
+
+
+def test_vocab_keys_non_mapping_section(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agri_core.pack import scaffold as mod
+
+    monkeypatch.setattr(mod, "_load_vocab", lambda _name: {"archetypes": ["not", "a", "dict"]})
+    with pytest.raises(PackError, match=r"is not a mapping"):
+        mod._vocab_keys("archetypes", "archetypes")
+
+
+def test_infer_organism_group_not_mapping(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agri_core.pack import scaffold as mod
+
+    monkeypatch.setattr(mod, "_load_vocab", lambda _name: {"organism_groups": ["not", "dict"]})
+    with pytest.raises(PackError, match=r"must be a mapping"):
+        mod.infer_organism_group("annual")
+
+
+def test_infer_organism_group_skips_non_dict_spec(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agri_core.pack import scaffold as mod
+
+    monkeypatch.setattr(
+        mod,
+        "_load_vocab",
+        lambda _name: {
+            "organism_groups": {
+                "bad_group": "not a dict",
+                "vascular_plant": {"allowed_archetypes": ["annual"]},
+            }
+        },
+    )
+    assert mod.infer_organism_group("annual") == "vascular_plant"
+
+
+def test_infer_organism_group_no_match(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agri_core.pack import scaffold as mod
+
+    monkeypatch.setattr(
+        mod,
+        "_load_vocab",
+        lambda _name: {
+            "organism_groups": {
+                "vascular_plant": {"allowed_archetypes": ["annual"]},
+            }
+        },
+    )
+    with pytest.raises(PackError, match=r"matches 0 organism groups"):
+        mod.infer_organism_group("nonexistent_archetype_xyz")
+
+
+def test_infer_organism_group_ambiguous(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agri_core.pack import scaffold as mod
+
+    monkeypatch.setattr(
+        mod,
+        "_load_vocab",
+        lambda _name: {
+            "organism_groups": {
+                "group_a": {"allowed_archetypes": ["annual"]},
+                "group_b": {"allowed_archetypes": ["annual"]},
+            }
+        },
+    )
+    with pytest.raises(PackError, match=r"matches 2 organism groups"):
+        mod.infer_organism_group("annual")
+
+
+# ===== Coverage: _resolve_source_ids / _default_source_id =====
+
+
+def test_resolve_source_ids_explicit() -> None:
+    from agri_core.pack import scaffold as mod
+
+    assert mod._resolve_source_ids(("S001", "S002"), {}) == ("S001", "S002")
+
+
+def test_default_source_id_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agri_core.pack import scaffold as mod
+
+    class _FakeTable:
+        rows: tuple[dict[str, object], ...] = ()
+
+    monkeypatch.setattr(mod, "read_table", lambda *_a, **_kw: _FakeTable())
+    with pytest.raises(PackError, match=r"sources.csv is empty"):
+        mod._default_source_id({"sources.csv": b""})
+
+
+def test_default_source_id_missing_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agri_core.pack import scaffold as mod
+
+    class _FakeTable:
+        rows: tuple[dict[str, object], ...] = ({"url": "x"},)
+
+    monkeypatch.setattr(mod, "read_table", lambda *_a, **_kw: _FakeTable())
+    with pytest.raises(PackError, match=r"no 'id' column value"):
+        mod._default_source_id({"sources.csv": b""})
+
+
+# ===== Coverage: direct scaffold_taxon validation =====
+
+
+def test_scaffold_direct_empty_name(tmp_path: Path) -> None:
+    from agri_core.pack.scaffold import scaffold_taxon
+
+    with pytest.raises(PackError, match=r"scientific_name"):
+        scaffold_taxon(tmp_path, scientific_name="", archetype="annual", uses=("veg",))
+
+
+def test_scaffold_direct_empty_uses(tmp_path: Path) -> None:
+    from agri_core.pack.scaffold import scaffold_taxon
+
+    with pytest.raises(PackError, match=r"uses must contain"):
+        scaffold_taxon(tmp_path, scientific_name="X", archetype="annual", uses=())
+
+
+# ===== Coverage: OSError atomic cleanup =====
+
+
+def test_scaffold_oserror_atomic_cleanup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    src = _sample_source(tmp_path, strip_hash=True)
+    original_write = Path.write_bytes
+
+    def fake_write(self: Path, data: bytes) -> int:
+        if self.name.endswith(".tmp") and str(self).startswith(str(src)):
+            raise OSError("simulated write failure")
+        return original_write(self, data)
+
+    monkeypatch.setattr(Path, "write_bytes", fake_write)
+    r = _invoke(_scaffold_args(src))
+    assert r.exit_code == 70
+    assert "OSError" in r.stderr
+    assert not any(src.rglob("*.tmp"))
