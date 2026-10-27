@@ -124,6 +124,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   implementation. New codes cannot land without a doc line, and
   doc lines cannot be added without an implementation. 4 new
   contract tests.
+- Two new validation rules for license compliance:
+  `PACK_LICENSE_NC_COMMERCIAL` (non-commercial source with
+  `commercial_use=yes`) and `PACK_LICENSE_DATASET_SA_ND` (SA/ND
+  dataset referenced by any fact). `is_sa_license` and
+  `is_nd_license` helpers added to `registry.sources` alongside
+  `is_nc_license`. These rules run in `validate_pack_report` and
+  therefore in `agri-core validate`, `agri-core pack build`, and
+  `agri-core coverage`. 10 new tests (8 contract, 2 parametrized
+  unit).
+
 
 ### Added
 
