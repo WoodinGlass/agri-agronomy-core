@@ -93,6 +93,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `scripts/gen_schemas.py`, with drift tests. `docs/decisions/ADR-003`
   records the M7 decisions on tiers, license gate, duplicates, and
   exit codes.
+- `agri-core diff --old A --new B [--json] [--exit-code]` compares two
+  source or built packs. Enforces M6 identity invariants: fact and
+  taxon IDs are never removed or reused for different content. Exits 1
+  on any violation by default; `--exit-code` also promotes normal
+  differences to exit 1 for CI. `DiffReport` is JSON-safe and
+  deterministic; fact changes are classified per field (violation vs
+  acceptable). 16 new contract tests.
 
 ### Added
 

@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+from agri_core.pack.diff import (
+    DiffReport,
+    DiffViolation,
+    FactChange,
+    FactChangeClass,
+    TaxaDiff,
+    diff_packs,
+)
 from agri_core.pack.errors import (
     EngineTooOldError,
     InvalidPackError,
@@ -63,7 +71,11 @@ __all__ = [
     "TABLES",
     "ColumnSpec",
     "ColumnType",
+    "DiffReport",
+    "DiffViolation",
     "EngineTooOldError",
+    "FactChange",
+    "FactChangeClass",
     "InMemoryKnowledgeSet",
     "InvalidPackError",
     "KnowledgeSet",
@@ -88,9 +100,11 @@ __all__ = [
     "PackValueOutOfRangeError",
     "Table",
     "TableSpec",
+    "TaxaDiff",
     "UnsupportedSchemaVersionError",
     "ValidationReport",
     "compute_pack_hash",
+    "diff_packs",
     "hash_pack_files",
     "load_knowledge_set",
     "load_knowledge_set_from_files",
