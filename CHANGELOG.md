@@ -144,6 +144,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python requirement raised to 3.11 or newer.
 - Public output contract clarified as an `Outcome` discriminated union; `result.schema.json` renamed to `outcome.schema.json`.
 
+- Coverage is now enforced by an explicit
+  `coverage report --fail-under=90 --skip-covered` step in CI
+  (`ci.yml`), run after `pytest` in the `locked`, `latest`, and
+  `lowest-direct` jobs. The step reads `[tool.coverage.report]`
+  from `pyproject.toml`, which now sets `precision = 2`, so the
+  comparison is at full precision: `90.86 < 90` passes,
+  `90.86 < 91` fails, `90.86 < 90.87` fails. Previously the gate
+  used `--cov-fail-under=90` inside `addopts`, which compared
+  `round(total)` instead of `total`, so a run at 89.5% (rounded
+  to 90) slipped past. `addopts` no longer carries
+  `--cov-fail-under`.
+- Local `make check` now runs `coverage` (pytest +
+  `coverage report --fail-under=90`) instead of `test`, and
+  `make coverage` is a new target. `pytest` alone is still
+  available and does not gate on coverage.
+
 ### Removed
 
 - `resolve_data_root()` and its tests. Replaced by explicit pack loading

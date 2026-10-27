@@ -41,6 +41,8 @@ jobs:
         run: mypy
       - name: pytest
         run: pytest
+      - name: Coverage gate
+        run: coverage report --fail-under=90 --skip-covered
       - name: agri-core validate (explicit path)
         run: agri-core validate --pack src/agri_core/_samples/sample_pack
       - name: agri-core validate (sample keyword)
@@ -80,6 +82,8 @@ jobs:
         run: mypy
       - name: pytest
         run: pytest
+      - name: Coverage gate
+        run: coverage report --fail-under=90 --skip-covered
 
   lowest-direct:
     name: Lowest-direct (py${{ matrix.python-version }})
@@ -107,6 +111,8 @@ jobs:
         run: mypy
       - name: pytest
         run: pytest
+      - name: Coverage gate
+        run: coverage report --fail-under=90 --skip-covered
 
   pre-commit:
     name: Pre-commit hooks
