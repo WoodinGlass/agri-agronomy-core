@@ -45,16 +45,29 @@ Two rules, identical in `validate`, `build`, and `coverage`:
 
 No rule for "safety-critical requires commercial source" — not in README.
 
-## Decision — Duplicate facts
+## Decision — Duplicate facts (finalized M7-3)
 
-- Code `PACK_FACT_KEY_DUPLICATE` for facts with identical
-  `(taxon_id, parameter, phase, canonical_scope)`. **Error**.
-- Two facts with the same key but different values from different `src`
-  are corroboration, not duplicates. **No warning.**
+- **`PACK_SUPERSEDED_SELF`** — a fact cannot set `superseded_by` to
+  its own `fact_id`.
+- **`PACK_SUPERSEDED_CYCLE`** — cycles in the `superseded_by` chain
+  are rejected. One finding per cycle, anchored at the smallest
+  `fact_id` in the cycle for determinism. Self-loops are handled by
+  `PACK_SUPERSEDED_SELF`, not here.
+- **`PACK_FACT_KEY_DUPLICATE`** — two live facts with identical
+  `(taxon_id, parameter, phase, canonical_scope)` and **different**
+  `value` are an error. Message names both `fact_id`s and instructs
+  the author to supersede one via `superseded_by`.
+- **Corroboration is allowed.** Same key, same value, different `src`
+  is independent confirmation, not a duplicate.
+- **Superseded facts are excluded** from the duplicate check.
+- **FK for `superseded_by`** remains `PACK_FK_VIOLATION` (enforced in
+  `loader.py::_validate_structure` at load time, consistent with
+  `parent_id`, `dataset_id`, `src`). Not renamed; M7-3 does not
+  duplicate the FK check.
 - `FACT_CONFLICT` remains M8 (resolution time, not load time).
-- `superseded_by` must reference an existing fact. Cycles →
-  `PACK_SUPERSEDED_CYCLE`. Self-supersession is an error. Superseded
-  facts are excluded from tier calculation and duplicate detection.
+- **Canonical scope form** for key equality: `canonical_json(fact.scope)`
+  (sorted keys, compact separators, UTF-8). Matches the encoding used
+  by `hash_pack_files` and SQLite `_sql_value`.
 
 ## Decision — Exit codes
 

@@ -106,6 +106,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   trapezoids where all four points are equal. Range `min <= max` is
   already enforced at load and gets no separate rule. 5 new contract
   tests.
+- Three new validation rules: `PACK_SUPERSEDED_SELF` (fact
+  supersedes itself), `PACK_SUPERSEDED_CYCLE` (cycle in
+  `superseded_by` chain, one finding per cycle anchored at the
+  smallest `fact_id`), and `PACK_FACT_KEY_DUPLICATE` (two live
+  facts with the same `(taxon, parameter, phase,
+  canonical_scope)` and different values). Same key with same
+  value across different `src` is corroboration, not a duplicate.
+  Superseded facts are excluded from the duplicate check. FK for
+  `superseded_by` remains `PACK_FK_VIOLATION` at load time. 8 new
+  contract tests.
 
 ### Added
 

@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterable, Mapping
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
+from agri_core.models.canonical import canonical_json
 from agri_core.models.dictionary import Dictionary
 from agri_core.models.fact import TrapezoidValue
 from agri_core.models.finding import (
@@ -62,7 +63,118 @@ def check_trapezoid_not_degenerate(
             )
 
 
-RULES: tuple[RuleFn, ...] = (check_trapezoid_not_degenerate,)
+def check_superseded_self(ks: KnowledgeSet, files: Mapping[str, bytes]) -> Iterable[Finding]:
+    """Flag facts that reference themselves via ``superseded_by``."""
+    for fact in ks.facts():
+        if fact.superseded_by == fact.fact_id:
+            yield Finding(
+                code="PACK_SUPERSEDED_SELF",
+                severity=FindingSeverity.ERROR,
+                message=(
+                    f"fact {fact.fact_id} supersedes itself; "
+                    f"superseded_by must be a different fact_id"
+                ),
+                location=FindingLocation(
+                    taxon_id=fact.taxon_id,
+                    fact_id=fact.fact_id,
+                    parameter=fact.parameter,
+                ),
+            )
+
+
+def check_superseded_cycle(ks: KnowledgeSet, files: Mapping[str, bytes]) -> Iterable[Finding]:
+    """Detect cycles in the ``superseded_by`` chain (excluding self-loops).
+
+    ``superseded_by`` is a single pointer per fact, so chains are simple
+    paths ending either in ``None`` or in a cycle. We walk each chain
+    forward, tracking local path; when a node repeats within the path,
+    that sub-path is a cycle. One finding per cycle, anchored at the
+    smallest ``fact_id`` in the cycle for determinism. Self-loops are
+    excluded (``check_superseded_self`` handles them).
+    """
+    facts_by_id = {f.fact_id: f for f in ks.facts()}
+    visited: set[str] = set()
+    reported: set[frozenset[str]] = set()
+
+    for start in sorted(facts_by_id):
+        if start in visited:
+            continue
+        path: list[str] = []
+        local_seen: dict[str, int] = {}
+        node: str | None = start
+
+        while node is not None and node not in visited and node not in local_seen:
+            local_seen[node] = len(path)
+            path.append(node)
+            fact = facts_by_id.get(node)
+            nxt = fact.superseded_by if fact else None
+            node = nxt if (nxt is not None and nxt in facts_by_id) else None
+
+        if node is not None and node in local_seen:
+            cycle = frozenset(path[local_seen[node] :])
+            if len(cycle) >= 2 and cycle not in reported:
+                reported.add(cycle)
+                anchor = min(cycle)
+                anchor_fact = facts_by_id[anchor]
+                yield Finding(
+                    code="PACK_SUPERSEDED_CYCLE",
+                    severity=FindingSeverity.ERROR,
+                    message=(f"cycle in superseded_by: {' -> '.join(sorted(cycle))} -> ..."),
+                    location=FindingLocation(
+                        taxon_id=anchor_fact.taxon_id,
+                        fact_id=anchor,
+                        parameter=anchor_fact.parameter,
+                    ),
+                )
+
+        for p in path:
+            visited.add(p)
+
+
+def check_fact_key_duplicate(ks: KnowledgeSet, files: Mapping[str, bytes]) -> Iterable[Finding]:
+    """Flag live facts with identical fact keys **and different values**.
+
+    Fact key = ``(taxon_id, parameter, phase, canonical_scope)``.
+    Same key with same value across different ``src`` is corroboration,
+    not a duplicate. Superseded facts are excluded from this check.
+    """
+    by_key: dict[tuple[str, str, str | None, str], object] = {}
+    for fact in ks.facts():
+        if fact.superseded_by is not None:
+            continue
+        scope_key = canonical_json(fact.scope).decode("utf-8")
+        key = (fact.taxon_id, fact.parameter, fact.phase, scope_key)
+        if key not in by_key:
+            by_key[key] = fact
+            continue
+        first = by_key[key]
+        # first and fact are FactRow; compare values via Pydantic equality.
+        if getattr(first, "value", None) != fact.value:
+            yield Finding(
+                code="PACK_FACT_KEY_DUPLICATE",
+                severity=FindingSeverity.ERROR,
+                message=(
+                    f"conflicting facts for "
+                    f"(taxon={fact.taxon_id}, parameter={fact.parameter!r}, "
+                    f"phase={fact.phase!r}, scope={scope_key}): "
+                    f"{getattr(first, 'fact_id', '?')} vs {fact.fact_id}; "
+                    f"supersede one via superseded_by"
+                ),
+                location=FindingLocation(
+                    taxon_id=fact.taxon_id,
+                    fact_id=fact.fact_id,
+                    parameter=fact.parameter,
+                    phase=fact.phase,
+                ),
+            )
+
+
+RULES: tuple[RuleFn, ...] = (
+    check_trapezoid_not_degenerate,
+    check_superseded_self,
+    check_superseded_cycle,
+    check_fact_key_duplicate,
+)
 """Registered rules. Explicit tuple, not auto-import.
 
 M7-1 ships empty. M7-2..M7-4 append. Review sees exactly what runs and
