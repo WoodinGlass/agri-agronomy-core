@@ -324,6 +324,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   has the allowlist bytes (for example from `read_pack_bytes`). Pre-1.0;
   no released API depended on the removed names.
 
+### Fixed
+
+- `PACK_SAFETY_VIOLATION` now fires for **all** `safety_class != "none"`
+  parameters (`dose_cap`, `toxicity_limit`, `regulatory`), not only
+  `dose_cap`. The load-time predicate in
+  `pack/loader.py::_validate_structure` was `== "dose_cap"`, so a
+  fact whose parameter was classified `toxicity_limit` or
+  `regulatory` could be `draft` or `imported` without tripping the
+  rule. README design #8 applies to any safety-critical parameter.
+  3 new tests (`test_dose_cap_draft_violation`,
+  `test_toxicity_limit_draft_violation`,
+  `test_regulatory_draft_violation`).
+
+
 ## [0.0.0] - 2026-10-17
 
 - Repository created.
