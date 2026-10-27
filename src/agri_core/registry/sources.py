@@ -5,13 +5,14 @@ from __future__ import annotations
 import csv
 import io
 import re
-from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from agri_core.models.finding import Finding, FindingLocation, FindingSeverity
 
 CommercialUse = Literal["yes", "no", "unclear"]
 
@@ -110,27 +111,15 @@ class SourceRow(BaseModel):
         return value
 
 
-@dataclass(frozen=True)
-class Finding:
-    """One problem found while linting ``sources.csv``."""
-
-    code: str
-    severity: Literal["error", "warning", "info"]
-    file: str
-    line: int | None
-    message: str
-
-
 def _row_findings(row: SourceRow, line: int, *, today: date, filename: str) -> list[Finding]:
     out: list[Finding] = []
     if row.access_date > today:
         out.append(
             Finding(
                 code="SRC004",
-                severity="error",
-                file=filename,
-                line=line,
+                severity=FindingSeverity.ERROR,
                 message=f"{row.id}: access_date {row.access_date} is in the future",
+                location=FindingLocation(file=filename, line=line),
             )
         )
     if row.commercial_use == "yes":
@@ -138,22 +127,20 @@ def _row_findings(row: SourceRow, line: int, *, today: date, filename: str) -> l
             out.append(
                 Finding(
                     code="SRC002",
-                    severity="error",
-                    file=filename,
-                    line=line,
+                    severity=FindingSeverity.ERROR,
                     message=f"{row.id}: commercial_use=yes requires a known license",
+                    location=FindingLocation(file=filename, line=line),
                 )
             )
         elif is_nc_license(row.license):
             out.append(
                 Finding(
                     code="SRC001",
-                    severity="error",
-                    file=filename,
-                    line=line,
+                    severity=FindingSeverity.ERROR,
                     message=(
                         f"{row.id}: commercial_use=yes conflicts with NC license {row.license}"
                     ),
+                    location=FindingLocation(file=filename, line=line),
                 )
             )
     return out
@@ -173,16 +160,22 @@ def lint_csv_text(
     try:
         header = next(reader)
     except StopIteration:
-        findings.append(Finding("SRC100", "error", filename, None, "empty file"))
+        findings.append(
+            Finding(
+                code="SRC100",
+                severity=FindingSeverity.ERROR,
+                message="empty file",
+                location=FindingLocation(file=filename),
+            )
+        )
         return findings
     if header != CSV_HEADER:
         findings.append(
             Finding(
-                "SRC101",
-                "error",
-                filename,
-                1,
-                f"header mismatch: expected {CSV_HEADER!r}, got {header!r}",
+                code="SRC101",
+                severity=FindingSeverity.ERROR,
+                message=f"header mismatch: expected {CSV_HEADER!r}, got {header!r}",
+                location=FindingLocation(file=filename, line=1),
             )
         )
         return findings
@@ -194,11 +187,10 @@ def lint_csv_text(
         if len(csv_row) != len(CSV_HEADER):
             findings.append(
                 Finding(
-                    "SRC102",
-                    "error",
-                    filename,
-                    line,
-                    f"row has {len(csv_row)} fields, expected {len(CSV_HEADER)}",
+                    code="SRC102",
+                    severity=FindingSeverity.ERROR,
+                    message=f"row has {len(csv_row)} fields, expected {len(CSV_HEADER)}",
+                    location=FindingLocation(file=filename, line=line),
                 )
             )
             continue
@@ -206,16 +198,22 @@ def lint_csv_text(
         try:
             row = SourceRow.model_validate(record)
         except ValueError as exc:
-            findings.append(Finding("SRC103", "error", filename, line, f"invalid row: {exc}"))
+            findings.append(
+                Finding(
+                    code="SRC103",
+                    severity=FindingSeverity.ERROR,
+                    message=f"invalid row: {exc}",
+                    location=FindingLocation(file=filename, line=line),
+                )
+            )
             continue
         if row.id in seen:
             findings.append(
                 Finding(
-                    "SRC104",
-                    "error",
-                    filename,
-                    line,
-                    f"{row.id}: duplicate id (first at line {seen[row.id]})",
+                    code="SRC104",
+                    severity=FindingSeverity.ERROR,
+                    message=f"{row.id}: duplicate id (first at line {seen[row.id]})",
+                    location=FindingLocation(file=filename, line=line),
                 )
             )
             continue
@@ -226,7 +224,14 @@ def lint_csv_text(
 
 def lint_csv_file(path: Path, *, today: date) -> list[Finding]:
     if not path.is_file():
-        return [Finding("SRC000", "error", str(path), None, "sources file not found")]
+        return [
+            Finding(
+                code="SRC000",
+                severity=FindingSeverity.ERROR,
+                message="sources file not found",
+                location=FindingLocation(file=str(path)),
+            )
+        ]
     with path.open("r", encoding="utf-8-sig", newline="") as f:
         text = f.read()
     return lint_csv_text(text, today=today, filename=str(path))
