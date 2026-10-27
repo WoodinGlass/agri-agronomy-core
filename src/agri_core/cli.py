@@ -32,7 +32,7 @@ from agri_core.pack import (
 from agri_core.pack.build import build_pack, render_source_manifest
 from agri_core.pack.loader import _default_dictionary
 from agri_core.pack.scaffold import scaffold_taxon
-from agri_core.pack.validate import validate_pack
+from agri_core.pack.validate import validate_pack, validate_pack_report
 from agri_core.registry import lint_csv_text
 
 EXIT_OK = 0
@@ -86,7 +86,9 @@ def _resolve_pack_path(spec: str) -> Path:
     return Path(spec)
 
 
-def _load_and_print(spec: str) -> tuple[Mapping[str, bytes], PackManifest]:
+def _load_and_print(
+    spec: str, *, print_pack_line: bool = True
+) -> tuple[Mapping[str, bytes], PackManifest]:
     path = _resolve_pack_path(spec)
     try:
         files = read_pack_bytes(path)
@@ -95,8 +97,9 @@ def _load_and_print(spec: str) -> tuple[Mapping[str, bytes], PackManifest]:
         typer.echo(f"error: {exc.code}: {exc}", err=True)
         raise typer.Exit(EXIT_PACK) from exc
 
-    kind = "sample" if spec == "sample" else str(path.resolve())
-    typer.echo(f"pack: {manifest.name} {manifest.version} ({kind})")
+    if print_pack_line:
+        kind = "sample" if spec == "sample" else str(path.resolve())
+        typer.echo(f"pack: {manifest.name} {manifest.version} ({kind})")
     if manifest.synthetic:
         typer.echo("SYNTHETIC DATA", err=True)
     return files, manifest
@@ -115,6 +118,19 @@ def _emit_findings(findings: list[Finding]) -> tuple[int, int]:
         elif f.severity == FindingSeverity.WARNING:
             warnings += 1
     return errors, warnings
+
+
+def _compute_exit_code(errors: int, warnings: int, *, strict: bool) -> int:
+    """Return the exit code for the validate command.
+
+    Errors always exit 1. ``--strict`` promotes warnings to 1.
+    No findings -> 0.
+    """
+    if errors > 0:
+        return EXIT_ERROR
+    if strict and warnings > 0:
+        return EXIT_ERROR
+    return EXIT_OK
 
 
 def _count_commercial_use(sources_bytes: bytes) -> dict[str, int]:
@@ -168,37 +184,88 @@ def validate(
         str,
         typer.Option("--pack", help="Path to a pack directory, or 'sample'."),
     ],
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Emit JSON instead of text."),
+    ] = False,
+    strict: Annotated[
+        bool,
+        typer.Option(
+            "--strict",
+            help="Exit 1 if any finding (errors or warnings) is present.",
+        ),
+    ] = False,
 ) -> None:
     """Validate a pack: manifest, sources, and structural integrity.
 
     Inspection only; always accepts synthetic packs. The SYNTHETIC DATA
     banner on stderr is the warning. Only calculation commands (M8+)
     require an explicit opt-in for synthetic data.
+
+    ``--strict`` promotes warnings to exit 1 (errors are always exit 1).
+    ``--json`` emits a structured report; the exit code is unchanged.
     """
-    files, manifest = _load_and_print(pack)
+    files, manifest = _load_and_print(pack, print_pack_line=not json_output)
     _warn_if_unverified(manifest)
 
     text = files["sources.csv"].decode("utf-8-sig")
-    findings = lint_csv_text(text, today=date.today(), filename="sources.csv")
-    errors, warnings = _emit_findings(findings)
+    src_findings = lint_csv_text(text, today=date.today(), filename="sources.csv")
     counts = _count_commercial_use(files["sources.csv"])
-    typer.echo(
-        f"sources: {sum(counts.values())} "
-        f"(yes: {counts['yes']}, no: {counts['no']}, unclear: {counts['unclear']})"
-    )
-    typer.echo(f"errors: {errors}, warnings: {warnings}")
 
-    try:
-        validate_pack(files, allow_synthetic=True)
-    except PackError as exc:
-        typer.echo(f"error: {exc.code}: {exc}", err=True)
-        for finding in getattr(exc, "findings", ()):
-            loc = f"{finding.file}:{finding.line}" if getattr(finding, "file", None) else "-"
-            typer.echo(f"  {finding.code} {loc}: {finding}", err=True)
-        raise typer.Exit(EXIT_PACK) from exc
+    report, ks = validate_pack_report(files, allow_synthetic=True)
 
-    if errors:
-        raise typer.Exit(EXIT_ERROR)
+    # Load errors (report.findings from _report_from_error/_report_from_missing_key)
+    # mean the pack could not be loaded. Exit 3, distinct from rule findings.
+    if ks is None:
+        for f in report.findings:
+            loc_parts = []
+            if f.location.file:
+                loc = f.location.file
+                if f.location.line:
+                    loc = f"{loc}:{f.location.line}"
+                loc_parts.append(loc)
+            loc_str = " ".join(loc_parts) if loc_parts else "-"
+            typer.echo(f"{f.severity.value}: {f.code} {loc_str}: {f.message}", err=True)
+        raise typer.Exit(EXIT_PACK)
+
+    combined = list(src_findings) + list(report.findings)
+    combined.sort(key=lambda f: (f.location.file or "", f.location.line or 0, f.code))
+
+    errors = sum(1 for f in combined if f.severity == FindingSeverity.ERROR)
+    warnings = sum(1 for f in combined if f.severity == FindingSeverity.WARNING)
+
+    if json_output:
+        payload = {
+            "pack": {
+                "name": manifest.name,
+                "version": manifest.version,
+                "synthetic": manifest.synthetic,
+                "verified": manifest.content_hash is not None,
+            },
+            "sources": {
+                "total": sum(counts.values()),
+                "yes": counts["yes"],
+                "no": counts["no"],
+                "unclear": counts["unclear"],
+            },
+            "report": {
+                "report_version": report.report_version,
+                "ok": errors == 0,
+                "findings": [f.model_dump(mode="json") for f in combined],
+            },
+        }
+        typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        _emit_findings(combined)
+        typer.echo(
+            f"sources: {sum(counts.values())} "
+            f"(yes: {counts['yes']}, no: {counts['no']}, unclear: {counts['unclear']})"
+        )
+        typer.echo(f"errors: {errors}, warnings: {warnings}")
+
+    exit_code = _compute_exit_code(errors, warnings, strict=strict)
+    if exit_code != EXIT_OK:
+        raise typer.Exit(exit_code)
 
 
 @pack_app.command(name="lock")

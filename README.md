@@ -68,7 +68,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 | 6 | Irrigation, fertilizer, media and water | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. Every mode declares the parameters it requires; missing → `unknown` or `insufficient_input`. | M11 | Not started |
 | 7 | Suitability and propagation | Single and batch site suitability with `suitable`/`marginal`/`unsuitable` and per-factor reasons; dated propagation plans. | M12 | Not started |
 | 8 | Exports | `tool_schemas.json` (function-calling schemas with `taxon_id`, `country`, `system`), `edge_thresholds.json` per site, `review_sheet.csv` per tier. | M13 | Not started |
-| 9 | Command line | `lint-sources` and a basic `validate` ship in M0; `pack lock` in M5; `pack scaffold` and `pack build` in M6; full `validate`, `diff` and `coverage` in M7; `show` in M8; `calc` in M11; `export` in M13. | M0, M5–M13 | In progress |
+| 9 | Command line | `lint-sources` and a basic `validate` ship in M0; `pack lock` in M5; `pack scaffold` and `pack build` in M6; full `validate --json --strict`, `diff` and `coverage` in M7; `show` in M8; `calc` in M11; `export` in M13. | M0, M5–M13 | In progress |
 
 ## Quick start
 

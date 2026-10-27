@@ -275,6 +275,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Literal`; `file` and `line` live under `.location.file` and
   `.location.line`. The unused `"info"` severity value is
   dropped (was never constructed by the linter).
+- `agri-core validate` gains `--json` and `--strict`. `--json`
+  emits `{pack, sources, report}` with the full findings list
+  (SRC + PACK codes, sorted) and `report.ok`/`report.report_version`;
+  the exit code is unchanged. `--strict` promotes warnings to exit 1
+  (errors already exit 1). Load errors (unreadable pack) always
+  exit 3, distinct from rule findings. Text mode is unchanged for
+  the sample pack: 0 findings -> 0 errors, 0 warnings, exit 0.
+
 
 
 ### Removed
