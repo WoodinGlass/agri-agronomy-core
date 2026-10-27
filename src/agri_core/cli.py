@@ -5,7 +5,9 @@ from __future__ import annotations
 import contextlib
 import csv
 import io
+import json
 import os
+from collections import Counter
 from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
@@ -18,7 +20,9 @@ from agri_core.models.finding import Finding, FindingSeverity
 from agri_core.pack import (
     PackError,
     PackManifest,
+    Tier,
     compute_pack_hash,
+    derive_all_tiers,
     diff_packs,
     hash_pack_files,
     load_knowledge_set,
@@ -26,6 +30,7 @@ from agri_core.pack import (
     read_pack_bytes,
 )
 from agri_core.pack.build import build_pack, render_source_manifest
+from agri_core.pack.loader import _default_dictionary
 from agri_core.pack.scaffold import scaffold_taxon
 from agri_core.pack.validate import validate_pack
 from agri_core.registry import lint_csv_text
@@ -468,6 +473,129 @@ def diff(
         raise typer.Exit(EXIT_ERROR)
     if exit_code and not report.identical:
         raise typer.Exit(EXIT_ERROR)
+
+
+@app.command(name="coverage")
+def coverage_cmd(
+    pack: Annotated[
+        str,
+        typer.Option("--pack", help="Path to a pack directory, or 'sample'."),
+    ],
+    tier: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--tier",
+            help="Exact tier filter (T0, T1, T2, T3); repeatable.",
+        ),
+    ] = None,
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Emit JSON instead of text."),
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", help="Show full lists instead of truncating."),
+    ] = False,
+) -> None:
+    """Show tier distribution and per-taxon coverage.
+
+    Tiers are derived from fact coverage; see ADR-003. The distribution
+    summary counts every taxon in the pack; ``--tier`` filters only the
+    per-taxon detail rows.
+    """
+    tier_filter: set[Tier] | None = None
+    if tier:
+        parsed: set[Tier] = set()
+        for raw in tier:
+            try:
+                parsed.add(Tier(raw))
+            except ValueError:
+                valid = ", ".join(m.value for m in Tier)
+                typer.echo(
+                    f"error: invalid --tier {raw!r}; valid values: {valid}",
+                    err=True,
+                )
+                raise typer.Exit(EXIT_USAGE) from None
+        tier_filter = parsed
+
+    path = _resolve_pack_path(pack)
+    try:
+        ks = load_knowledge_set(path, allow_synthetic=True)
+    except PackError as exc:
+        typer.echo(f"error: {exc.code}: {exc}", err=True)
+        raise typer.Exit(EXIT_PACK) from exc
+
+    if ks.manifest.synthetic:
+        typer.echo("SYNTHETIC DATA", err=True)
+
+    dictionary = _default_dictionary()
+    results = derive_all_tiers(ks, dictionary)
+
+    summary = Counter(r.tier.value for r in results.values())
+
+    if tier_filter is not None:
+        shown = {tid: r for tid, r in results.items() if r.tier in tier_filter}
+    else:
+        shown = results
+
+    tier_order = {"T0": 0, "T1": 1, "T2": 2, "T3": 3}
+    sorted_taxa = sorted(
+        shown.values(),
+        key=lambda r: (tier_order[r.tier.value], r.taxon_id),
+    )
+
+    if json_output:
+        payload = {
+            "pack": {
+                "name": ks.manifest.name,
+                "version": ks.manifest.version,
+                "synthetic": ks.manifest.synthetic,
+            },
+            "summary": {t.value: summary.get(t.value, 0) for t in Tier},
+            "taxa": [
+                {
+                    "taxon_id": r.taxon_id,
+                    "tier": r.tier.value,
+                    "required_params": list(r.required_params),
+                    "missing_params": list(r.missing_params),
+                    "system_gaps": list(r.system_gaps),
+                    "detail": r.detail,
+                }
+                for r in sorted_taxa
+            ],
+        }
+        typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+        return
+
+    kind = "sample" if pack == "sample" else str(path.resolve())
+    typer.echo(f"pack: {ks.manifest.name} {ks.manifest.version} ({kind})")
+    typer.echo("")
+    typer.echo("distribution:")
+    for t in Tier:
+        typer.echo(f"  {t.value}: {summary.get(t.value, 0)}")
+    typer.echo("")
+    if not sorted_taxa:
+        typer.echo("no taxa match --tier filter")
+        return
+    typer.echo("taxa:")
+    for r in sorted_taxa:
+        typer.echo(
+            f"  {r.taxon_id}  {r.tier.value}  "
+            f"required={len(r.required_params)} "
+            f"missing={len(r.missing_params)} "
+            f"system_gaps={len(r.system_gaps)}"
+        )
+        for label, items in (
+            ("missing", r.missing_params),
+            ("system_gaps", r.system_gaps),
+        ):
+            if not items:
+                continue
+            if verbose or len(items) <= 3:
+                typer.echo(f"    {label}: {', '.join(items)}")
+            else:
+                head_items = ", ".join(items[:3])
+                typer.echo(f"    {label}: {head_items} (+{len(items) - 3} more)")
 
 
 def main() -> NoReturn:
