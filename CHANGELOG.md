@@ -258,6 +258,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   regardless of status: `status`, `evidence`, `reviewed_by`,
   `reviewed_at`, `locator`, `superseded_by`, `src`, `dataset_id`,
   `provenance_kind`.
+- Unified the two finding types. `agri_core.registry.Finding`
+  (dataclass) is removed; `agri_core.models.finding.Finding`
+  (Pydantic) is the single type used by both
+  `agri-core lint-sources` and `validate_pack_report`.
+  `Finding.severity` is `FindingSeverity` (StrEnum) instead of
+  `Literal`; `file` and `line` live under `.location.file` and
+  `.location.line`. The unused `"info"` severity value is
+  dropped (was never constructed by the linter).
+
 
 ### Removed
 

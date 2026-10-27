@@ -134,7 +134,9 @@ def test_lint_file_findings_carry_real_path(tmp_path: Path) -> None:
     codes = {f.code for f in findings}
     assert {"SRC001", "SRC002", "SRC004"} <= codes, f"missing expected codes in {sorted(codes)}"
     for f in findings:
-        assert f.file == str(target), f"{f.code} reports file={f.file!r}, expected {str(target)!r}"
+        assert f.location.file == str(target), (
+            f"{f.code} reports file={f.location.file!r}, expected {str(target)!r}"
+        )
 
 
 def test_lint_text_honours_explicit_filename() -> None:
@@ -145,7 +147,7 @@ def test_lint_text_honours_explicit_filename() -> None:
     codes = {f.code for f in findings}
     assert {"SRC001", "SRC004"} <= codes
     for f in findings:
-        assert f.file == "custom.csv"
+        assert f.location.file == "custom.csv"
 
 
 @pytest.mark.parametrize(

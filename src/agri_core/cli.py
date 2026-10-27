@@ -14,6 +14,7 @@ from typing import Annotated, NoReturn
 import typer
 
 from agri_core import __version__
+from agri_core.models.finding import Finding, FindingSeverity
 from agri_core.pack import (
     PackError,
     PackManifest,
@@ -27,7 +28,7 @@ from agri_core.pack import (
 from agri_core.pack.build import build_pack, render_source_manifest
 from agri_core.pack.scaffold import scaffold_taxon
 from agri_core.pack.validate import validate_pack
-from agri_core.registry import Finding, lint_csv_text
+from agri_core.registry import lint_csv_text
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -100,11 +101,13 @@ def _emit_findings(findings: list[Finding]) -> tuple[int, int]:
     errors = 0
     warnings = 0
     for f in findings:
-        loc = f"{f.file}:{f.line}" if f.line else f.file
-        typer.echo(f"{f.severity}: {f.code} {loc}: {f.message}")
-        if f.severity == "error":
+        file = f.location.file or "<unknown>"
+        line = f.location.line
+        loc = f"{file}:{line}" if line else file
+        typer.echo(f"{f.severity.value}: {f.code} {loc}: {f.message}")
+        if f.severity == FindingSeverity.ERROR:
             errors += 1
-        elif f.severity == "warning":
+        elif f.severity == FindingSeverity.WARNING:
             warnings += 1
     return errors, warnings
 
