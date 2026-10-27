@@ -187,6 +187,62 @@ def test_diff_fact_parameter_changed_is_violation(tmp_path: Path) -> None:
     assert changes[0].classification == FactChangeClass.VIOLATION
 
 
+def test_diff_fact_value_changed_draft_is_acceptable(tmp_path: Path) -> None:
+    """Draft facts are editable in place -- value change is not a violation."""
+    a = _sample_copy(tmp_path, "a")
+    b = _sample_copy(tmp_path, "b")
+    for pack in (a, b):
+        _mutate_fact_row(pack, "T000000001.csv", "F00000000002", status="draft")
+    _mutate_fact_row(
+        b,
+        "T000000001.csv",
+        "F00000000002",
+        value='{"shape":"scalar","unit":"degree_Celsius","value":9.5}',
+    )
+    report = diff_packs(_load(a), _load(b))
+    changes = [fc for fc in report.facts_changed if fc.fact_id == "F00000000002"]
+    assert len(changes) == 1
+    assert changes[0].classification == FactChangeClass.ACCEPTABLE
+    assert "value" in changes[0].fields_changed
+    assert report.violations == ()
+
+
+def test_diff_fact_value_changed_reviewed_is_violation(tmp_path: Path) -> None:
+    """Reviewed facts are frozen -- value change requires a new fact_id."""
+    a = _sample_copy(tmp_path, "a")
+    b = _sample_copy(tmp_path, "b")
+    for pack in (a, b):
+        _mutate_fact_row(pack, "T000000001.csv", "F00000000002", status="reviewed")
+    _mutate_fact_row(
+        b,
+        "T000000001.csv",
+        "F00000000002",
+        value='{"shape":"scalar","unit":"degree_Celsius","value":9.5}',
+    )
+    report = diff_packs(_load(a), _load(b))
+    changes = [fc for fc in report.facts_changed if fc.fact_id == "F00000000002"]
+    assert len(changes) == 1
+    assert changes[0].classification == FactChangeClass.VIOLATION
+    assert "value" in changes[0].fields_changed
+    assert any(
+        v.kind == "fact_id_reused" and v.entity_id == "F00000000002" for v in report.violations
+    )
+
+
+def test_diff_fact_parameter_changed_draft_is_acceptable(tmp_path: Path) -> None:
+    """Draft facts are editable in place -- parameter change is not a violation."""
+    a = _sample_copy(tmp_path, "a")
+    b = _sample_copy(tmp_path, "b")
+    for pack in (a, b):
+        _mutate_fact_row(pack, "T000000001.csv", "F00000000002", status="draft")
+    _mutate_fact_row(b, "T000000001.csv", "F00000000002", parameter="gdd_upper")
+    report = diff_packs(_load(a), _load(b))
+    changes = [fc for fc in report.facts_changed if fc.fact_id == "F00000000002"]
+    assert len(changes) == 1
+    assert changes[0].classification == FactChangeClass.ACCEPTABLE
+    assert "parameter" in changes[0].fields_changed
+
+
 def test_diff_fact_status_changed_is_acceptable(tmp_path: Path) -> None:
     a = _sample_copy(tmp_path, "a")
     b = _sample_copy(tmp_path, "b")

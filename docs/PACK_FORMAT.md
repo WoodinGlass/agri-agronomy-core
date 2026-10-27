@@ -356,9 +356,12 @@ three invariants when comparing two packs:
 - **Fact IDs are never removed.** A fact that is obsolete is marked
   with `superseded_by`, not deleted.
 - **Taxon IDs are never removed** for the same reason.
-- **Fact IDs are never reused for different content.** If a fact's
-  `value`, `scope`, `parameter`, `taxon_id`, or `phase` changes, the
+- **Fact IDs are never reused for different content once reviewed.**
+  If a fact's `value`, `scope`, `parameter`, `taxon_id`, or `phase`
+  changes **and its OLD status was `reviewed` or `approved`**, the
   change must be a new `fact_id` with `superseded_by` on the old one.
+  `draft` and `imported` facts may be edited in place; they are
+  still under editorial control.
 
 Acceptable in-place changes for an existing `fact_id`: `status`,
 `evidence`, `reviewed_by`, `reviewed_at`, `locator`, `superseded_by`,
