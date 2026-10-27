@@ -18,6 +18,12 @@ from agri_core.models.finding import (
 from agri_core.pack.errors import PackError
 from agri_core.pack.knowledge_set import KnowledgeSet
 from agri_core.pack.loader import load_knowledge_set_from_files
+from agri_core.pack.tables import TABLES, read_table
+from agri_core.registry.sources import (
+    is_nc_license,
+    is_nd_license,
+    is_sa_license,
+)
 
 __all__ = [
     "RULES",
@@ -169,11 +175,66 @@ def check_fact_key_duplicate(ks: KnowledgeSet, files: Mapping[str, bytes]) -> It
             )
 
 
+def check_license_source_nc_commercial(
+    ks: KnowledgeSet, files: Mapping[str, bytes]
+) -> Iterable[Finding]:
+    """Flag non-commercial sources marked ``commercial_use=yes``.
+
+    A source declared NC (CC-BY-NC-*, LicenseRef-NC-*, etc.) with
+    ``commercial_use=yes`` contradicts itself: the row asserts
+    commercial use is permitted, the license forbids it. Pack-level
+    promotion of ``SRC001`` from ``agri-core lint-sources``.
+    """
+    table = read_table(TABLES["sources"], files["sources.csv"], source_name="sources.csv")
+    for row in table.rows:
+        if row.get("commercial_use") == "yes" and is_nc_license(row.get("license", "")):
+            sid = row["id"]
+            yield Finding(
+                code="PACK_LICENSE_NC_COMMERCIAL",
+                severity=FindingSeverity.ERROR,
+                message=(
+                    f"source {sid} has non-commercial license "
+                    f"{row['license']!r} but commercial_use=yes"
+                ),
+                location=FindingLocation(file="sources.csv", key=sid),
+            )
+
+
+def check_license_dataset_sa_nd(ks: KnowledgeSet, files: Mapping[str, bytes]) -> Iterable[Finding]:
+    """Flag SA/ND datasets that any fact references.
+
+    ShareAlike and NoDerivatives forbid redistribution of derived values
+    under this repository's Apache-2.0 license. Unreferenced datasets
+    are not flagged (dead weight, not a redistribution problem).
+    """
+    table = read_table(TABLES["datasets"], files["datasets.csv"], source_name="datasets.csv")
+    by_id = {row["dataset_id"]: row for row in table.rows}
+    referenced = sorted({f.dataset_id for f in ks.facts() if f.dataset_id})
+    for did in referenced:
+        row = by_id.get(did)
+        if row is None:
+            continue  # FK check fires elsewhere (PACK_FK_VIOLATION)
+        lic = row.get("license", "")
+        if is_sa_license(lic) or is_nd_license(lic):
+            yield Finding(
+                code="PACK_LICENSE_DATASET_SA_ND",
+                severity=FindingSeverity.ERROR,
+                message=(
+                    f"dataset {did} has {lic!r} (SA/ND) and is referenced "
+                    f"by a fact; derived values cannot be redistributed "
+                    f"under this pack's license"
+                ),
+                location=FindingLocation(file="datasets.csv", key=did),
+            )
+
+
 RULES: tuple[RuleFn, ...] = (
     check_trapezoid_not_degenerate,
     check_superseded_self,
     check_superseded_cycle,
     check_fact_key_duplicate,
+    check_license_source_nc_commercial,
+    check_license_dataset_sa_nd,
 )
 """Registered rules. Explicit tuple, not auto-import.
 

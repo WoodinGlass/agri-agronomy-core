@@ -146,3 +146,40 @@ def test_lint_text_honours_explicit_filename() -> None:
     assert {"SRC001", "SRC004"} <= codes
     for f in findings:
         assert f.file == "custom.csv"
+
+
+@pytest.mark.parametrize(
+    ("license_id", "expected"),
+    [
+        ("CC-BY-SA-4.0", True),
+        ("CC-BY-SA-3.0", True),
+        ("CC-BY-NC-SA-4.0", True),
+        ("LicenseRef-ShareAlike-custom", True),
+        ("CC-BY-4.0", False),
+        ("CC0-1.0", False),
+        ("NASDAQ", False),
+        ("unclear", False),
+    ],
+)
+def test_is_sa_license(license_id: str, expected: bool) -> None:
+    from agri_core.registry.sources import is_sa_license
+
+    assert is_sa_license(license_id) is expected
+
+
+@pytest.mark.parametrize(
+    ("license_id", "expected"),
+    [
+        ("CC-BY-ND-4.0", True),
+        ("CC-BY-NC-ND-4.0", True),
+        ("LicenseRef-NoDerivatives", True),
+        ("CC-BY-4.0", False),
+        ("CC0-1.0", False),
+        ("INDIA", False),
+        ("unclear", False),
+    ],
+)
+def test_is_nd_license(license_id: str, expected: bool) -> None:
+    from agri_core.registry.sources import is_nd_license
+
+    assert is_nd_license(license_id) is expected

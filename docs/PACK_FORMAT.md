@@ -321,6 +321,15 @@ M7 rules (run by `agri-core validate` after structural load):
   `value` are rejected (`PACK_FACT_KEY_DUPLICATE`). Same key with
   same value across different `src` is corroboration, not a
   duplicate. Superseded facts are excluded.
+- **Source license gate.** A source declared NC (CC-BY-NC-*,
+  `LicenseRef-NC-*`, etc.) with `commercial_use=yes` is an error
+  (`PACK_LICENSE_NC_COMMERCIAL`). This is the pack-level promotion
+  of `SRC001` from `agri-core lint-sources`.
+- **Dataset license gate.** A dataset with ShareAlike or
+  NoDerivatives license (`CC-BY-SA-*`, `CC-BY-ND-*`,
+  `CC-BY-NC-SA-*`, `CC-BY-NC-ND-*`) that is referenced by any fact
+  is an error (`PACK_LICENSE_DATASET_SA_ND`). Unreferenced datasets
+  are not flagged.
 
 Not yet validated (M7): `tier_required`, safety `toxicity_limit` and
 `regulatory` semantics, license gate for `commercial_use`.
@@ -406,6 +415,8 @@ all is accepted.
 | `PACK_SUPERSEDED_SELF` | `superseded_by` points to the fact itself |
 | `PACK_SUPERSEDED_CYCLE` | cycle in `superseded_by` chain (anchor = min `fact_id`) |
 | `PACK_FACT_KEY_DUPLICATE` | two live facts share `(taxon, parameter, phase, canonical_scope)` with different values |
+| `PACK_LICENSE_NC_COMMERCIAL` | NC source with `commercial_use=yes` |
+| `PACK_LICENSE_DATASET_SA_ND` | SA/ND dataset referenced by a fact |
 
 ## Size limit
 

@@ -38,6 +38,27 @@ def is_nc_license(license_id: str) -> bool:
     return "nc" in tokens or "noncommercial" in tokens
 
 
+def is_sa_license(license_id: str) -> bool:
+    """True if *license_id* names a ShareAlike variant.
+
+    Splits on ``-`` and looks for ``sa`` or ``sharealike`` tokens, so
+    ``CC-BY-SA-4.0`` matches but ``NASDAQ`` does not.
+    """
+    tokens = {tok.lower() for tok in license_id.split("-")}
+    return "sa" in tokens or "sharealike" in tokens
+
+
+def is_nd_license(license_id: str) -> bool:
+    """True if *license_id* names a NoDerivatives variant.
+
+    Splits on ``-`` and looks for ``nd``, ``noderiv``, or
+    ``noderivatives`` tokens, so ``CC-BY-ND-4.0`` matches but ``INDIA``
+    does not.
+    """
+    tokens = {tok.lower() for tok in license_id.split("-")}
+    return "nd" in tokens or "noderiv" in tokens or "noderivatives" in tokens
+
+
 def _is_valid_license(license_id: str) -> bool:
     if license_id == "unclear":
         return True

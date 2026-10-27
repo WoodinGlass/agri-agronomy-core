@@ -30,20 +30,35 @@ Notes:
   "every core parameter" is unreachable in practice and the flag exists
   precisely for this purpose. `REVIEW_GUIDE.md` will be updated in M7-5.
 
-## Decision — License gate
+## Decision — License gate (finalized M7-4)
 
-Two rules, identical in `validate`, `build`, and `coverage`:
+Two rules, identical in `validate_pack_report` and therefore in
+`agri-core validate`, `agri-core pack build`, and `agri-core coverage`
+(all use the single validation pipeline).
 
-- **L1** — a source with NC license (CC-BY-NC-*, CC-BY-NC-SA-*,
-  CC-BY-NC-ND-*) and `commercial_use = yes` is an error. This matches
-  `lint-sources` (`SRC001`) and is promoted from a source-row warning to
-  a pack-level error.
-- **L2** — a dataset whose `license` is SA (CC-BY-SA-*) or ND
-  (CC-BY-ND-*, CC-BY-NC-ND-*) that is referenced by any `dataset_id` in
-  the pack is an error. Derived values must be redistributable under the
-  pack's own license, which SA and ND forbid.
-
-No rule for "safety-critical requires commercial source" — not in README.
+- **`PACK_LICENSE_NC_COMMERCIAL`** — a source with NC license
+  (`is_nc_license`) and `commercial_use=yes` is an error. Pack-level
+  promotion of `SRC001` from `agri-core lint-sources` (which already
+  emits `SRC001` as `error` -> `lint-sources` exits 1). All three
+  commands agree: NC+yes is never accepted.
+- **`PACK_LICENSE_DATASET_SA_ND`** — a dataset with ShareAlike or
+  NoDerivatives license (`is_sa_license` or `is_nd_license`) that is
+  referenced by any fact is an error. SA/ND forbid redistribution of
+  derived values under this repository's Apache-2.0 license.
+  Unreferenced datasets are not flagged (dead weight, not a
+  redistribution problem).
+- **No rule for "safety-critical requires commercial source"** — not
+  in README, removed from earlier drafts.
+- **No rule for SA/ND *source*** — BY-SA and BY-ND permit commercial
+  use; `commercial_use=yes` is valid for those. Only NC is a
+  commercial-use restriction on sources. (SA/ND on *datasets* matters
+  for redistribution of *derived values*, hence the separate dataset
+  rule.)
+- **Detection helpers live in `registry.sources`**
+  (`is_nc_license`, `is_sa_license`, `is_nd_license`), reused by
+  `agri-core lint-sources` and M7-4 rules. Token splitting on `-`
+  (case-insensitive); `NASDAQ` does not match `sa`, `INDIA` does not
+  match `nd`.
 
 ## Decision — Duplicate facts (finalized M7-3)
 
