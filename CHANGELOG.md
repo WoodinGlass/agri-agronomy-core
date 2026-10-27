@@ -133,6 +133,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   therefore in `agri-core validate`, `agri-core pack build`, and
   `agri-core coverage`. 10 new tests (8 contract, 2 parametrized
   unit).
+- `tests/contract/test_finding_registry.py` gains
+  `test_each_rule_code_has_contract_fixture`: every rule-specific
+  `Finding` code (a code emitted by a `Finding(code=...)` in
+  `pack/validate.py` that is not a `PackError` subclass) must
+  appear in at least one `tests/contract/*.py` file other than the
+  registry meta-test. A rule without a fixture is untested dead
+  code, so this makes "add a rule, add a fixture" a mechanical
+  requirement.
 
 
 ### Added

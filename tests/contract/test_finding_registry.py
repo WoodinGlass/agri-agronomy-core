@@ -87,3 +87,41 @@ def test_pack_error_base_never_emitted_as_finding() -> None:
     assert _BASE_CLASS_CODE not in _rule_finding_codes(), (
         f"{_BASE_CLASS_CODE} is the base class; it must not appear as a Finding code"
     )
+
+
+def _contract_files_with_contents() -> dict[str, str]:
+    """All test files under tests/contract/, excluding the registry meta-test."""
+    return {
+        p.name: p.read_text(errors="replace")
+        for p in (ROOT / "tests" / "contract").glob("*.py")
+        if p.name != "test_finding_registry.py"
+    }
+
+
+def test_each_rule_code_has_contract_fixture() -> None:
+    """Every rule-specific Finding code must be exercised by >=1 contract test.
+
+    "Rule-specific" = a code emitted by a ``Finding(code=...)`` in
+    ``pack/validate.py`` that is NOT already a ``PackError`` subclass code.
+    The latter (e.g. ``PACK_INVALID``) appear from error->finding
+    conversion and are covered by structural tests in
+    ``test_load_knowledge_set.py`` and ``test_validation_report.py``.
+
+    A rule without a fixture is untested dead code: CI cannot catch a
+    regression. This test makes "add a rule, add a fixture" a mechanical
+    requirement for every future rule.
+    """
+    rule_specific = _rule_finding_codes() - _packerror_codes()
+    assert rule_specific, "no rule-specific codes found -- check AST scan"
+
+    fixtures = _contract_files_with_contents()
+    missing: dict[str, list[str]] = {}
+    for code in sorted(rule_specific):
+        hits = [name for name, text in fixtures.items() if code in text]
+        if not hits:
+            missing[code] = []
+
+    assert not missing, (
+        f"rule-specific codes without a contract fixture: {sorted(missing)}; "
+        f"add a test in tests/contract/ that triggers each code"
+    )
