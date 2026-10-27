@@ -1,0 +1,23 @@
+{
+  "facts_added": [],
+  "facts_changed": [],
+  "facts_removed": [],
+  "identical": false,
+  "new_pack_hash": "<new_pack_hash>",
+  "ok": false,
+  "old_pack_hash": "<old_pack_hash>",
+  "taxa": {
+    "added": [],
+    "changed": [],
+    "removed": [
+      "T000000005"
+    ]
+  },
+  "violations": [
+    {
+      "entity_id": "T000000005",
+      "kind": "taxon_removed",
+      "message": "taxon T000000005 removed; taxon_ids are never reused"
+    }
+  ]
+}

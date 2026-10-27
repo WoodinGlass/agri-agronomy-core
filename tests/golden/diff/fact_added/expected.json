@@ -1,0 +1,17 @@
+{
+  "facts_added": [
+    "F99999999999"
+  ],
+  "facts_changed": [],
+  "facts_removed": [],
+  "identical": false,
+  "new_pack_hash": "<new_pack_hash>",
+  "ok": true,
+  "old_pack_hash": "<old_pack_hash>",
+  "taxa": {
+    "added": [],
+    "changed": [],
+    "removed": []
+  },
+  "violations": []
+}

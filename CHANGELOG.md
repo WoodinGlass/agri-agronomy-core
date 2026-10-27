@@ -166,6 +166,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for programmatic use. Default truncates each list to 3 entries
   plus `(+N more)`; `--verbose` shows full lists. Exit 3 on any
   `PackError`. 12 new unit tests.
+- Golden diff fixtures under `tests/golden/diff/<case>/expected.json`.
+  Five cases (`identical`, `fact_added`, `fact_value_changed_draft`,
+  `fact_value_changed_reviewed`, `taxon_removed`) built from the
+  sample pack via `tests/contract/_diff_golden.py` and regenerated
+  by `scripts/gen_diff_golden.py`. `test_diff_golden.py` compares
+  `DiffReport.model_dump(mode="json")` and enforces idempotent
+  regeneration — a `DiffReport` field addition or rename now fails
+  CI until the fixtures are regenerated and committed.
+
 
 
 

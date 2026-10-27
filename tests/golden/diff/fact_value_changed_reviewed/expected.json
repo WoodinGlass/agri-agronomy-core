@@ -1,0 +1,31 @@
+{
+  "facts_added": [],
+  "facts_changed": [
+    {
+      "classification": "violation",
+      "fact_id": "F00000000002",
+      "fields_changed": [
+        "value"
+      ],
+      "new_status": "reviewed",
+      "old_status": "reviewed"
+    }
+  ],
+  "facts_removed": [],
+  "identical": false,
+  "new_pack_hash": "<new_pack_hash>",
+  "ok": false,
+  "old_pack_hash": "<old_pack_hash>",
+  "taxa": {
+    "added": [],
+    "changed": [],
+    "removed": []
+  },
+  "violations": [
+    {
+      "entity_id": "F00000000002",
+      "kind": "fact_id_reused",
+      "message": "fact F00000000002 changed ['value']; create a new fact_id and set superseded_by"
+    }
+  ]
+}
