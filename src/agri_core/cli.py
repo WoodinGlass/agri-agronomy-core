@@ -702,7 +702,7 @@ def show_cmd(
         str | None,
         typer.Option(
             "--language",
-            help="Display name in this language (only with --name).",
+            help="Prefer names in this language when resolving --name.",
         ),
     ] = None,
     min_status: Annotated[
@@ -773,20 +773,12 @@ def _show_name(
     json_output: bool,
     language: str | None,
 ) -> int:
-    outcome = resolve_taxon(ks, name)
+    outcome = resolve_taxon(ks, name, language=language)
     if isinstance(outcome, TaxonOk):
-        display = outcome.name
-        if language is not None:
-            for n in ks.names_for(outcome.taxon_id):
-                if n.language == language:
-                    display = n.name
-                    break
         if json_output:
-            payload = outcome.model_dump(mode="json")
-            payload["name"] = display
-            typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+            typer.echo(json.dumps(outcome.model_dump(mode="json"), indent=2, sort_keys=True))
         else:
-            typer.echo(f"ok: {outcome.taxon_id} {display} via={outcome.matched_via}")
+            typer.echo(f"ok: {outcome.taxon_id} {outcome.name} via={outcome.matched_via}")
         return EXIT_OK
     if isinstance(outcome, Ambiguous):
         if json_output:

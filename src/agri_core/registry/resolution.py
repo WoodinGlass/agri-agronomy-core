@@ -103,7 +103,7 @@ def _best(entries: tuple[NameIndexEntry, ...]) -> NameIndexEntry:
     )
 
 
-def resolve_taxon(pack: KnowledgeSet, name: str) -> TaxonOutcome:
+def resolve_taxon(pack: KnowledgeSet, name: str, *, language: str | None = None) -> TaxonOutcome:
     """Resolve *name* against *pack*, returning a discriminated outcome.
 
     Match set is the union of ``scientific_name``, ``accepted_name``, and
@@ -113,6 +113,13 @@ def resolve_taxon(pack: KnowledgeSet, name: str) -> TaxonOutcome:
     ``truncated=True`` if necessary); zero matches yields
     :class:`Unknown` with ``code="no_match"``. An empty query after
     normalization yields ``Unknown(code="empty_input")``.
+
+    The optional ``language`` narrows the candidate entries to those
+    tagged with that language tag (``"la"`` for ``scientific_name`` /
+    ``accepted_name``; ``"id"`` / ``"en"`` / ... for ``names.csv``
+    rows). When the query matches no entry in that language, the full
+    set is used (soft preference, not a hard filter), so a query like
+    ``"Testus annualis"`` with ``language="id"`` still resolves.
 
     This function is pure: it does not touch the filesystem or clock. All
     I/O happened when *pack* was loaded.
@@ -132,6 +139,13 @@ def resolve_taxon(pack: KnowledgeSet, name: str) -> TaxonOutcome:
             reason=f"no taxon matched {name!r}",
             code="no_match",
         )
+
+    if language is not None:
+        # Soft preference: narrow to entries with the requested language
+        # tag only if at least one such entry matches the query.
+        filtered = tuple(e for e in entries if e.language == language)
+        if filtered:
+            entries = filtered
 
     by_taxon: dict[str, list[NameIndexEntry]] = {}
     for e in entries:
