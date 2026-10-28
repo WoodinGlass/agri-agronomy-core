@@ -217,6 +217,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `scope_not_covered`, `value_unknown`, `license_excluded`.
   `tests/contract/test_unknown_code_registry.py` enforces drift
   between the registry, the emitted codes in source, and ADR-004.
+- `registry/resolution.py`: `resolve_fact(pack, taxon_id, parameter, *,
+  phase=None, scope=None, min_status="approved", require_commercial=False)`
+  returns `FactResolved | Unknown | NotApplicable | InsufficientInput`.
+  Filters in order: parameter lookup, `applies_to` match, phase
+  validation, safety floor (`min_status` raised to `reviewed` for
+  `safety_class != "none"`), superseded exclusion, status filter,
+  scope match, license gate. Winner is the most specific candidate
+  (largest `len(scope)`), then highest status, then newest review,
+  then smallest `fact_id`.
+- Scope matching uses union semantics: a fact matches when its scope
+  keys are a subset **or** a superset of the request keys, with
+  per-key value check on the intersection (range scope: fact covers
+  request; multi string/enum: set equality; scalar: equality).
+  Partial overlap is rejected — the fact requires a constraint the
+  caller did not supply.
+- `FactResolved` model: winning `fact`, its `value` / `value_pretty`,
+  non-superseded `alternatives`, `Provenance` naming only the
+  winner, and `warnings` (`fact_conflict`, `safety_min_status_raised`).
+- `models/fact.py::format_value(value: FactValue) -> str`: deterministic
+  display text for every `FactValue` shape (scalar / range / trapezoid
+  / enum / enum_set / bool / rule / unknown).
+- `schema/unknown_code_registry.json`: `license_excluded` promoted from
+  `planned` to `active`; emitted by `resolve_fact` when
+  `require_commercial=True` and no matching fact passes the gate. The
+  other three `planned` codes stay reserved for a later PR.
 
 
 
