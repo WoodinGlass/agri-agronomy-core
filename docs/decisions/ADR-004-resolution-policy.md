@@ -1,6 +1,6 @@
 # ADR-004: Taxon and fact resolution policy
 
-Status: Accepted (M8-PR-2). Updated as M8 sub-PRs land.
+Status: Accepted (M8-PR-3, final).
 
 ## Context
 
@@ -274,6 +274,45 @@ Fields:
     (filter 6) was raised.
   - No other warning codes are emitted by `resolve_fact`.
 
+## Decision — `meta()` and show CLI (finalized M8-4)
+
+`meta(pack) -> MetaInfo` is a pure function over the loaded pack:
+
+- `engine_version` — running `agri-core.__version__`.
+- `pack_version` — `pack.manifest.version`.
+- `schema_version` — `pack.manifest.schema_version`.
+- `dictionary_version` — `pack.dictionary_version`.
+- `content_hash` — `pack.pack_hash` (semantic pin).
+- `artifact_sha256` — `pack.manifest.artifact_sha256` (source packs: `None`).
+- `synthetic` — `pack.manifest.synthetic`.
+- `verified` — `pack.verified`.
+
+`FactOutcome = Annotated[FactResolved | Ambiguous | Unknown,
+Field(discriminator="status")]` and `FactOutcomeAdapter` live in
+`registry/resolution.py`. Kept separate from `Outcome` and
+`TaxonOutcome` for the same `status="ok"` collision reason.
+
+`agri-core show` has three modes, exactly one required:
+
+- `--name NAME` — resolves via `resolve_taxon`, prints `ok:` /
+  `ambiguous:` / `unknown:` in text mode or the `TaxonOutcome` JSON.
+  `--language LANG` optionally swaps the display name for a
+  `names.csv` entry in that language.
+- `--taxon TAXON_ID` — prints the taxon row and its facts.
+  `--min-status` filters by minimum status; `--require-commercial`
+  keeps only facts whose sources are all `commercial_use="yes"`.
+- `--fact FACT_ID` — prints one fact by `fact_id`.
+
+Exit codes: 0 success; 1 not-found / unknown / ambiguous; 2 usage
+(no/both modes, invalid `--min-status`, mode-mismatched flags); 3
+unreadable pack. `--json` swaps text for the model's
+`model_dump(mode="json")` for all three modes.
+
+JSON Schemas for the resolution types ship in `schema/` and are
+kept in sync by `tests/contract/test_resolution_schemas.py`:
+`taxon_outcome.schema.json`, `fact_outcome.schema.json`,
+`meta_info.schema.json`.
+
 ## Consequences
 
 - `resolve_taxon` is **pure**: no filesystem or clock access; all I/O
@@ -292,12 +331,7 @@ Fields:
   to pass `verified=True` after verifying `content_hash` or
   `artifact_sha256`.
 
-## Deferred to PR-3
+## Completed
 
-The following are **not** part of PR-1 or PR-2 and are recorded
-here so the scope boundary is explicit:
-
-- **PR-3** — `meta()` and the `show` CLI: output shape, exit codes,
-  `taxon_outcome` / `fact_outcome` / `meta_info` JSON schemas, and
-  a `FactOutcomeAdapter` if the CLI needs to serialize
-  `FactResolved` through a discriminated union.
+All three PRs (M8-PR-1, M8-PR-2, M8-PR-3) have landed. The M8
+resolution policy is stable; a change requires a superseding ADR.

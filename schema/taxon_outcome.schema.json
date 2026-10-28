@@ -1,0 +1,179 @@
+{
+  "$defs": {
+    "Ambiguous": {
+      "additionalProperties": false,
+      "description": "A name matched more than one taxon; the caller must choose one.",
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/AmbiguousCandidate"
+          },
+          "maxItems": 20,
+          "minItems": 2,
+          "title": "Candidates",
+          "type": "array"
+        },
+        "status": {
+          "const": "ambiguous",
+          "title": "Status",
+          "type": "string"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "status",
+        "candidates"
+      ],
+      "title": "Ambiguous",
+      "type": "object"
+    },
+    "AmbiguousCandidate": {
+      "additionalProperties": false,
+      "description": "One possible taxon when a name resolves to more than one.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "taxon_id": {
+          "minLength": 1,
+          "title": "Taxon Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxon_id",
+        "name"
+      ],
+      "title": "AmbiguousCandidate",
+      "type": "object"
+    },
+    "TaxonOk": {
+      "additionalProperties": false,
+      "description": "A name resolved to exactly one taxon.\n\n``status`` is always ``\"ok\"``. This is a **separate** success model from\n:class:`agri_core.models.result.Result` because ``Result`` carries a\nnumeric value; ``TaxonOk`` identifies a taxon. The two never appear in\nthe same union, so the ``status=\"ok\"`` collision is avoided by\nconstruction (``TaxonOutcome`` is a distinct discriminated union).",
+      "properties": {
+        "matched_via": {
+          "enum": [
+            "scientific_name",
+            "accepted_name",
+            "names"
+          ],
+          "title": "Matched Via",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "rank": {
+          "enum": [
+            "species",
+            "hybrid",
+            "cultivar_group",
+            "genus"
+          ],
+          "title": "Rank",
+          "type": "string"
+        },
+        "scientific_name": {
+          "minLength": 1,
+          "title": "Scientific Name",
+          "type": "string"
+        },
+        "status": {
+          "const": "ok",
+          "title": "Status",
+          "type": "string"
+        },
+        "taxon_id": {
+          "minLength": 1,
+          "title": "Taxon Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "taxon_id",
+        "name",
+        "matched_via",
+        "scientific_name",
+        "rank"
+      ],
+      "title": "TaxonOk",
+      "type": "object"
+    },
+    "Unknown": {
+      "additionalProperties": false,
+      "description": "The answer needs a value the profile marks as unknown.\n\nThis includes the case where no value covers the requested scope.",
+      "properties": {
+        "code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Code"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "status": {
+          "const": "unknown",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "reason"
+      ],
+      "title": "Unknown",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "ambiguous": "#/$defs/Ambiguous",
+      "ok": "#/$defs/TaxonOk",
+      "unknown": "#/$defs/Unknown"
+    },
+    "propertyName": "status"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/TaxonOk"
+    },
+    {
+      "$ref": "#/$defs/Ambiguous"
+    },
+    {
+      "$ref": "#/$defs/Unknown"
+    }
+  ]
+}

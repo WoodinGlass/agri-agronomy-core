@@ -16,8 +16,11 @@ from typing import Annotated, NoReturn
 import typer
 
 from agri_core import __version__
+from agri_core.models.fact import FactRow, format_value
 from agri_core.models.finding import Finding, FindingSeverity
+from agri_core.models.refusals import Ambiguous
 from agri_core.pack import (
+    KnowledgeSet,
     PackError,
     PackManifest,
     Tier,
@@ -33,7 +36,7 @@ from agri_core.pack.build import build_pack, render_source_manifest
 from agri_core.pack.loader import _default_dictionary
 from agri_core.pack.scaffold import scaffold_taxon
 from agri_core.pack.validate import validate_pack, validate_pack_report
-from agri_core.registry import lint_csv_text
+from agri_core.registry import TaxonOk, lint_csv_text, resolve_taxon
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -663,6 +666,219 @@ def coverage_cmd(
             else:
                 head_items = ", ".join(items[:3])
                 typer.echo(f"    {label}: {head_items} (+{len(items) - 3} more)")
+
+
+_STATUS_ORDER: dict[str, int] = {
+    "imported": 0,
+    "draft": 1,
+    "reviewed": 2,
+    "approved": 3,
+}
+
+
+@app.command(name="show")
+def show_cmd(
+    pack: Annotated[
+        str,
+        typer.Option("--pack", help="Path to a pack directory, or 'sample'."),
+    ],
+    name: Annotated[
+        str | None,
+        typer.Option("--name", help="Resolve a taxon name."),
+    ] = None,
+    taxon: Annotated[
+        str | None,
+        typer.Option("--taxon", help="Show a taxon by taxon_id."),
+    ] = None,
+    fact: Annotated[
+        str | None,
+        typer.Option("--fact", help="Show a fact by fact_id."),
+    ] = None,
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Emit JSON instead of text."),
+    ] = False,
+    language: Annotated[
+        str | None,
+        typer.Option(
+            "--language",
+            help="Display name in this language (only with --name).",
+        ),
+    ] = None,
+    min_status: Annotated[
+        str | None,
+        typer.Option("--min-status", help="Minimum fact status for --taxon."),
+    ] = None,
+    require_commercial: Annotated[
+        bool,
+        typer.Option(
+            "--require-commercial",
+            help="Only facts whose sources are all commercial_use=yes.",
+        ),
+    ] = False,
+) -> None:
+    """Show a resolution outcome, a taxon, or a fact from a pack."""
+    flags = [name is not None, taxon is not None, fact is not None]
+    if sum(flags) != 1:
+        typer.echo("error: specify exactly one of --name, --taxon, --fact", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    if language is not None and name is None:
+        typer.echo("error: --language only valid with --name", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    if (min_status is not None or require_commercial) and taxon is None:
+        typer.echo(
+            "error: --min-status and --require-commercial only valid with --taxon",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
+    if min_status is not None and min_status not in _STATUS_ORDER:
+        valid = ", ".join(_STATUS_ORDER)
+        typer.echo(
+            f"error: invalid --min-status {min_status!r}; valid: {valid}",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
+
+    path = _resolve_pack_path(pack)
+    try:
+        ks = load_knowledge_set(path, allow_synthetic=True)
+    except PackError as exc:
+        typer.echo(f"error: {exc.code}: {exc}", err=True)
+        raise typer.Exit(EXIT_PACK) from exc
+
+    if ks.manifest.synthetic:
+        typer.echo("SYNTHETIC DATA", err=True)
+
+    if name is not None:
+        rc = _show_name(ks, name, json_output=json_output, language=language)
+    elif taxon is not None:
+        rc = _show_taxon(
+            ks,
+            taxon,
+            json_output=json_output,
+            min_status=min_status,
+            require_commercial=require_commercial,
+        )
+    else:
+        assert fact is not None
+        rc = _show_fact(ks, fact, json_output=json_output)
+    if rc != EXIT_OK:
+        raise typer.Exit(rc)
+
+
+def _show_name(
+    ks: KnowledgeSet,
+    name: str,
+    *,
+    json_output: bool,
+    language: str | None,
+) -> int:
+    outcome = resolve_taxon(ks, name)
+    if isinstance(outcome, TaxonOk):
+        display = outcome.name
+        if language is not None:
+            for n in ks.names_for(outcome.taxon_id):
+                if n.language == language:
+                    display = n.name
+                    break
+        if json_output:
+            payload = outcome.model_dump(mode="json")
+            payload["name"] = display
+            typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            typer.echo(f"ok: {outcome.taxon_id} {display} via={outcome.matched_via}")
+        return EXIT_OK
+    if isinstance(outcome, Ambiguous):
+        if json_output:
+            typer.echo(json.dumps(outcome.model_dump(mode="json"), indent=2, sort_keys=True))
+        else:
+            flag = "true" if outcome.truncated else "false"
+            typer.echo(f"ambiguous: {len(outcome.candidates)} candidates truncated={flag}")
+            for c in outcome.candidates:
+                note_part = f" ({c.note})" if c.note else ""
+                typer.echo(f"  {c.taxon_id} {c.name}{note_part}")
+        return EXIT_ERROR
+    if json_output:
+        typer.echo(json.dumps(outcome.model_dump(mode="json"), indent=2, sort_keys=True))
+    else:
+        code_part = f" code={outcome.code}" if outcome.code else ""
+        typer.echo(f"unknown: {outcome.reason}{code_part}")
+    return EXIT_ERROR
+
+
+def _fact_is_commercial(ks: KnowledgeSet, fact: FactRow) -> bool:
+    for sid in fact.src or ():
+        try:
+            src = ks.source(sid)
+        except KeyError:
+            return False
+        if src.commercial_use != "yes":
+            return False
+    return True
+
+
+def _show_taxon(
+    ks: KnowledgeSet,
+    taxon_id: str,
+    *,
+    json_output: bool,
+    min_status: str | None,
+    require_commercial: bool,
+) -> int:
+    try:
+        row = ks.taxon(taxon_id)
+    except KeyError:
+        typer.echo(f"error: taxon {taxon_id!r} not found", err=True)
+        return EXIT_ERROR
+
+    facts = list(ks.facts_for(taxon_id))
+    if min_status is not None:
+        floor = _STATUS_ORDER[min_status]
+        facts = [f for f in facts if _STATUS_ORDER[f.status] >= floor]
+    if require_commercial:
+        facts = [f for f in facts if _fact_is_commercial(ks, f)]
+
+    if json_output:
+        typer.echo(
+            json.dumps(
+                {
+                    "taxon": row.model_dump(mode="json"),
+                    "facts": [f.model_dump(mode="json") for f in facts],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+    else:
+        typer.echo(
+            f"taxon: {row.taxon_id} {row.scientific_name} "
+            f"rank={row.rank} archetype={row.archetype} "
+            f"organism_group={row.organism_group}"
+        )
+        for f in facts:
+            pretty = format_value(f.value)
+            typer.echo(f"  {f.fact_id} {f.parameter}={pretty} status={f.status}")
+    return EXIT_OK
+
+
+def _show_fact(ks: KnowledgeSet, fact_id: str, *, json_output: bool) -> int:
+    target: FactRow | None = None
+    for f in ks.facts():
+        if f.fact_id == fact_id:
+            target = f
+            break
+    if target is None:
+        typer.echo(f"error: fact {fact_id!r} not found", err=True)
+        return EXIT_ERROR
+    if json_output:
+        typer.echo(json.dumps(target.model_dump(mode="json"), indent=2, sort_keys=True))
+    else:
+        pretty = format_value(target.value)
+        typer.echo(
+            f"fact: {target.fact_id} taxon={target.taxon_id} "
+            f"parameter={target.parameter} value={pretty} status={target.status}"
+        )
+    return EXIT_OK
 
 
 def main() -> NoReturn:
