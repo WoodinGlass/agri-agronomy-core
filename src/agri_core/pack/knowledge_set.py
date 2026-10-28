@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
@@ -13,17 +14,22 @@ from typing import Any, Protocol, TypeVar
 from pydantic import BaseModel
 
 from agri_core.models.dataset import DatasetRow
+from agri_core.models.dictionary import Dictionary
 from agri_core.models.fact import FactRow
 from agri_core.models.hazard import HazardRow
 from agri_core.models.name import NameRow
 from agri_core.models.taxon import TaxonRow
+from agri_core.pack.errors import PackStaleArtifactError
 from agri_core.pack.manifest import PackManifest
+from agri_core.pack.name_index import NameIndexEntry, build_name_index
+from agri_core.pack.normalize import normalize_name
 from agri_core.pack.tables import TABLES, TableSpec
 from agri_core.registry.sources import SourceRow
 
 __all__ = ["InMemoryKnowledgeSet", "KnowledgeSet", "SQLiteKnowledgeSet"]
 
 _T = TypeVar("_T", bound=BaseModel)
+_PACK_HASH_RE = re.compile(r"^sha256:[a-f0-9]{64}$")
 
 
 class KnowledgeSet(Protocol):
@@ -50,6 +56,10 @@ class KnowledgeSet(Protocol):
     @property
     def verified(self) -> bool:
         """True if a manifest hash or caller-pinned hash was checked."""
+
+    @property
+    def dictionary(self) -> Dictionary:
+        """The full dictionary this pack was loaded against."""
 
     def taxon(self, taxon_id: str) -> TaxonRow:
         """Return the taxon row; ``KeyError`` if unknown."""
@@ -86,6 +96,13 @@ class KnowledgeSet(Protocol):
     def dataset(self, dataset_id: str) -> DatasetRow:
         """Return the dataset row; ``KeyError`` if unknown."""
 
+    def names_index(self, query: str) -> tuple[NameIndexEntry, ...]:
+        """Entries whose normalized name matches ``normalize_name(query)``.
+
+        Sorted by ``(taxon_id, matched_via, language, name)``. Empty tuple
+        if no entries match.
+        """
+
 
 # Do not add slots=True: on Python 3.10/3.11, @dataclass(slots=True)
 # with frozen=True rebuilds the class and breaks super().__setattr__,
@@ -106,6 +123,7 @@ class InMemoryKnowledgeSet:
     _pack_hash: str
     _dictionary_version: str
     _verified: bool
+    _dictionary: Dictionary
     _taxa_by_id: Mapping[str, TaxonRow]
     _taxa_sorted: tuple[TaxonRow, ...]
     _facts_by_taxon: Mapping[str, tuple[FactRow, ...]]
@@ -113,6 +131,7 @@ class InMemoryKnowledgeSet:
     _facts_all: tuple[FactRow, ...]
     _names_by_taxon: Mapping[str, tuple[NameRow, ...]]
     _names_all: tuple[NameRow, ...]
+    _name_index: Mapping[str, tuple[NameIndexEntry, ...]]
     _hazards_by_taxon: Mapping[str, tuple[HazardRow, ...]]
     _hazards_all: tuple[HazardRow, ...]
     _sources_by_id: Mapping[str, SourceRow]
@@ -125,7 +144,8 @@ class InMemoryKnowledgeSet:
         manifest: PackManifest,
         pack_hash: str,
         dictionary_version: str,
-        verified: bool = True,
+        dictionary: Dictionary,
+        verified: bool = False,
         taxa: Iterable[TaxonRow] = (),
         names: Iterable[NameRow] = (),
         facts: Iterable[FactRow] = (),
@@ -138,6 +158,17 @@ class InMemoryKnowledgeSet:
         Indices are built eagerly. Duplicate primary keys raise
         ``ValueError`` with the offending key set's name.
         """
+        if not _PACK_HASH_RE.match(pack_hash):
+            raise ValueError(f"pack_hash must match 'sha256:<64 hex>', got {pack_hash!r}")
+        if manifest.content_hash is not None and pack_hash != manifest.content_hash:
+            raise ValueError(
+                f"pack_hash {pack_hash!r} != manifest.content_hash {manifest.content_hash!r}"
+            )
+        if dictionary_version != dictionary.version:
+            raise ValueError(
+                f"dictionary_version {dictionary_version!r} != "
+                f"dictionary.version {dictionary.version!r}"
+            )
         taxa_tuple = tuple(taxa)
         taxa_by_id: dict[str, TaxonRow] = {}
         for t in taxa_tuple:
@@ -220,6 +251,7 @@ class InMemoryKnowledgeSet:
         object.__setattr__(ks, "_pack_hash", pack_hash)
         object.__setattr__(ks, "_dictionary_version", dictionary_version)
         object.__setattr__(ks, "_verified", verified)
+        object.__setattr__(ks, "_dictionary", dictionary)
         object.__setattr__(ks, "_taxa_by_id", MappingProxyType(taxa_by_id))
         object.__setattr__(ks, "_taxa_sorted", taxa_sorted)
         object.__setattr__(ks, "_facts_by_taxon", MappingProxyType(facts_by_taxon))
@@ -227,6 +259,11 @@ class InMemoryKnowledgeSet:
         object.__setattr__(ks, "_facts_all", facts_all)
         object.__setattr__(ks, "_names_by_taxon", MappingProxyType(names_by_taxon))
         object.__setattr__(ks, "_names_all", names_all)
+        object.__setattr__(
+            ks,
+            "_name_index",
+            MappingProxyType(build_name_index(taxa=taxa_sorted, names=names_all)),
+        )
         object.__setattr__(ks, "_hazards_by_taxon", MappingProxyType(hazards_by_taxon))
         object.__setattr__(ks, "_hazards_all", hazards_all)
         object.__setattr__(ks, "_sources_by_id", MappingProxyType(sources_by_id))
@@ -248,6 +285,10 @@ class InMemoryKnowledgeSet:
     @property
     def verified(self) -> bool:
         return self._verified
+
+    @property
+    def dictionary(self) -> Dictionary:
+        return self._dictionary
 
     def taxon(self, taxon_id: str) -> TaxonRow:
         return self._taxa_by_id[taxon_id]
@@ -287,6 +328,10 @@ class InMemoryKnowledgeSet:
     def dataset(self, dataset_id: str) -> DatasetRow:
         return self._datasets_by_id[dataset_id]
 
+    def names_index(self, query: str) -> tuple[NameIndexEntry, ...]:
+        normalized = normalize_name(query)
+        return self._name_index.get(normalized, ())
+
 
 def _conforms(ks: InMemoryKnowledgeSet) -> KnowledgeSet:
     """mypy structural check: InMemoryKnowledgeSet satisfies KnowledgeSet."""
@@ -325,6 +370,47 @@ def _row_to_dict(row: sqlite3.Row, spec: TableSpec) -> dict[str, Any]:
 # Do not add slots=True: on Python 3.10/3.11 @dataclass(slots=True) with
 # frozen=True rebuilds the class and breaks super().__setattr__. See the
 # comment on InMemoryKnowledgeSet.
+def _read_raw_rows_for_index(
+    ks: SQLiteKnowledgeSet,
+) -> tuple[tuple[TaxonRow, ...], tuple[NameRow, ...]]:
+    """Read taxa and names rows from SQLite to build the name index.
+
+    Uses ``model_construct`` — rows were validated at pack-build time,
+    so ``model_validate`` per row is unnecessary.
+    """
+    conn = ks._connect()
+    try:
+        taxa_rows = conn.execute(
+            "SELECT taxon_id, rank, scientific_name, accepted_name FROM taxa"
+        ).fetchall()
+        names_rows = conn.execute(
+            "SELECT taxon_id, name, language, kind, preferred FROM names"
+        ).fetchall()
+    finally:
+        conn.close()
+
+    taxa = tuple(
+        TaxonRow.model_construct(
+            taxon_id=r["taxon_id"],
+            rank=r["rank"],
+            scientific_name=r["scientific_name"],
+            accepted_name=r["accepted_name"],
+        )
+        for r in taxa_rows
+    )
+    names = tuple(
+        NameRow.model_construct(
+            taxon_id=r["taxon_id"],
+            name=r["name"],
+            language=r["language"],
+            kind=r["kind"],
+            preferred=bool(r["preferred"]),
+        )
+        for r in names_rows
+    )
+    return taxa, names
+
+
 @dataclass(frozen=True, init=False)
 class SQLiteKnowledgeSet:
     """Read-only SQLite-backed KnowledgeSet.
@@ -344,6 +430,9 @@ class SQLiteKnowledgeSet:
     _pack_hash: str
     _dictionary_version: str
     _verified: bool
+    _dictionary: Dictionary
+    _stat_snapshot: tuple[int, int, int]
+    _name_index: Mapping[str, tuple[NameIndexEntry, ...]]
 
     @classmethod
     def _build(
@@ -353,19 +442,53 @@ class SQLiteKnowledgeSet:
         manifest: PackManifest,
         pack_hash: str,
         dictionary_version: str,
+        dictionary: Dictionary,
         verified: bool,
     ) -> SQLiteKnowledgeSet:
+        if not _PACK_HASH_RE.match(pack_hash):
+            raise ValueError(f"pack_hash must match 'sha256:<64 hex>', got {pack_hash!r}")
+        if manifest.content_hash is not None and pack_hash != manifest.content_hash:
+            raise ValueError(
+                f"pack_hash {pack_hash!r} != manifest.content_hash {manifest.content_hash!r}"
+            )
+        if dictionary_version != dictionary.version:
+            raise ValueError(
+                f"dictionary_version {dictionary_version!r} != "
+                f"dictionary.version {dictionary.version!r}"
+            )
+
+        path = Path(sqlite_path)
+        st = path.stat()
+        stat_snapshot = (st.st_size, st.st_mtime_ns, st.st_ino)
+
         ks = object.__new__(cls)
-        object.__setattr__(ks, "_sqlite_path", Path(sqlite_path))
+        object.__setattr__(ks, "_sqlite_path", path)
         object.__setattr__(ks, "_manifest", manifest)
         object.__setattr__(ks, "_pack_hash", pack_hash)
         object.__setattr__(ks, "_dictionary_version", dictionary_version)
         object.__setattr__(ks, "_verified", verified)
+        object.__setattr__(ks, "_dictionary", dictionary)
+        object.__setattr__(ks, "_stat_snapshot", stat_snapshot)
+        raw_taxa, raw_names = _read_raw_rows_for_index(ks)
+        object.__setattr__(
+            ks,
+            "_name_index",
+            MappingProxyType(build_name_index(taxa=raw_taxa, names=raw_names)),
+        )
         return ks
 
     # ---- internal -----------------------------------------------------
 
+    def _check_not_stale(self) -> None:
+        st = self._sqlite_path.stat()
+        if (st.st_size, st.st_mtime_ns, st.st_ino) != self._stat_snapshot:
+            raise PackStaleArtifactError(
+                f"{self._sqlite_path} changed since load; re-load the pack",
+                file="pack.sqlite",
+            )
+
     def _connect(self) -> sqlite3.Connection:
+        self._check_not_stale()
         conn = sqlite3.connect(_sqlite_uri(self._sqlite_path), uri=True)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA query_only = ON")
@@ -423,6 +546,10 @@ class SQLiteKnowledgeSet:
     def verified(self) -> bool:
         return self._verified
 
+    @property
+    def dictionary(self) -> Dictionary:
+        return self._dictionary
+
     # ---- per-item lookups ---------------------------------------------
 
     def taxon(self, taxon_id: str) -> TaxonRow:
@@ -457,6 +584,11 @@ class SQLiteKnowledgeSet:
         if result is None:
             raise KeyError(dataset_id)
         return result
+
+    def names_index(self, query: str) -> tuple[NameIndexEntry, ...]:
+        self._check_not_stale()
+        normalized = normalize_name(query)
+        return self._name_index.get(normalized, ())
 
     # ---- iterators ----------------------------------------------------
 

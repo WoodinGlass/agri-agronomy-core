@@ -109,3 +109,7 @@ class PackUnitMismatchError(PackError):
 
 class PackSafetyViolationError(PackError):
     code = "PACK_SAFETY_VIOLATION"
+
+
+class PackStaleArtifactError(PackError):
+    code = "PACK_STALE_ARTIFACT"

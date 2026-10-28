@@ -10,14 +10,18 @@ from pathlib import Path  # noqa: F401 (used in helper type hints only)
 import pytest
 
 from agri_core.models.dataset import DatasetRow
+from agri_core.models.dictionary import Dictionary
 from agri_core.models.fact import FactRow
 from agri_core.models.hazard import HazardRow
 from agri_core.models.name import NameRow
 from agri_core.models.taxon import TaxonRow
 from agri_core.pack import InMemoryKnowledgeSet, PackManifest
+from agri_core.pack.loader import _default_dictionary
 from agri_core.registry.sources import SourceRow
 
 pytestmark = pytest.mark.contract
+
+_DICT = _default_dictionary()
 
 
 # ---- fixture builders --------------------------------------------------
@@ -101,6 +105,7 @@ def _dataset(did: str) -> DatasetRow:
 
 def _make_ks(
     *,
+    dictionary: Dictionary = _DICT,
     taxa=(),
     names=(),
     facts=(),
@@ -121,7 +126,8 @@ def _make_ks(
     return InMemoryKnowledgeSet.from_rows(
         manifest=manifest,
         pack_hash="sha256:" + "1" * 64,
-        dictionary_version="1.0.0",
+        dictionary_version=dictionary.version,
+        dictionary=dictionary,
         verified=verified,
         taxa=taxa,
         names=names,

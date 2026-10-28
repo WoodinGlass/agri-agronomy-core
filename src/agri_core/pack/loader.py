@@ -549,6 +549,7 @@ def load_knowledge_set_from_files(
         manifest=manifest,
         pack_hash=actual,
         dictionary_version=dictionary.version,
+        dictionary=dictionary,
         verified=verified,
         taxa=rows["taxa"],  # type: ignore[arg-type]
         names=rows["names"],  # type: ignore[arg-type]
@@ -703,6 +704,7 @@ def _load_built_pack(
         manifest=manifest,
         pack_hash=content_hash,
         dictionary_version=dictionary.version,
+        dictionary=dictionary,
         verified=True,
     )
 
