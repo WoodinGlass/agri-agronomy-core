@@ -46,7 +46,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 1. **Numbers come from data and tested code, never from a language model.** The engine may explain a result; it must not invent one.
 2. **Refuse rather than guess.** Every calculation returns an `Outcome`. Missing input gives `insufficient_input`. Missing data gives `unknown`. An ambiguous taxon name gives `ambiguous`. A question that does not apply gives `not_applicable`. A legal or regulatory question gives `refer_to_authority`. There are no silent defaults, and expected "cannot answer" cases are never exceptions.
 3. **The pack is the source of truth.** Every fact carries a `fact_id`, a status, an evidence grade, a scope and a source. Every `Result` records which fact IDs it used, the pack version and pack hash, and the source IDs behind the values.
-4. **Deterministic fact resolution.** The policy is fixed: filter by status ≥ the caller's minimum and by the license gate; match scope (empty key = wildcard, a filled key must cover the given context; a context not given is never considered a match); order by scope specificity, status, evidence, then `fact_id`. Conflicting equal-ranked facts raise a `FACT_CONFLICT` warning and are returned as alternatives. No matching fact gives `unknown`; the engine never borrows a value from another taxon or region.
+4. **Deterministic fact resolution.** The policy is fixed and specified in `docs/decisions/ADR-004-resolution-policy.md`. A query names a taxon, a parameter, and optionally a phase, scope, minimum status and `require_commercial` flag. Filters run in order: parameter lookup, `applies_to` match (`not_applicable` otherwise), phase validation (`insufficient_input` otherwise), superseded exclusion, status ≥ the caller's minimum (with a `reviewed` safety floor for safety-critical parameters), phase match, scope match, and the license gate. Scope match is union semantics — a fact matches when its keys are a subset **or** a superset of the request keys, with per-key values compared on the intersection (range covers; multi string/enum set equality; scalar equality); partial overlap is rejected. The winner is the most specific candidate (largest `len(scope)`), then highest status, then most recent review date, then smallest `fact_id`. Conflicting alternatives raise a `fact_conflict` warning. No matching fact gives `unknown(code="no_match")`; the engine never borrows a value from another taxon or region.
 5. **Pure and repeatable.** No I/O in calculators and no hidden clock: dates are arguments. The same input against the same pack always gives the same output.
 6. **Immutable, explicit state.** A loaded pack is a `KnowledgeSet`: immutable, thread-safe, created by the caller. No singletons, hidden caches, current-directory lookups or environment-variable reads.
 7. **Scoped, not global.** No single pH, temperature or dose fits every taxon, country and growing system. Values declare their scope; the engine answers `unknown` outside it.
@@ -94,32 +94,41 @@ Install in any Colab cell:
 
 No API key or GPU is needed. Pure Python, CPU only.
 
-### Python (preview)
+### Python (as of M8)
 
-The snippet shows the intended `v0.1` interface that the contract tests are written against. Names may change until `v0.1.0` is tagged.
+The snippet uses the signatures the contract tests exercise today. Calculation functions (`vpd`, `gdd`, `et0`, irrigation, fertilizer) ship in M10–M13.
 
 ```python
 from pathlib import Path
 
 from agri_core import registry
-from agri_core.climate import vpd
 from agri_core.pack import load_knowledge_set
 
 # Load a pack explicitly. No current-directory lookup, no environment variables.
 pack = load_knowledge_set(Path("/data/agri-knowledge/packs/2026.10.0"))
 
-# Resolve a taxon by name. Returns ok, ambiguous or unknown.
-taxon = registry.resolve_taxon("tomato", country="ID", pack=pack)
-if taxon.status != "ok":
-    print(taxon.status)  # "ambiguous" or "unknown"
+# Resolve a taxon by name. Returns TaxonOk, Ambiguous or Unknown.
+outcome = registry.resolve_taxon(pack, "tomato")
+if outcome.status == "ok":
+    print(outcome.taxon_id, outcome.name, outcome.matched_via)
+elif outcome.status == "ambiguous":
+    print([c.taxon_id for c in outcome.candidates], "truncated=", outcome.truncated)
+else:  # "unknown"
+    print(outcome.code, outcome.reason)
 
-# Every result carries the fact IDs, pack version, pack hash and source IDs.
-r = vpd(temp_c=28.0, rh_pct=65.0)
-if r.status == "ok":
-    print(r.value, r.unit)  # about 1.32 kPa
-    print(r.method, r.assumptions, r.warnings)
-else:
-    print(r.status)
+# Optional: prefer a name in a given language tag (e.g. from names.csv).
+outcome = registry.resolve_taxon(pack, "Bawang", language="id")
+taxon_id = outcome.taxon_id if outcome.status == "ok" else None
+
+# Resolve a fact for a taxon. Returns FactResolved, Unknown, NotApplicable
+# or InsufficientInput.
+fact = registry.resolve_fact(pack, taxon_id, "soil_ph")
+if fact.status == "ok":
+    print(fact.value_pretty, fact.fact.fact_id, fact.provenance.pack_hash)
+
+# Metadata for the loaded pack (pure; no filesystem or clock access).
+info = registry.meta(pack)
+print(info.engine_version, info.pack_version, info.content_hash)
 ```
 
 ### Command line
@@ -133,6 +142,11 @@ agri-core pack scaffold --pack PATH --scientific-name NAME --archetype annual --
 agri-core pack build --pack src/agri_core/_samples/sample_pack --out build/  # build SQLite
 agri-core coverage --pack sample          # tier distribution + per-taxon coverage
 agri-core diff --old A --new B [--json] [--exit-code]  # compare two packs
+
+# M8 resolution and inspection
+agri-core show --pack sample --name "Testus annualis" [--language LANG] [--json]                 # resolve a name
+agri-core show --pack sample --taxon T000000001 [--min-status S] [--require-commercial] [--json]  # show a taxon + facts
+agri-core show --pack sample --fact F00000000001 [--json]                                        # show a fact by id
 ```
 
 ## Output contract
@@ -143,10 +157,10 @@ Every calculation returns an `Outcome`, a discriminated union whose `status` fie
 |---|---|---|
 | `ok` | `Result` | The calculation succeeded. |
 | `insufficient_input` | `InsufficientInput` | A required input is missing, or a conversion needs an explicit factor (EC to ppm: 0.5, 0.64 or 0.7). Lists what is missing. |
-| `unknown` | `Unknown` | The answer needs a value the pack marks as unknown, or no fact covers the requested scope. Gives a reason. |
+| `unknown` | `Unknown` | The answer needs a value the pack marks as unknown, or no fact covers the requested scope. Gives a `reason` and an optional stable `code` (a lowercase identifier registered in `schema/unknown_code_registry.json`; `no_match`, `empty_input`, `license_excluded`, ...). |
 | `not_applicable` | `NotApplicable` | The question does not apply (for example no standard Kc, or a propagation method the taxon does not use). Gives a reason. |
 | `refer_to_label` | `ReferToLabel` | Pesticides: follow the product label and local regulations. |
-| `ambiguous` | `Ambiguous` | A taxon name resolves to more than one candidate. Lists `candidates` (each with `taxon_id`, `name`, optional `note`); the caller must choose one. |
+| `ambiguous` | `Ambiguous` | A taxon name resolves to more than one candidate. Lists `candidates` (each with `taxon_id`, `name`, optional `note`), capped at 20 with `truncated: bool`; the caller must choose one. |
 | `refer_to_authority` | `ReferToAuthority` | The answer depends on a legal or regulatory authority. Gives a `reason` and a sorted, unique list of `flags` (stable uppercase codes). |
 
 A successful `Result` has `status` plus these payload fields:
@@ -160,10 +174,25 @@ A successful `Result` has `status` plus these payload fields:
 | `provenance` | Where the numbers came from: fact IDs, pack version, pack hash and source IDs. |
 | `evidence` | Evidence grade(s) of the facts used. |
 | `assumptions` | Every assumed or defaulted condition, stated explicitly. Each has a stable `code` and a message. |
-| `warnings` | Fallback methods, out-of-range inputs, near-threshold results, `FACT_CONFLICT`. Each has a stable `code` and a message. |
+| `warnings` | Fallback methods, out-of-range inputs, near-threshold results, `fact_conflict`, `safety_min_status_raised`. Each has a stable `code` and a message. |
 | `capped` | `true` if a safety cap limited the result. |
 
 The word `unknown` appears at three levels: a fact whose value is marked unknown (with a reason), a factor without data inside a suitability breakdown, and the `unknown` outcome returned when an answer would need such a value.
+
+### Resolution outcomes (M8)
+
+`resolve_taxon` returns a `TaxonOutcome`, `resolve_fact` returns a `FactOutcome`. These are **separate unions** from `Outcome`, discriminated by `status`, kept apart to avoid the `status="ok"` collision with `Result`. Each has its own `TypeAdapter` in `registry/resolution.py` and its own JSON Schema in `schema/`.
+
+- **`TaxonOk`** (`status="ok"`): `taxon_id`, `name`, `matched_via` (`scientific_name` / `accepted_name` / `names`), `scientific_name`, `rank`. `resolve_taxon(pack, name, *, language=None)` accepts an optional BCP-47 tag; when set and at least one matching entry carries it, the candidate set narrows to those entries before `matched_via` precedence. When no entry matches, the full set is used (soft preference — a scientific-name query with `language="id"` still resolves via `scientific_name`).
+- **`FactResolved`** (`status="ok"`): `fact` (the winning `FactRow`), `value` / `value_pretty` (`format_value(fact.value)`), `alternatives` (other non-superseded matches, sorted by the same tie-break), `provenance` (`fact_ids` names only the winner; `pack_version`, `pack_hash`, `source_ids`), `warnings` (`fact_conflict`, `safety_min_status_raised`).
+- **`Unknown`** shared by both unions: `reason` (mandatory) and optional `code`. The registry `schema/unknown_code_registry.json` tracks each code as `active` (already emitted) or `planned` (reserved for a later release); a drift test rejects `planned` codes appearing in source.
+- **`Ambiguous`** (from `resolve_taxon`): `candidates` capped at 20, sorted by `taxon_id`; `truncated=True` when the cap is hit.
+- **`NotApplicable`**: `applies_to` mismatch on `resolve_fact`.
+- **`InsufficientInput`**: missing or invalid `phase` on `resolve_fact`.
+
+### `MetaInfo` (`meta(pack)`)
+
+`meta(pack) -> MetaInfo` is a pure function over the loaded pack: `engine_version`, `pack_version`, `schema_version`, `dictionary_version`, `content_hash` (mirrors `pack_hash`), `artifact_sha256` (`None` for source packs), `synthetic`, `verified`.
 
 ## Pack format
 
@@ -199,7 +228,7 @@ content_hash = "sha256:..."
 
 ### Facts
 
-Each fact is one value at one scope. The engine resolves facts deterministically: filter, match scope, then order by specificity, status, evidence and `fact_id`. Conflicts between equally ranked facts raise a `FACT_CONFLICT` warning and are returned as alternatives. No matching fact gives `unknown`.
+Each fact is one value at one scope. The engine resolves facts deterministically: filter by status (with a `reviewed` safety floor for safety-critical parameters), match `applies_to`, validate phase, exclude superseded facts, match scope by union semantics, then order by specificity (`len(scope)`), status, review date and `fact_id`. Conflicts between alternatives raise a `fact_conflict` warning and are returned as `alternatives`. No matching fact gives `unknown(code="no_match")`.
 
 | Field | Meaning |
 |---|---|
@@ -232,12 +261,12 @@ Parameters with a `safety_class` other than `none` are safety-critical in the di
 | `toxicity_limit` | Threshold above which a hazard harms humans, animals or the environment. |
 | `regulatory` | Flag or limit mandated by a specific jurisdiction. |
 
-Safety-critical parameters may never be `draft` or `imported`; `approved` requires two independent reviews. Salinity (`soil_ec`, `water_ec_max`) is a tolerance condition for the plant, not an applied amount and not a hazard to humans, animals or the environment; it stays `safety_class: none`.
+Safety-critical parameters may never be `draft` or `imported`; `approved` requires two independent reviews. `resolve_fact` also raises the minimum status floor to `reviewed` for safety-critical parameters and records the elevation as a `safety_min_status_raised` warning. Salinity (`soil_ec`, `water_ec_max`) is a tolerance condition for the plant, not an applied amount and not a hazard to humans, animals or the environment; it stays `safety_class: none`.
 
 ### Pack security
 
 - The engine verifies the pack hash on load.
-- SQLite is opened read-only and immutable, with `trusted_schema=OFF`.
+- SQLite is opened read-only and immutable, with `trusted_schema=OFF`. A TOCTOU guard raises `PackStaleArtifactError` (`PACK_STALE_ARTIFACT`) if the built artifact changed on disk after load.
 - YAML, if used for overlays, is read with `safe_load` only.
 - Pack size is bounded.
 - A pack from an untrusted source is not loaded without a pinned hash.
@@ -401,8 +430,8 @@ If you use the engine in research or in a product, cite this repository with the
 | **M5** Loader and sample pack | Done | `compute_pack_hash` / `verify_pack_hash`; `load_knowledge_set(path)`; immutable `KnowledgeSet`; sample pack with 8 synthetic taxa, one per initial archetype (`annual`, `aquatic`, `biennial`, `epiphyte`, `fungal`, `geophyte`, `herbaceous_perennial`, `woody_perennial`), without real agronomic data. | Hash determinism and mismatch tests pass; sample pack loads cleanly; foreign keys on `taxon_id`, `parameter`, `src` verified. |
 | **M6** Build | Done | `scaffold` (opaque taxon IDs, never reused) plus `build` (CSV → SQLite + manifest, reproducible). | Wheel and pack build reproducibly (identical SHA-256 twice). |
 | **M7** Validate, diff, coverage, license gate | Done | Trapezoid order, scope validity, unit resolution, duplicate detection, tier derivation (T0–T3), `diff` report, `coverage`, license gate. | Sample pack passes validate with 0 errors; `diff` matches fixtures; coverage assigns tiers; license gate rejects NC + `commercial_use=yes`. |
-| **M8** `resolve_taxon` and `resolve_fact` | Done | Deterministic resolution per the fixed policy; `show` CLI. | `resolve_taxon` p95 ≤ 5 ms; resolution tests match fixtures. |
-| **M9** Offline, performance, docs, tag `v0.1.0` | Not started | Socket-blocking pytest plugin, performance budget tests, and the remaining `docs/` skeleton (`DICTIONARY`, `RESOLUTION_POLICY`, `SAFETY`, `ADDING_A_TAXON`; `PACK_FORMAT` and `REVIEW_GUIDE` ship in M5). | Every test passes with network blocked; performance budget met; tag `v0.1.0`. |
+| **M8** `resolve_taxon` and `resolve_fact` | Done | Deterministic resolution per the fixed policy (ADR-004); `meta()`; `show` CLI with three modes (`--name`, `--taxon`, `--fact`). | `resolve_taxon` p95 ≤ 5 ms on a 10k-taxa pack (measured ≈ 12 µs); resolution contract tests pass (taxon, fact, schema drift, perf); `show` CLI usable. |
+| **M9** Offline, performance, docs, tag `v0.1.0` | Not started | Socket-blocking pytest plugin; additional performance budget tests for pack load, batch suitability and memory (resolver perf test ships in M8); the remaining `docs/` skeleton (`DICTIONARY`, `RESOLUTION_POLICY`, `SAFETY`, `ADDING_A_TAXON`); tag `v0.1.0`. | Every test passes with network blocked; performance budget met; tag `v0.1.0`. |
 | **M10** Climate, thresholds and stages | Not started | VPD, GDD, DLI, ET0 with fallback, temperature from elevation, threshold checks, stage resolver. | Golden tests pass; phases resolve per archetype; perennials use caller-supplied events. |
 | **M11** Irrigation, fertilizer, media and water | Not started | Registry of irrigation modes (`container_band`, `field_etc`, `paddy_awd`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. | `v0.1.0` passes against the sample pack and against `agri-knowledge` `v0.1.0`; irrigation results match scenario fixtures. |
 | **M12** Suitability and propagation | Not started | Single and batch site suitability, per-factor reasons, hazard flags, dated propagation plans. | Batch mode within the performance budget; scenario tests including an `unsuitable` case. |
@@ -427,10 +456,10 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 
 **Test kinds**
 
-- `contract`: `Outcome`, dictionary, exported tool schemas and JSON Schemas stay stable.
+- `contract`: `Outcome`, dictionary, exported tool schemas and JSON Schemas stay stable. Includes the M8 resolution contract tests (`tests/contract/test_resolve_taxon.py`, `test_resolve_fact.py`, `test_resolution_schemas.py`, `test_unknown_code_registry.py`).
 - `golden`: results validated against published worked examples, or against independent permissively licensed implementations.
 - `offline` (from `v0.1.0`): network access is blocked; any attempt to open a socket fails the test.
-- `perf` (from `v0.1.0`): pack load and resolution stay within the published budget.
+- `perf`: pack load and resolution stay within the published budget (resolver perf test ships in M8; wider coverage from `v0.1.0`). Exclude with `-m 'not perf'` on slow runners.
 - `property`: Hypothesis checks such as unit round-trips, no negative amounts, and monotonic behavior with area.
 - `scenario`: end-to-end expectations, for example a taxon whose every suitability factor is `unsuitable` in the requested scope must return `unsuitable`.
 - `unit`: functions in isolation.
@@ -464,7 +493,7 @@ These targets are measured in CI and in Colab from `v0.1.0`, and will be recalib
 | Batch suitability, 5,000 taxa | ≤ 200 ms p95 |
 | Load a pack with 10,000 taxa | ≤ 1 s |
 | Peak memory | ≤ 200 MB |
-| `resolve_taxon` p95 | ≤ 5 ms |
+| `resolve_taxon` p95 | ≤ 5 ms (measured ≈ 12 µs on a 10k-taxa pack in M8) |
 
 ## Repository layout
 
@@ -479,38 +508,45 @@ agri-agronomy-core/
 │                            #   stages, systems, environments, uses, traits, organism_groups,
 │                            #   climate_zones, growth_habits, establishment_states,
 │                            #   yield_targets, scope_keys, modules, safety_classes
-├─ docs/                     # PACK_FORMAT.md, REVIEW_GUIDE.md (present);
+├─ docs/                     # PACK_FORMAT.md, REVIEW_GUIDE.md;
 │                            #   ADDING_A_TAXON, DICTIONARY, RESOLUTION_POLICY, SAFETY (M9)
-│  ├─ decisions/             # ADR-001-knowledge-set.md, ADR-002-build-and-hash.md
+│  ├─ decisions/             # ADR-001-knowledge-set.md, ADR-002-build-and-hash.md,
+│  │                         #   ADR-003-tiers-license-duplicates.md,
+│  │                         #   ADR-004-resolution-policy.md
 │  └─ design/                # plant_wishlist_v4.csv, plant_wishlist_v4_rationale.md,
 │                            #   plant_wishlist_v4_migration.md
 ├─ notebooks/                # Colab quickstart (from v0.2.0), executed in CI
 ├─ schema/                   # JSON Schemas: outcome, source, taxon, name, fact, hazard,
-│                            #   parameter, dataset, manifest
+│                            #   parameter, dataset, manifest, finding, validation_report,
+│                            #   taxon_outcome, fact_outcome, meta_info;
+│                            #   plus unknown_code_registry.json (code registry, not a schema)
 ├─ src/agri_core/
 │  ├─ _samples/              # synthetic Apache-2.0 sample pack
-│  ├─ climate/               # VPD, GDD, DLI, ET0
-│  ├─ export/                # bundle, tool schemas, edge thresholds, review sheet
-│  ├─ fertilizer/            # nutrient to product, unit conversion
-│  ├─ irrigation/            # registry of modes: container_band, field_etc, paddy_awd
-│  ├─ media/                 # media mixes and water quality
+│  ├─ climate/               # VPD, GDD, DLI, ET0 (M10)
+│  ├─ export/                # bundle, tool schemas, edge thresholds, review sheet (M13)
+│  ├─ fertilizer/            # nutrient to product, unit conversion (M11)
+│  ├─ irrigation/            # registry of modes: container_band, field_etc, paddy_awd (M11)
+│  ├─ media/                 # media mixes and water quality (M11)
 │  ├─ models/                # Outcome, Result, Dictionary, ParameterDef, PhaseSet, ScopeKey,
-│  │                         #   row models, canonical JSON, ids, units
-│  ├─ pack/                  # build, diff, license gate, load, migrate, scaffold, validate, verify
-│  ├─ propagation/           # dated planner
-│  ├─ registry/              # meta, resolve_fact, resolve_taxon
-│  ├─ safety/                # dose caps, label referral
-│  ├─ stages/                # stage resolver
-│  ├─ suitability/           # scoring with reasons
-│  ├─ thresholds/            # four-point trapezoid checks
+│  │                         #   row models, canonical JSON, ids, units, refusals, notices, provenance
+│  ├─ pack/                  # build, diff, license gate, load, migrate, scaffold, validate, verify,
+│  │                         #   knowledge_set, loader, manifest, tables, sqlite_schema,
+│  │                         #   name_index, normalize, errors, tiers, files
+│  ├─ propagation/           # dated planner (M12)
+│  ├─ registry/              # resolution.py (resolve_taxon, resolve_fact, meta, MetaInfo),
+│  │                         #   sources.py, errors.py
+│  ├─ safety/                # dose caps, label referral (M11)
+│  ├─ stages/                # stage resolver (M10)
+│  ├─ suitability/           # scoring with reasons (M12)
+│  ├─ thresholds/            # four-point trapezoid checks (M10)
 │  ├─ cli.py
 │  └─ py.typed
 ├─ tests/
-│  ├─ contract/              # Outcome, dictionary, exported schemas stay stable
+│  ├─ contract/              # Outcome, dictionary, exported schemas, resolution stay stable
 │  ├─ fixtures/              # synthetic data for behavior tests only
 │  ├─ golden/                # validated against published examples or independent permissive implementations
 │  ├─ offline/               # socket blocker (from v0.1.0)
-│  ├─ perf/                  # performance budget (from v0.1.0)
+│  ├─ perf/                  # performance budget (resolver perf test ships in M8)
 │  ├─ property/              # Hypothesis checks
 │  ├─ scenario/              # end-to-end expectations
 │  └─ unit/
