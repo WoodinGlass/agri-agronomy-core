@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "codes": [
+    {
+      "code": "empty_input",
+      "status": "active",
+      "description": "Query normalized to empty string"
+    },
+    {
+      "code": "no_match",
+      "status": "active",
+      "description": "No taxon matched the query"
+    },
+    {
+      "code": "below_min_status",
+      "status": "planned",
+      "description": "Fact exists but its status is below the requested minimum"
+    },
+    {
+      "code": "scope_not_covered",
+      "status": "planned",
+      "description": "No fact's scope covers the requested scope"
+    },
+    {
+      "code": "value_unknown",
+      "status": "planned",
+      "description": "Fact exists but its value is marked unknown"
+    },
+    {
+      "code": "license_excluded",
+      "status": "planned",
+      "description": "Fact excluded by license gate (commercial_use != yes)"
+    }
+  ]
+}

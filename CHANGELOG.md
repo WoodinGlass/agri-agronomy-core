@@ -210,6 +210,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   precedence, name index design, TOCTOU, `TaxonOutcome` union,
   `Unknown.code` semantics. Deferral scope for PR-2 and PR-3
   recorded explicitly.
+- `schema/unknown_code_registry.json` (new) -- registry for
+  `Unknown.code` values with `status: "active" | "planned"`. Two
+  codes are `active` (`empty_input`, `no_match`); four are
+  `planned` for `resolve_fact` (PR-2): `below_min_status`,
+  `scope_not_covered`, `value_unknown`, `license_excluded`.
+  `tests/contract/test_unknown_code_registry.py` enforces drift
+  between the registry, the emitted codes in source, and ADR-004.
 
 
 
