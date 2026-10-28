@@ -159,12 +159,16 @@ PR-1 populates two codes:
 - `"empty_input"` — the query was empty after normalization.
 - `"no_match"` — the query normalized fine but nothing matched.
 
-A separate PR (`chore/m8-unknown-code-registry`, a PR-mini in the
-M8 plan) will ship a registry file plus a drift test once PR-2's
-codes (`below_min_status`, `scope_not_covered`, `license_excluded`,
-`value_unknown`) are also in place. Until then, `code` is a
-free-form lowercase string, and the schema's `pattern` (not a
-`Literal`) is the contract.
+A separate PR-mini (`chore/m8-unknown-code-registry`) ships
+`schema/unknown_code_registry.json` with every planned code, each
+carrying a status: `active` means the code is already emitted by
+the resolver; `planned` means the code is reserved for a later PR
+and not yet emitted. `below_min_status`, `scope_not_covered`,
+`value_unknown`, and `license_excluded` are `planned` until PR-2.
+A drift test (`tests/contract/test_unknown_code_registry.py`)
+keeps the registry, the source, and this section in sync. Until
+every code is `active`, the wire contract remains the schema's
+`pattern` (not a `Literal`).
 
 ## Consequences
 
