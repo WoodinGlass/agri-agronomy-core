@@ -88,6 +88,24 @@ Final tie-break is `name` (deterministic). `Ambiguous.candidates[].note`
 records the matched path of each candidate so a caller can see
 whether the candidates agree or disagree on the route.
 
+## Decision — Language preference (added M8 follow-up)
+
+`resolve_taxon(pack, name, *, language: str | None = None)` accepts
+an optional BCP-47 tag. When `language` is set and at least one
+entry in the query's match set carries that tag, the candidate set
+is narrowed to those entries before the `matched_via` precedence is
+applied. When the query has no entries in that language, the full
+match set is used (soft preference, not a hard filter), so a
+scientific-name query like `"Testus annualis"` with `language="id"`
+still resolves via `scientific_name`.
+
+Tags recognised in practice: `"la"` on the synthetic
+`scientific_name` / `accepted_name` entries, and any language tag
+present in `names.csv` (e.g. `"id"`, `"en"`, `"ja"`). The
+`agri-core show --name ... --language LANG` flag forwards this
+parameter verbatim; there is no second post-hoc name lookup in the
+CLI.
+
 ## Decision — Name index design (finalized M8-1b)
 
 - **Built eagerly at load**, never persisted. Unicode normalization
@@ -126,7 +144,7 @@ its timestamp; that is out of scope for a library.
 only from the in-memory index and never touches SQLite; without an
 explicit check it would happily answer from a stale index. The 1 µs
 `stat` cost is negligible against the ~12 µs p95 baseline measured
-in `tests/perf/test_resolve_taxon.py`.
+in `tests/perf/test_resolve_taxon_perf.py`.
 
 ## Decision — `TaxonOutcome` union (finalized M8-2a)
 
@@ -323,9 +341,9 @@ kept in sync by `tests/contract/test_resolution_schemas.py`:
 - `Outcome` and `OutcomeAdapter` are untouched;
   `outcome.schema.json` regenerates with the additive fields only.
 - Every new behavior has a test: `test_name_index.py`,
-  `test_names_index.py`, `test_resolve_taxon.py`,
+  `test_names_index.py`, `tests/contract/test_resolve_taxon.py`,
   `test_stale_artifact.py`, `test_pack_hash_validation.py`,
-  `tests/perf/test_resolve_taxon.py`.
+  `tests/perf/test_resolve_taxon_perf.py`.
 - **Breaking:** `from_rows` / `_build` now require `dictionary=`,
   and `from_rows` defaults `verified=False`. The loader continues
   to pass `verified=True` after verifying `content_hash` or
@@ -333,5 +351,7 @@ kept in sync by `tests/contract/test_resolution_schemas.py`:
 
 ## Completed
 
-All three PRs (M8-PR-1, M8-PR-2, M8-PR-3) have landed. The M8
-resolution policy is stable; a change requires a superseding ADR.
+M8 is complete: M8-PR-1 (`resolve_taxon`), M8-PR-2 (`resolve_fact`),
+M8-PR-3 (`meta` + `show`), plus follow-ups: the `Unknown.code`
+registry (#98) and the `language` preference for `resolve_taxon`.
+The policy is stable; a change requires a superseding ADR.

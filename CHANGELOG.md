@@ -260,6 +260,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   **M8-PR-3, final**. New section documenting `meta()` and `show`.
   Deferred section replaced by Completed.
 - `README.md`: Registry feature row and M8 milestone move to Done.
+- `resolve_taxon` gains a keyword-only `language: str | None = None`
+  filter. When set and at least one matching entry carries the tag,
+  the candidate set narrows to those entries before `matched_via`
+  precedence; otherwise the full match set is used (soft
+  preference). `agri-core show --name ... --language LANG` forwards
+  the parameter to `resolve_taxon`; the post-hoc name lookup in the
+  CLI is removed (single source of truth).
+- `tests/contract/test_resolve_taxon.py` (new, 21 tests) closes the
+  missing contract test file for `resolve_taxon`. Covers exact /
+  ambiguous / unknown, case, hybrid sign, ambiguity via the real
+  loader (D18), truncation at 20, accepted_name collision, and the
+  five `language` cases.
+- `docs/decisions/ADR-004-resolution-policy.md`: new section
+  documenting `language` preference; `test_resolve_taxon.py`
+  reference made explicit (`tests/contract/...`); Completed
+  section notes the follow-ups.
 
 
 
