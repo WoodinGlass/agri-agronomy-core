@@ -94,6 +94,7 @@ def _mini_ks(
         manifest=manifest,
         pack_hash="sha256:" + "0" * 64,
         dictionary_version=dictionary.version,
+        dictionary=dictionary,
         verified=True,
         taxa=[taxon],
         facts=facts or [],

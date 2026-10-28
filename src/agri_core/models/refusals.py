@@ -44,6 +44,7 @@ class Unknown(BaseModel):
 
     status: Literal["unknown"]
     reason: str = Field(min_length=1)
+    code: Annotated[str, Field(min_length=1, pattern=r"^[a-z][a-z0-9_]*$")] | None = None
 
 
 class NotApplicable(BaseModel):
@@ -81,6 +82,7 @@ class Ambiguous(BaseModel):
 
     status: Literal["ambiguous"]
     candidates: list[AmbiguousCandidate] = Field(min_length=2, max_length=20)
+    truncated: bool = False
 
     @field_validator("candidates")
     @classmethod
@@ -112,8 +114,8 @@ def insufficient_input(missing: list[str]) -> InsufficientInput:
     return InsufficientInput(status="insufficient_input", missing=missing)
 
 
-def unknown(reason: str) -> Unknown:
-    return Unknown(status="unknown", reason=reason)
+def unknown(reason: str, code: str | None = None) -> Unknown:
+    return Unknown(status="unknown", reason=reason, code=code)
 
 
 def not_applicable(reason: str) -> NotApplicable:
@@ -124,8 +126,8 @@ def refer_to_label(reason: str) -> ReferToLabel:
     return ReferToLabel(status="refer_to_label", reason=reason)
 
 
-def ambiguous(candidates: list[AmbiguousCandidate]) -> Ambiguous:
-    return Ambiguous(status="ambiguous", candidates=candidates)
+def ambiguous(candidates: list[AmbiguousCandidate], *, truncated: bool = False) -> Ambiguous:
+    return Ambiguous(status="ambiguous", candidates=candidates, truncated=truncated)
 
 
 def refer_to_authority(reason: str, flags: list[str] | None = None) -> ReferToAuthority:

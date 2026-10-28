@@ -420,6 +420,7 @@ all is accepted.
 | `PACK_TRAPEZOID_DEGENERATE` | trapezoid `pts[0] == pts[-1]`; use `scalar` |
 | `PACK_SUPERSEDED_SELF` | `superseded_by` points to the fact itself |
 | `PACK_SUPERSEDED_CYCLE` | cycle in `superseded_by` chain (anchor = min `fact_id`) |
+| `PACK_STALE_ARTIFACT` | `pack.sqlite` changed since load (TOCTOU guard) |
 | `PACK_FACT_KEY_DUPLICATE` | two live facts share `(taxon, parameter, phase, canonical_scope)` with different values |
 | `PACK_LICENSE_NC_COMMERCIAL` | NC source with `commercial_use=yes` |
 | `PACK_LICENSE_DATASET_SA_ND` | SA/ND dataset referenced by a fact |

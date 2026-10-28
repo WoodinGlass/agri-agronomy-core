@@ -25,6 +25,7 @@ from agri_core.pack.errors import (
     PackSafetyViolationError,
     PackScopeInvalidError,
     PackShapeMismatchError,
+    PackStaleArtifactError,
     PackSyntheticNotAllowedError,
     PackTableInvalidError,
     PackTooLargeError,
@@ -41,6 +42,7 @@ from agri_core.pack.loader import (
     parse_manifest_bytes,
 )
 from agri_core.pack.manifest import SUPPORTED_SCHEMA_VERSIONS, PackManifest
+from agri_core.pack.name_index import MatchedVia, NameIndexEntry
 from agri_core.pack.tables import (
     ADVISORIES_FILENAME,
     TABLES,
@@ -85,6 +87,8 @@ __all__ = [
     "InMemoryKnowledgeSet",
     "InvalidPackError",
     "KnowledgeSet",
+    "MatchedVia",
+    "NameIndexEntry",
     "PackDictionaryIncompatibleError",
     "PackDuplicateKeyError",
     "PackEnumInvalidError",
@@ -98,6 +102,7 @@ __all__ = [
     "PackSafetyViolationError",
     "PackScopeInvalidError",
     "PackShapeMismatchError",
+    "PackStaleArtifactError",
     "PackSyntheticNotAllowedError",
     "PackTableInvalidError",
     "PackTooLargeError",

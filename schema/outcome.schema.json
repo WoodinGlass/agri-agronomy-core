@@ -17,6 +17,11 @@
           "const": "ambiguous",
           "title": "Status",
           "type": "string"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
         }
       },
       "required": [
@@ -301,6 +306,20 @@
       "additionalProperties": false,
       "description": "The answer needs a value the profile marks as unknown.\n\nThis includes the case where no value covers the requested scope.",
       "properties": {
+        "code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Code"
+        },
         "reason": {
           "minLength": 1,
           "title": "Reason",
