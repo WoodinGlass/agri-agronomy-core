@@ -1,6 +1,6 @@
 # ADR-004: Taxon and fact resolution policy
 
-Status: Accepted (M8-PR-1). Updated as M8 sub-PRs land.
+Status: Accepted (M8-PR-2). Updated as M8 sub-PRs land.
 
 ## Context
 
@@ -170,6 +170,110 @@ keeps the registry, the source, and this section in sync. Until
 every code is `active`, the wire contract remains the schema's
 `pattern` (not a `Literal`).
 
+## Decision — `resolve_fact` pipeline (finalized M8-3b)
+
+`resolve_fact(pack, taxon_id, parameter, *, phase=None, scope=None,
+min_status="approved", require_commercial=False)` returns
+`FactResolved | Unknown | NotApplicable | InsufficientInput`.
+
+Filters in fixed order:
+
+1. `taxon_id` must exist in the pack; else `Unknown(code="no_match")`.
+2. `parameter` must exist in the dictionary; else
+   `Unknown(code="no_match")`.
+3. `parameter.applies_to` must match the taxon (organism_group,
+   archetype, uses intersection, traits intersection); else
+   `NotApplicable`.
+4. If `parameter.phase_set != "none"` and `phase` is `None`,
+   `InsufficientInput(missing=["phase"])`. If `phase` is provided but
+   is not in `parameter.allowed_phases` (or, when that is `None`, in
+   `dictionary.phases_by_archetype[taxon.archetype]`), the same
+   `InsufficientInput` is returned.
+5. Superseded facts are excluded.
+6. Facts below `min_status` are excluded. For safety-critical
+   parameters (`safety_class != "none"`) the effective floor is
+   raised to `"reviewed"`; the elevation is recorded as
+   `Notice(code="safety_min_status_raised")`.
+7. Facts whose `phase` does not match the requested `phase` are
+   excluded (only for phase-bearing parameters).
+8. Facts whose `scope` does not match the requested `scope` are
+   excluded (see next section).
+9. If `require_commercial=True`, facts whose sources are not all
+   `commercial_use="yes"` are excluded; if no fact survives, the
+   result is `Unknown(code="license_excluded")`.
+
+If no candidate survives filters 1-8, the result is
+`Unknown(code="no_match")`. The winner is the most specific candidate
+(largest `len(fact.scope)`), then highest status
+(`approved > reviewed > draft > imported`), then most recent
+`reviewed_at`, then smallest `fact_id`. The remaining candidates
+become `alternatives` (same sort order, winner excluded).
+
+`Unknown.code` grows by one active entry in this PR:
+`license_excluded` is promoted from `planned` to `active` in
+`schema/unknown_code_registry.json`. The other three planned codes
+(`below_min_status`, `scope_not_covered`, `value_unknown`) stay
+`planned` until a later PR; the drift test rejects any of them
+appearing in source before then.
+
+## Decision — Scope matching (finalized M8-3b)
+
+Scope matching uses **union semantics** (informally, "A \u222a B"):
+a fact matches when its scope keys are a subset of the request keys,
+**or** the request keys are a subset of the fact keys. Both
+directions are allowed because a fact without `country` is a global
+claim and a fact with `country: ID` is a specific one; a request with
+`country` should find both, and a request without `country` should
+still find the global one.
+
+Per-key value check runs only on the intersection. For each shared
+key:
+
+- **`range`** (`elevation_m`): fact `[lo_f, hi_f]` covers request
+  `[lo_r, hi_r]` when `lo_f <= lo_r` and `hi_f >= hi_r`.
+- **`multi` string/enum** (`system`, `climate_zone`, `country`,
+  `variety`, ...): fact and request lists are compared as sets.
+- **scalar string/enum**: equality.
+
+**Partial overlap is rejected**: if neither side's keys are a subset
+of the other's, the fact is not returned. This is intentional. The
+fact requires a constraint the caller did not supply, and that
+constraint cannot be verified from the available data. A permissive
+intersection rule would silently match facts whose applicability the
+resolver cannot check. Callers that want broader matching should
+supply the constraint.
+
+A fact with an empty scope matches any request. A request with an
+empty scope matches every fact; the tie-break makes the most
+specific fact win.
+
+## Decision — `FactResolved` and warnings (finalized M8-3b)
+
+`FactResolved` is a success model, parallel to `TaxonOk` and
+`Result` but for fact queries. It is **not** part of the `Outcome`
+union (like `TaxonOutcome`, it has its own adapter-free usage for
+now; a `FactOutcome` adapter is deferred to PR-3 when the `show`
+CLI needs to serialize it).
+
+Fields:
+
+- `fact: FactRow` — the winning fact.
+- `value: FactValue` and `value_pretty: str` — `value` mirrors
+  `fact.value`; `value_pretty` is `format_value(fact.value)` (a
+  deterministic display string, not a wire format).
+- `alternatives: list[FactRow]` — non-superseded other matches,
+  sorted by the same tie-break as the winner (winner excluded).
+- `provenance: Provenance` — `fact_ids` names **only** the winner;
+  `pack_version`, `pack_hash`, and `source_ids` follow the existing
+  `Provenance` contract.
+- `warnings: list[Notice]` — populated in three cases:
+  - `Notice(code="fact_conflict")` — an alternative carries a
+    different `value` than the winner. Same `value` with a different
+    `src` is corroboration, not a conflict.
+  - `Notice(code="safety_min_status_raised")` — the safety floor
+    (filter 6) was raised.
+  - No other warning codes are emitted by `resolve_fact`.
+
 ## Consequences
 
 - `resolve_taxon` is **pure**: no filesystem or clock access; all I/O
@@ -188,16 +292,12 @@ every code is `active`, the wire contract remains the schema's
   to pass `verified=True` after verifying `content_hash` or
   `artifact_sha256`.
 
-## Deferred to PR-2 and PR-3
+## Deferred to PR-3
 
-The following are **not** part of PR-1 and are recorded here so the
-scope boundary is explicit:
+The following are **not** part of PR-1 or PR-2 and are recorded
+here so the scope boundary is explicit:
 
-- **PR-2** — `resolve_fact`: scope matching (range = cover, multi =
-  intersection, string/enum = equality), `min_status` default plus
-  safety floor, license gate, phase-missing to `InsufficientInput`,
-  `NotApplicable` semantics, `FACT_CONFLICT` handling,
-  `FactResolved` model, `format_value` helper, `Provenance`
-  validator.
 - **PR-3** — `meta()` and the `show` CLI: output shape, exit codes,
-  `taxon_outcome` / `fact_outcome` / `meta_info` JSON schemas.
+  `taxon_outcome` / `fact_outcome` / `meta_info` JSON schemas, and
+  a `FactOutcomeAdapter` if the CLI needs to serialize
+  `FactResolved` through a discriminated union.
