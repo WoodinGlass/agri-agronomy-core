@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
+from agri_core import __version__
 from agri_core.models.fact import FactRow, FactStatus, FactValue, format_value
 from agri_core.models.notices import Notice
 from agri_core.models.parameter import ParameterDef
@@ -32,10 +33,14 @@ if TYPE_CHECKING:
     from agri_core.pack.knowledge_set import KnowledgeSet
 
 __all__ = [
+    "FactOutcome",
+    "FactOutcomeAdapter",
     "FactResolved",
+    "MetaInfo",
     "TaxonOk",
     "TaxonOutcome",
     "TaxonOutcomeAdapter",
+    "meta",
     "resolve_fact",
     "resolve_taxon",
 ]
@@ -441,4 +446,61 @@ def resolve_fact(
         alternatives=alternatives,
         provenance=provenance,
         warnings=warnings,
+    )
+
+
+class MetaInfo(BaseModel):
+    """Pack and engine metadata for a loaded ``KnowledgeSet``.
+
+    ``engine_version`` is the running ``agri-core`` version;
+    ``pack_version`` is the pack's manifest version.
+    ``dictionary_version`` is the version pinned at load.
+    ``content_hash`` mirrors ``KnowledgeSet.pack_hash``.
+    ``artifact_sha256`` is only present for built packs (SQLite); it is
+    ``None`` for source packs. ``verified`` mirrors
+    ``KnowledgeSet.verified``.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    engine_version: str
+    pack_version: str
+    schema_version: int
+    dictionary_version: str
+    content_hash: str
+    artifact_sha256: str | None
+    synthetic: bool
+    verified: bool
+
+
+FactOutcome = Annotated[
+    FactResolved | Ambiguous | Unknown,
+    Field(discriminator="status"),
+]
+"""Discriminated union returned by :func:`resolve_fact`.
+
+Kept separate from ``Outcome`` (and from ``TaxonOutcome``) because
+``FactResolved.status`` is ``"ok"``, matching ``Result.status``;
+combining them in one union would make the discriminator ambiguous.
+"""
+
+FactOutcomeAdapter: TypeAdapter[FactOutcome] = TypeAdapter(FactOutcome)  # type: ignore[arg-type, unused-ignore]
+"""Validate or serialize any :data:`FactOutcome` value."""
+
+
+def meta(pack: KnowledgeSet) -> MetaInfo:
+    """Return :class:`MetaInfo` for *pack*.
+
+    Pure: reads the pack's already-loaded state; does not touch the
+    filesystem or clock.
+    """
+    return MetaInfo(
+        engine_version=__version__,
+        pack_version=pack.manifest.version,
+        schema_version=pack.manifest.schema_version,
+        dictionary_version=pack.dictionary_version,
+        content_hash=pack.pack_hash,
+        artifact_sha256=pack.manifest.artifact_sha256,
+        synthetic=pack.manifest.synthetic,
+        verified=pack.verified,
     )

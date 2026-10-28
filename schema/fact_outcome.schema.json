@@ -1,0 +1,696 @@
+{
+  "$defs": {
+    "Ambiguous": {
+      "additionalProperties": false,
+      "description": "A name matched more than one taxon; the caller must choose one.",
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/AmbiguousCandidate"
+          },
+          "maxItems": 20,
+          "minItems": 2,
+          "title": "Candidates",
+          "type": "array"
+        },
+        "status": {
+          "const": "ambiguous",
+          "title": "Status",
+          "type": "string"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "status",
+        "candidates"
+      ],
+      "title": "Ambiguous",
+      "type": "object"
+    },
+    "AmbiguousCandidate": {
+      "additionalProperties": false,
+      "description": "One possible taxon when a name resolves to more than one.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "taxon_id": {
+          "minLength": 1,
+          "title": "Taxon Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxon_id",
+        "name"
+      ],
+      "title": "AmbiguousCandidate",
+      "type": "object"
+    },
+    "BoolValue": {
+      "additionalProperties": false,
+      "description": "Boolean value.",
+      "properties": {
+        "shape": {
+          "const": "bool",
+          "title": "Shape",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "shape",
+        "value"
+      ],
+      "title": "BoolValue",
+      "type": "object"
+    },
+    "EnumSetValue": {
+      "additionalProperties": false,
+      "description": "Set of enum values.\n\nOne fact represents the whole set, avoiding FACT_CONFLICT from multiple\nfacts with identical scope. ``values`` must be non-empty and unique.",
+      "properties": {
+        "shape": {
+          "const": "enum_set",
+          "title": "Shape",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "shape",
+        "values"
+      ],
+      "title": "EnumSetValue",
+      "type": "object"
+    },
+    "EnumValue": {
+      "additionalProperties": false,
+      "description": "One value from a closed set. Membership validated at M1-2 against\nthe parameter's ``enum_values``.",
+      "properties": {
+        "shape": {
+          "const": "enum",
+          "title": "Shape",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "shape",
+        "value"
+      ],
+      "title": "EnumValue",
+      "type": "object"
+    },
+    "FactResolved": {
+      "additionalProperties": false,
+      "description": "A fact matched the query.\n\n``fact`` is the winning ``FactRow``; ``value`` and ``value_pretty``\nmirror ``fact.value`` for API ergonomics. ``alternatives`` are the\nother non-superseded facts that matched the query, sorted by the\nsame tie-break as the winner (more specific first, then higher\nstatus, then newer review, then ``fact_id``).\n``provenance.fact_ids`` names **only** the winner.",
+      "properties": {
+        "alternatives": {
+          "items": {
+            "$ref": "#/$defs/FactRow"
+          },
+          "title": "Alternatives",
+          "type": "array"
+        },
+        "fact": {
+          "$ref": "#/$defs/FactRow"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "status": {
+          "const": "ok",
+          "title": "Status",
+          "type": "string"
+        },
+        "value": {
+          "discriminator": {
+            "mapping": {
+              "bool": "#/$defs/BoolValue",
+              "enum": "#/$defs/EnumValue",
+              "enum_set": "#/$defs/EnumSetValue",
+              "range": "#/$defs/RangeValue",
+              "rule": "#/$defs/RuleValue",
+              "scalar": "#/$defs/ScalarValue",
+              "trapezoid": "#/$defs/TrapezoidValue",
+              "unknown": "#/$defs/UnknownValue"
+            },
+            "propertyName": "shape"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/TrapezoidValue"
+            },
+            {
+              "$ref": "#/$defs/RangeValue"
+            },
+            {
+              "$ref": "#/$defs/ScalarValue"
+            },
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "$ref": "#/$defs/EnumSetValue"
+            },
+            {
+              "$ref": "#/$defs/BoolValue"
+            },
+            {
+              "$ref": "#/$defs/RuleValue"
+            },
+            {
+              "$ref": "#/$defs/UnknownValue"
+            }
+          ],
+          "title": "Value"
+        },
+        "value_pretty": {
+          "title": "Value Pretty",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/Notice"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "fact",
+        "value",
+        "value_pretty",
+        "alternatives",
+        "provenance",
+        "warnings"
+      ],
+      "title": "FactResolved",
+      "type": "object"
+    },
+    "FactRow": {
+      "additionalProperties": false,
+      "description": "One row of ``fact.csv``: a single value at a single scope.\n\nCross-rules enforced here:\n- ``src`` or ``dataset_id`` (at least one)\n- ``provenance_kind=imported`` requires ``dataset_id`` and ``evidence`` C or D\n- ``provenance_kind=derived`` requires ``dataset_id``\n- ``provenance_kind=curated`` requires ``locator``\n- ``status`` reviewed/approved requires ``reviewed_by`` and ``reviewed_at``\n\nDeferred to validate (M1-2), because they need the dictionary:\n- ``parameter`` exists in ``parameters.core.yaml`` or a pack\n- ``phase`` is a member of the parameter's ``phase_set``\n- safety-critical parameters require ``status`` reviewed or approved\n- shape matches ``parameter.shape``\n- ``enum`` value is in the parameter's ``enum_values``\n- ``unit`` matches the parameter's ``unit``\n- ``scope`` keys and values are valid against ``scope_keys.yaml``",
+      "properties": {
+        "dataset_id": {
+          "anyOf": [
+            {
+              "pattern": "^D[0-9A-HJKMNP-TV-Z]{9}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dataset Id"
+        },
+        "evidence": {
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "title": "Evidence",
+          "type": "string"
+        },
+        "fact_id": {
+          "pattern": "^F[0-9A-HJKMNP-TV-Z]{11,}$",
+          "title": "Fact Id",
+          "type": "string"
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locator"
+        },
+        "parameter": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Parameter",
+          "type": "string"
+        },
+        "phase": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phase"
+        },
+        "provenance_kind": {
+          "enum": [
+            "curated",
+            "imported",
+            "derived"
+          ],
+          "title": "Provenance Kind",
+          "type": "string"
+        },
+        "reviewed_at": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reviewed At"
+        },
+        "reviewed_by": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reviewed By"
+        },
+        "scope": {
+          "additionalProperties": true,
+          "title": "Scope",
+          "type": "object"
+        },
+        "src": {
+          "anyOf": [
+            {
+              "items": {
+                "pattern": "^S\\d{3,}$",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Src"
+        },
+        "status": {
+          "enum": [
+            "imported",
+            "draft",
+            "reviewed",
+            "approved"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "superseded_by": {
+          "anyOf": [
+            {
+              "pattern": "^F[0-9A-HJKMNP-TV-Z]{11,}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Superseded By"
+        },
+        "taxon_id": {
+          "pattern": "^T[0-9A-HJKMNP-TV-Z]{9}$",
+          "title": "Taxon Id",
+          "type": "string"
+        },
+        "value": {
+          "discriminator": {
+            "mapping": {
+              "bool": "#/$defs/BoolValue",
+              "enum": "#/$defs/EnumValue",
+              "enum_set": "#/$defs/EnumSetValue",
+              "range": "#/$defs/RangeValue",
+              "rule": "#/$defs/RuleValue",
+              "scalar": "#/$defs/ScalarValue",
+              "trapezoid": "#/$defs/TrapezoidValue",
+              "unknown": "#/$defs/UnknownValue"
+            },
+            "propertyName": "shape"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/TrapezoidValue"
+            },
+            {
+              "$ref": "#/$defs/RangeValue"
+            },
+            {
+              "$ref": "#/$defs/ScalarValue"
+            },
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "$ref": "#/$defs/EnumSetValue"
+            },
+            {
+              "$ref": "#/$defs/BoolValue"
+            },
+            {
+              "$ref": "#/$defs/RuleValue"
+            },
+            {
+              "$ref": "#/$defs/UnknownValue"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "fact_id",
+        "taxon_id",
+        "parameter",
+        "value",
+        "provenance_kind",
+        "evidence",
+        "status"
+      ],
+      "title": "FactRow",
+      "type": "object"
+    },
+    "Notice": {
+      "additionalProperties": false,
+      "description": "A structured warning or assumption attached to a result.\n\n``code`` is a stable snake_case identifier and part of the contract.\n``message`` is human-readable and may change between releases.",
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "Notice",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "description": "Where a calculation's numbers came from.\n\n``fact_ids`` names the facts that contributed values.\n``pack_version`` is the version of the pack that supplied those facts;\nit is ``None`` when the calculation does not read a pack (for example,\nraw VPD from weather inputs).\n``pack_hash`` is the pack's ``content_hash`` (``sha256:<hex>``), which\npins the exact data used; it is ``None`` under the same conditions as\n``pack_version``.\n``source_ids`` lists the ``src`` IDs from ``sources.csv`` behind the\nvalues used.",
+      "properties": {
+        "fact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fact Ids",
+          "type": "array"
+        },
+        "pack_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pack Hash"
+        },
+        "pack_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pack Version"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "title": "Provenance",
+      "type": "object"
+    },
+    "RangeValue": {
+      "additionalProperties": false,
+      "description": "Range: min <= max, both with a unit.",
+      "properties": {
+        "max": {
+          "title": "Max",
+          "type": "number"
+        },
+        "min": {
+          "title": "Min",
+          "type": "number"
+        },
+        "shape": {
+          "const": "range",
+          "title": "Shape",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "shape",
+        "unit",
+        "min",
+        "max"
+      ],
+      "title": "RangeValue",
+      "type": "object"
+    },
+    "RuleValue": {
+      "additionalProperties": false,
+      "description": "Structured rule; shape-specific schema validated at M1-2 against\nthe parameter's ``rule_schema``.",
+      "properties": {
+        "data": {
+          "additionalProperties": true,
+          "title": "Data",
+          "type": "object"
+        },
+        "shape": {
+          "const": "rule",
+          "title": "Shape",
+          "type": "string"
+        }
+      },
+      "required": [
+        "shape",
+        "data"
+      ],
+      "title": "RuleValue",
+      "type": "object"
+    },
+    "ScalarValue": {
+      "additionalProperties": false,
+      "description": "Single numeric value with a unit.",
+      "properties": {
+        "shape": {
+          "const": "scalar",
+          "title": "Shape",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shape",
+        "unit",
+        "value"
+      ],
+      "title": "ScalarValue",
+      "type": "object"
+    },
+    "TrapezoidValue": {
+      "additionalProperties": false,
+      "description": "Four-point trapezoid: abs_min <= opt_min <= opt_max <= abs_max.",
+      "properties": {
+        "pts": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Pts",
+          "type": "array"
+        },
+        "shape": {
+          "const": "trapezoid",
+          "title": "Shape",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "shape",
+        "unit",
+        "pts"
+      ],
+      "title": "TrapezoidValue",
+      "type": "object"
+    },
+    "Unknown": {
+      "additionalProperties": false,
+      "description": "The answer needs a value the profile marks as unknown.\n\nThis includes the case where no value covers the requested scope.",
+      "properties": {
+        "code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Code"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "status": {
+          "const": "unknown",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "reason"
+      ],
+      "title": "Unknown",
+      "type": "object"
+    },
+    "UnknownValue": {
+      "additionalProperties": false,
+      "description": "Explicitly unknown, with a required reason.",
+      "properties": {
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "shape": {
+          "const": "unknown",
+          "title": "Shape",
+          "type": "string"
+        }
+      },
+      "required": [
+        "shape",
+        "reason"
+      ],
+      "title": "UnknownValue",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "ambiguous": "#/$defs/Ambiguous",
+      "ok": "#/$defs/FactResolved",
+      "unknown": "#/$defs/Unknown"
+    },
+    "propertyName": "status"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/FactResolved"
+    },
+    {
+      "$ref": "#/$defs/Ambiguous"
+    },
+    {
+      "$ref": "#/$defs/Unknown"
+    }
+  ]
+}

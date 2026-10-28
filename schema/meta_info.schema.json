@@ -1,0 +1,57 @@
+{
+  "additionalProperties": false,
+  "description": "Pack and engine metadata for a loaded ``KnowledgeSet``.\n\n``engine_version`` is the running ``agri-core`` version;\n``pack_version`` is the pack's manifest version.\n``dictionary_version`` is the version pinned at load.\n``content_hash`` mirrors ``KnowledgeSet.pack_hash``.\n``artifact_sha256`` is only present for built packs (SQLite); it is\n``None`` for source packs. ``verified`` mirrors\n``KnowledgeSet.verified``.",
+  "properties": {
+    "artifact_sha256": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Artifact Sha256"
+    },
+    "content_hash": {
+      "title": "Content Hash",
+      "type": "string"
+    },
+    "dictionary_version": {
+      "title": "Dictionary Version",
+      "type": "string"
+    },
+    "engine_version": {
+      "title": "Engine Version",
+      "type": "string"
+    },
+    "pack_version": {
+      "title": "Pack Version",
+      "type": "string"
+    },
+    "schema_version": {
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "synthetic": {
+      "title": "Synthetic",
+      "type": "boolean"
+    },
+    "verified": {
+      "title": "Verified",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "engine_version",
+    "pack_version",
+    "schema_version",
+    "dictionary_version",
+    "content_hash",
+    "artifact_sha256",
+    "synthetic",
+    "verified"
+  ],
+  "title": "MetaInfo",
+  "type": "object"
+}

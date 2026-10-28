@@ -18,6 +18,11 @@ from agri_core.models.parameter import ParameterDef
 from agri_core.models.taxon import TaxonRow
 from agri_core.pack.manifest import PackManifest
 from agri_core.pack.validate import ValidationReport
+from agri_core.registry.resolution import (
+    FactOutcomeAdapter,
+    MetaInfo,
+    TaxonOutcomeAdapter,
+)
 from agri_core.registry.sources import SourceRow
 
 
@@ -87,6 +92,21 @@ def main() -> int:
     _write(
         "validation_report.schema.json",
         TypeAdapter(ValidationReport).json_schema(mode="serialization"),
+        schema_dir,
+    )
+    _write(
+        "taxon_outcome.schema.json",
+        TaxonOutcomeAdapter.json_schema(mode="serialization"),
+        schema_dir,
+    )
+    _write(
+        "fact_outcome.schema.json",
+        FactOutcomeAdapter.json_schema(mode="serialization"),
+        schema_dir,
+    )
+    _write(
+        "meta_info.schema.json",
+        TypeAdapter(MetaInfo).json_schema(mode="serialization"),
         schema_dir,
     )
     return 0
