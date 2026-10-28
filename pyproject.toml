@@ -123,6 +123,7 @@ markers = [
     "contract: public API stability",
     "scenario: end-to-end expected behaviour",
     "golden: validated against published worked examples",
+    "perf: performance gates; exclude with -m 'not perf' on slow runners",
 ]
 
 [tool.coverage.run]
