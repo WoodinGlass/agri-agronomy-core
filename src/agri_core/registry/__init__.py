@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from agri_core.registry.resolution import (
+    FactResolved,
     TaxonOk,
     TaxonOutcome,
     TaxonOutcomeAdapter,
+    resolve_fact,
     resolve_taxon,
 )
 from agri_core.registry.sources import (
@@ -20,6 +22,7 @@ from agri_core.registry.sources import (
 __all__ = [
     "CSV_HEADER",
     "CommercialUse",
+    "FactResolved",
     "SourceRow",
     "TaxonOk",
     "TaxonOutcome",
@@ -27,5 +30,6 @@ __all__ = [
     "is_nc_license",
     "lint_csv_file",
     "lint_csv_text",
+    "resolve_fact",
     "resolve_taxon",
 ]

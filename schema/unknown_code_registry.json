@@ -28,7 +28,7 @@
     },
     {
       "code": "license_excluded",
-      "status": "planned",
+      "status": "active",
       "description": "Fact excluded by license gate (commercial_use != yes)"
     }
   ]

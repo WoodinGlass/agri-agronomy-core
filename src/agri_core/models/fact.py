@@ -233,6 +233,33 @@ class FactRow(BaseModel):
         return self
 
 
+def format_value(value: FactValue) -> str:
+    """Human-readable, deterministic string for a fact value.
+
+    Used by ``FactResolved.value_pretty``. Not for wire serialization —
+    that goes through Pydantic / canonical JSON. This is display text.
+    """
+    if isinstance(value, ScalarValue):
+        return f"{value.value} {value.unit}"
+    if isinstance(value, RangeValue):
+        return f"{value.min}\u2013{value.max} {value.unit}"
+    if isinstance(value, TrapezoidValue):
+        a, b, c, d = value.pts
+        return f"[{a}, {b}, {c}, {d}] {value.unit}"
+    if isinstance(value, EnumValue):
+        return value.value
+    if isinstance(value, EnumSetValue):
+        return "{" + ", ".join(sorted(value.values)) + "}"
+    if isinstance(value, BoolValue):
+        return "true" if value.value else "false"
+    if isinstance(value, RuleValue):
+        return f"<rule {len(value.data)} keys>"
+    if isinstance(value, UnknownValue):
+        return f"unknown ({value.reason})"
+    # FactValue is a closed union; unreachable.
+    raise TypeError(f"unknown FactValue: {value!r}")
+
+
 __all__ = [
     "BoolValue",
     "EnumSetValue",
@@ -246,4 +273,5 @@ __all__ = [
     "ScalarValue",
     "TrapezoidValue",
     "UnknownValue",
+    "format_value",
 ]
