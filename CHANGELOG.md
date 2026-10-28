@@ -174,6 +174,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `DiffReport.model_dump(mode="json")` and enforces idempotent
   regeneration — a `DiffReport` field addition or rename now fails
   CI until the fixtures are regenerated and committed.
+- `pack/normalize.py` -- name and scope-value normalization for
+  resolution: NFKC, case-fold, whitespace collapse (including NBSP),
+  and multiplication-sign `×` folded to ASCII `x` (matching-only).
+  `normalize_name` (with hybrid lift) and `normalize_scope_value`
+  (without).
+- `pack/name_index.py` -- `NameIndexEntry`, `MatchedVia`, and
+  `build_name_index()`: name-to-taxon index built eagerly from
+  `taxon.csv` + `names.csv` at pack load. Never persisted (Unicode
+  normalization varies across Python versions).
+- `KnowledgeSet` Protocol gains a `dictionary` property and a
+  `names_index(query)` method; `InMemoryKnowledgeSet` and
+  `SQLiteKnowledgeSet` implement both. `from_rows` and `_build` now
+  require `dictionary=`; `from_rows` also validates `pack_hash` and
+  `dictionary_version`.
+- `SQLiteKnowledgeSet` TOCTOU detection: `_build` snapshots
+  `(st_size, st_mtime_ns, st_ino)`; `_connect` and `names_index`
+  raise `PackStaleArtifactError` (`PACK_STALE_ARTIFACT`) if
+  `pack.sqlite` changed since load. Documented in `PACK_FORMAT.md`.
+- `agri_core.registry.resolve_taxon(name)` returns
+  `TaxonOk | Ambiguous | Unknown`. `TaxonOk` carries `taxon_id`,
+  display `name`, `matched_via`, `scientific_name`, `rank`.
+  `TaxonOutcome` is a discriminated union with its own
+  `TaxonOutcomeAdapter`, kept separate from `Outcome` to avoid a
+  `status="ok"` collision.
+- `Unknown.code` (nullable lowercase snake_case) and
+  `Ambiguous.truncated` are additive fields on the refusal models;
+  `outcome.schema.json` regenerated. PR-1 populates `no_match` and
+  `empty_input`; a follow-up PR-mini will ship the code registry.
+- Perf gate `tests/perf/test_resolve_taxon.py` enforces p95 < 5 ms
+  per query on a 10k-taxa pack; marker `perf` can be excluded with
+  `-m 'not perf'` on slow runners.
+- `docs/decisions/ADR-004-resolution-policy.md` -- normalization,
+  match set (union, not authoritative), ambiguity, `matched_via`
+  precedence, name index design, TOCTOU, `TaxonOutcome` union,
+  `Unknown.code` semantics. Deferral scope for PR-2 and PR-3
+  recorded explicitly.
 
 
 
@@ -291,6 +327,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (errors already exit 1). Load errors (unreadable pack) always
   exit 3, distinct from rule findings. Text mode is unchanged for
   the sample pack: 0 findings -> 0 errors, 0 warnings, exit 0.
+- Breaking: `InMemoryKnowledgeSet.from_rows` and
+  `SQLiteKnowledgeSet._build` now require a `dictionary` argument;
+  `from_rows` default for `verified` changes from `True` to `False`
+  (the loader still passes `verified=True` after hash verification).
 
 
 
