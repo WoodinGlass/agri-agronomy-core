@@ -22,13 +22,16 @@ typecheck:
 	mypy
 
 test:
-	pytest
+	pytest -m "not perf"
 
 coverage:
-	pytest
+	pytest -m "not perf"
 	coverage report --fail-under=90 --skip-covered
 
 check: lint typecheck coverage
+
+perf:
+	pytest -m perf --no-cov -q
 
 precommit:
 	pre-commit run --all-files

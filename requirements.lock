@@ -1395,9 +1395,14 @@ pytest==9.1.1 \
     #   agri-agronomy-core (pyproject.toml)
     #   nbmake
     #   pytest-cov
+    #   pytest-socket
 pytest-cov==6.3.0 \
     --hash=sha256:35c580e7800f87ce892e687461166e1ac2bcb8fb9e13aea79032518d6e503ff2 \
     --hash=sha256:440db28156d2468cafc0415b4f8e50856a0d11faefa38f30906048fe490f1749
+    # via agri-agronomy-core (pyproject.toml)
+pytest-socket==0.8.1 \
+    --hash=sha256:2f57787914ad2e1308d09ce141b95c3e55741fbb4fb7b7556593a6b063e0c9c7 \
+    --hash=sha256:f9846bed1dcd96eed459e5e14795bbaf96715cf4e827891fe70773817ecb8ed4
     # via agri-agronomy-core (pyproject.toml)
 python-dateutil==2.9.0.post0 \
     --hash=sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3 \

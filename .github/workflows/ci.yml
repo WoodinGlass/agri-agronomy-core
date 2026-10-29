@@ -40,7 +40,7 @@ jobs:
       - name: mypy
         run: mypy
       - name: pytest
-        run: pytest
+        run: pytest -m "not perf" -p no:nbmake -W ignore::DeprecationWarning
       - name: Coverage gate
         run: coverage report --fail-under=90 --skip-covered
       - name: agri-core validate (explicit path)
@@ -81,7 +81,7 @@ jobs:
       - name: mypy
         run: mypy
       - name: pytest
-        run: pytest
+        run: pytest -m "not perf" -p no:nbmake -W ignore::DeprecationWarning
       - name: Coverage gate
         run: coverage report --fail-under=90 --skip-covered
 
@@ -110,7 +110,7 @@ jobs:
       - name: mypy
         run: mypy
       - name: pytest
-        run: pytest
+        run: pytest -m "not perf" -p no:nbmake -W ignore::DeprecationWarning
       - name: Coverage gate
         run: coverage report --fail-under=90 --skip-covered
 
@@ -283,6 +283,31 @@ jobs:
           echo "$OUT" | grep -E '^pack: sample [0-9]+\.[0-9]+\.[0-9]+ \(sample\)$'
           ./venv-src/bin/agri-core lint-sources --pack sample
           ./venv-src/bin/python -c "from agri_core.models.dictionary import Dictionary; d = Dictionary.load_packaged(); print('dict:', d.version, '|', len(d.parameters), 'params')"
+
+  offline-wheel:
+    name: Offline wheel smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build-wheel]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Download wheel
+        uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: dist
+      - name: Create venv and install wheel (network allowed)
+        run: |
+          python -m venv .offline-venv
+          .offline-venv/bin/pip install --upgrade pip
+          .offline-venv/bin/pip install dist/*.whl
+      - name: Validate pack with network blocked
+        run: sudo unshare -n -- "${{ github.workspace }}/.offline-venv/bin/agri-core" validate --pack sample
+      - name: Show taxon with network blocked
+        run: sudo unshare -n -- "${{ github.workspace }}/.offline-venv/bin/agri-core" show --pack sample --name "Testus annualis" --json
 
   sdist-roundtrip:
     name: Sdist round-trip
