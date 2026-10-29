@@ -669,7 +669,20 @@ def _load_built_pack(
             f"!= engine SQLITE_SCHEMA_VERSION {SQLITE_SCHEMA_VERSION}"
         )
 
-    actual_artifact = "sha256:" + hashlib.sha256(pack_sqlite.read_bytes()).hexdigest()
+    # Hash the artifact in fixed-size chunks instead of reading the whole
+    # file into memory as a single allocation. Digest is identical. This
+    # does not reduce ru_maxrss peak for the current 55 MB sample pack
+    # (dominated by the import baseline), but it is safe for larger
+    # packs: real agri-knowledge artifacts can be hundreds of MB, where
+    # ``read_bytes`` would either spike RSS or fail allocation outright.
+    _h = hashlib.sha256()
+    with pack_sqlite.open("rb") as _f:
+        while True:
+            _chunk = _f.read(1 << 20)  # 1 MiB
+            if not _chunk:
+                break
+            _h.update(_chunk)
+    actual_artifact = "sha256:" + _h.hexdigest()
     if artifact_sha256 != actual_artifact:
         raise PackHashMismatchError(
             f"artifact_sha256 mismatch: manifest={artifact_sha256} computed={actual_artifact}",
