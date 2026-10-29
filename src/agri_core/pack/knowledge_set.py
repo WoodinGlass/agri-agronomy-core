@@ -341,8 +341,22 @@ def _conforms(ks: InMemoryKnowledgeSet) -> KnowledgeSet:
 # ---- SQLiteKnowledgeSet (M6-2) ----------------------------------------
 
 
+_WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:/")
+
+
 def _sqlite_uri(path: Path) -> str:
-    return f"file:{path.as_posix()}?mode=ro&immutable=1"
+    """Return a read-only immutable ``file:`` URI for *path*.
+
+    On Windows, SQLite needs ``file:///C:/...`` (three slashes) so that the
+    drive letter is not parsed as a URL scheme. POSIX paths and relative
+    paths keep the single-slash form. Detection uses a regex on the posix
+    form (``as_posix()`` always yields forward slashes) so the Windows
+    branch is testable on Linux.
+    """
+    posix = path.as_posix()
+    if _WINDOWS_DRIVE_RE.match(posix):
+        return f"file:///{posix}?mode=ro&immutable=1"
+    return f"file:{posix}?mode=ro&immutable=1"
 
 
 def _row_to_dict(row: sqlite3.Row, spec: TableSpec) -> dict[str, Any]:
