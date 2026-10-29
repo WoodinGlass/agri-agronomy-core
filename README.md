@@ -77,24 +77,24 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 Releases are distributed as git tags. Pin one:
 
 ```bash
-pip install "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.0"
+pip install "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.1"
 ```
 
-`v0.1.0` is not tagged yet. Until it is, replace `@v0.1.0` with `@main` in this and the Colab snippet, for development use only.
+`v0.1.1` is the current patch release; `v0.1.0` is the foundation release. Either tag can be pinned. To track the main branch instead, replace `@v0.1.1` with `@main` (development only; not recommended for anything you deploy).
 
-Requires Python 3.11 or newer (tested on 3.11, 3.12, 3.13 and 3.14 on Ubuntu-latest). Runtime dependencies: Pydantic v2, jsonschema, PyYAML (`safe_load` only), pint, Typer, packaging and `sqlite3` (Python stdlib). Pure Python, CPU only.
+Requires Python 3.11 or newer (tested on 3.11, 3.12, 3.13 and 3.14 on Ubuntu-latest, and on 3.11 on Windows-latest). Runtime dependencies: Pydantic v2, jsonschema, PyYAML (`safe_load` only), pint, Typer, packaging and `sqlite3` (Python stdlib). Pure Python, CPU only.
 
 ### Google Colab
 
 Install in any Colab cell:
 
 ```python
-!pip install -q "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.0"
+!pip install -q "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.1"
 ```
 
 No API key or GPU is needed. Pure Python, CPU only.
 
-### Python (as of M8)
+### Python
 
 The snippet uses the signatures the contract tests exercise today. Calculation functions (`vpd`, `gdd`, `et0`, irrigation, fertilizer) ship in M10–M13.
 
@@ -137,7 +137,7 @@ print(info.engine_version, info.pack_version, info.content_hash)
 agri-core --help
 agri-core validate --pack sample [--json] [--strict]   # manifest + sources + structural rules (M7)
 agri-core lint-sources --pack sample       # sources.csv checks
-agri-core pack lock --pack src/agri_core/_samples/sample_pack   # regenerate content_hash
+agri-core pack lock --pack src/agri_core/_samples/sample_pack   # regenerate content_hash (repairs a stale hash)
 agri-core pack scaffold --pack PATH --scientific-name NAME --archetype annual --use vegetable  # add a taxon
 agri-core pack build --pack src/agri_core/_samples/sample_pack --out build/  # build SQLite
 agri-core coverage --pack sample          # tier distribution + per-taxon coverage
@@ -375,6 +375,7 @@ The engine enforces provenance; the data lives in [`agri-knowledge`](https://git
 Contributions are welcome. Data contributions go to [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge); code contributions go here.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full rules, contribution scope, evidence requirements, licensing terms, protected-species policy, and the code owners list.
+
 ## Security
 
 - **Vulnerabilities** in code or dependencies: report them privately via GitHub's private vulnerability reporting (Security tab, "Report a vulnerability"), not as a public issue.
@@ -382,6 +383,7 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full rules, contribution scope,
 - The library makes no network calls; pack loading verifies hashes and opens SQLite read-only with `trusted_schema=OFF`; YAML is read with `safe_load` only.
 
 See [`SECURITY.md`](SECURITY.md) for the full policy, supported versions, scope and security guarantees.
+
 ## Versioning and releases
 
 - Semantic Versioning applies to the engine and to public contracts: `Outcome` and its members, the JSON Schemas, the dictionary and the exported tool schemas.
@@ -390,7 +392,7 @@ See [`SECURITY.md`](SECURITY.md) for the full policy, supported versions, scope 
 - Every fact has a stable `fact_id`. A superseded fact is marked with `superseded_by`; a critical correction will be published as an advisory in the pack (planned after M8; the loader currently rejects non-empty `advisories.csv`).
 - Every release pins the `agri-knowledge` version it was tested against. A canary CI job against `agri-knowledge` `main`, to surface incompatibilities early, is **planned for v0.2.0** (not yet implemented).
 - `dictionary/dictionary.lock` records `<version> <contract_hash>` per dictionary release; the SemVer rule is that adding a key is `MINOR`, removing / renaming / changing shape, unit, phase_set, enum values or narrowing a dimension is `MAJOR`, and description / rationale changes are `PATCH`. `classify_change` enforces this and is exercised by the test suite.
-- Releases are git tags and GitHub Releases (wheel, sample pack, built packs, hashes). They are not published on PyPI.
+- Releases are git tags and GitHub Releases (wheel, sdist, sample pack, `SHA256SUMS`, and — when the pinned `agri-knowledge` version has shipped — the built packs of `agri-knowledge`). They are not published on PyPI.
 
 ## Citing
 
@@ -450,7 +452,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 - `dictionary.lock` matches the running dictionary (`contract_hash` verified).
 - The pack and the wheel are reproducible: identical SHA-256 when built twice from the same inputs.
 - `CHANGELOG.md` is updated.
-- The GitHub Release contains the wheel, the sample pack, the built packs of `agri-knowledge` at the pinned version, and hashes.
+- The GitHub Release contains the wheel, the sdist, the sample pack and `SHA256SUMS`; the built packs of `agri-knowledge` at the pinned version are attached when that version has shipped.
 
 **Additional release gates from `v0.1.0`**
 
@@ -464,7 +466,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 
 ## Performance
 
-These targets are measured in CI and in Colab at v0.1.0 on a synthetic pack (10k taxa, 30k names, 200k facts). They will be recalibrated once real `agri-knowledge` pack sizes are known.
+These targets are measured in CI and in Colab at v0.1.0 (unchanged in the v0.1.1 patch) on a synthetic pack (10k taxa, 30k names, 200k facts). They will be recalibrated once real `agri-knowledge` pack sizes are known.
 
 | Operation | Budget |
 |---|---|
@@ -502,6 +504,7 @@ agri-agronomy-core/
 │                            #   parameter, dataset, manifest, finding, validation_report,
 │                            #   taxon_outcome, fact_outcome, meta_info;
 │                            #   plus unknown_code_registry.json (code registry, not a schema)
+├─ scripts/                  # gen_schemas.py, gen_diff_golden.py, gen_dictionary_doc.py
 ├─ src/agri_core/
 │  ├─ _samples/              # synthetic Apache-2.0 sample pack
 │  ├─ climate/               # VPD, GDD, DLI, ET0 (M10)
@@ -534,9 +537,12 @@ agri-agronomy-core/
 │  └─ unit/
 ├─ .github/                  # CODEOWNERS, workflows
 ├─ CHANGELOG.md
+├─ CONTRIBUTING.md
+├─ SECURITY.md
 ├─ LICENSE                   # Apache-2.0
 ├─ Makefile
-└─ pyproject.toml
+├─ pyproject.toml
+└─ requirements.lock         # pinned dev dependencies (pip-compile)
 ```
 
 ## License
