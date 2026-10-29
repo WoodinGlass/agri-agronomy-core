@@ -326,6 +326,33 @@ jobs:
       - name: Run perf tests
         run: pytest tests/perf/ -m perf --no-cov -q -p no:nbmake -W ignore::DeprecationWarning
 
+  windows-smoke:
+    name: Windows smoke (exploratory)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    # Not a required check yet (M9 PR-D). Run it first; if it stays green
+    # and no src/ fix is needed, promote to required in branch protection.
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install project
+        shell: bash
+        run: pip install -e ".[dev]"
+      - name: pytest (non-perf, no coverage)
+        shell: bash
+        run: pytest -m "not perf" --no-cov -q -p no:nbmake -W ignore::DeprecationWarning
+      - name: agri-core validate
+        shell: bash
+        run: agri-core validate --pack sample
+      - name: pack lock is reproducible across operating systems
+        shell: bash
+        run: |
+          agri-core pack lock --pack src/agri_core/_samples/sample_pack
+          git diff --exit-code src/agri_core/_samples/sample_pack/pack.toml
+
   sdist-roundtrip:
     name: Sdist round-trip
     runs-on: ubuntu-latest

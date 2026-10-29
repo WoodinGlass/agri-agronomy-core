@@ -413,6 +413,10 @@ def test_read_facts_key_uses_forward_slash(tmp_path: Path) -> None:
 # ---- T8: name sanitization ---------------------------------------------
 
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="NTFS rejects control characters in filenames",
+)
 def test_read_error_message_sanitizes_control_char(tmp_path: Path) -> None:
     _make_pack(tmp_path)
     (tmp_path / "facts").mkdir()
@@ -425,6 +429,10 @@ def test_read_error_message_sanitizes_control_char(tmp_path: Path) -> None:
     assert "\\x07" in msg or "x07" in msg
 
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="NTFS rejects control characters in filenames",
+)
 def test_read_error_preserves_raw_name(tmp_path: Path) -> None:
     _make_pack(tmp_path)
     (tmp_path / "facts").mkdir()
@@ -440,6 +448,10 @@ def test_read_error_preserves_raw_name(tmp_path: Path) -> None:
 # ---- T9: unreadable file -----------------------------------------------
 
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="chmod on Windows only toggles the read-only bit; file stays readable",
+)
 @pytest.mark.skipif(
     hasattr(os, "getuid") and os.getuid() == 0,
     reason="running as root; chmod bypassed",

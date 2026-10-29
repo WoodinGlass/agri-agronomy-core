@@ -54,6 +54,7 @@ from agri_core.pack.knowledge_set import (
     InMemoryKnowledgeSet,
     KnowledgeSet,
     SQLiteKnowledgeSet,
+    _sqlite_uri,
 )
 from agri_core.pack.manifest import SUPPORTED_SCHEMA_VERSIONS, PackManifest
 from agri_core.pack.sqlite_schema import SQLITE_SCHEMA_VERSION
@@ -589,7 +590,7 @@ def _check_built_metadata(
     built_by: str,
 ) -> None:
     """Verify pack.toml and SQLite metadata agree on 8 rows + user_version."""
-    conn = sqlite3.connect(f"file:{pack_sqlite.as_posix()}?mode=ro&immutable=1", uri=True)
+    conn = sqlite3.connect(_sqlite_uri(pack_sqlite), uri=True)
     conn.row_factory = sqlite3.Row
     try:
         conn.execute("PRAGMA query_only = ON")
