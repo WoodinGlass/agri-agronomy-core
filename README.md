@@ -5,7 +5,7 @@ Every number comes from a verified knowledge pack, never from a language model.<
 
 <p align="center">
   <a href="https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml"><img src="https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/status-pre--release-orange" alt="Status">
+  <img src="https://img.shields.io/badge/status-0.1.0--foundation-blue" alt="Status">
   <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue" alt="Python">
   <img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License">
   <img src="https://img.shields.io/badge/mypy-strict-blue" alt="mypy">
@@ -13,7 +13,7 @@ Every number comes from a verified knowledge pack, never from a language model.<
   <img src="https://img.shields.io/github/last-commit/WoodinGlass/agri-agronomy-core" alt="Last commit">
 </p>
 
-> **Pre-release.** Interfaces, the pack format and the JSON Schemas may change until `v0.1.0` is tagged. This project provides a calculation engine and a data contract; it is not professional agronomic advice. Read [Safety and limitations](#safety-and-limitations) before relying on any output.
+> **0.1.0 (foundation release).** This release covers the data contract, the pack lifecycle, and deterministic fact resolution. The calculation engine (VPD, GDD, ET0, irrigation, fertilizer, media, suitability, propagation) ships in v0.2+. Interfaces, the pack format and the JSON Schemas may still change in the 0.x line; see [Versioning and releases](#versioning-and-releases). This project provides a calculation engine and a data contract; it is not professional agronomic advice. Read [Safety and limitations](#safety-and-limitations) before relying on any output.
 
 ## What this is
 
@@ -374,43 +374,21 @@ The engine enforces provenance; the data lives in [`agri-knowledge`](https://git
 
 Contributions are welcome. Data contributions go to [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge); code contributions go here.
 
-Data contributions (`agri-knowledge`):
-
-- corrections to values, with a citation
-- new facts with sources, evidence grades and an honest scope
-- taxon aliases in other languages
-- new taxa at any rank, with an honest `parent_id`
-
-Code contributions (this repository):
-
-- improvements to the pack loader, validator and diff
-- new irrigation modes, calculation archetypes or parameter types, registered in the appropriate registry
-- tests and golden vectors from published worked examples or independent permissively licensed implementations
-
-Rules:
-
-1. **Facts and citations only.** Do not paste text, tables or figures from sources, and do not bulk-import datasets. Pull requests that do will be declined.
-2. **Every new fact needs** a `src` (added to `sources.csv` with URL, license, `commercial_use` and access date), an `evidence` grade, a `scope`, and a status. Imported facts start at `imported`; entered facts start at `draft`.
-3. **Unknown stays unknown.** If no reliable source exists, write the fact with `unknown: true` and a reason.
-4. **Everything is in English:** code, schema keys, identifiers and documentation. Local-language taxon names go in `names.csv`.
-5. **Code changes need tests.** Changes under `safety/` also need 100% coverage, a maintainer review and, for safety-critical parameters, a second independent review.
-6. **Licensing.** By submitting a contribution you confirm that you have the right to contribute it and that it is licensed under the same terms as the files it changes.
-7. **Protected species need a documented pathway.** Before proposing a taxon listed on CITES (any appendix), Permen LHK 106/2018 or the IUCN Red List at CR, EN or VU, cite the lawful cultivation pathway (an artificial-propagation exemption, a cultivated variety, or equivalent). Wild-collected material is not accepted.
-
-Domain experts can review through `review_sheet.csv` without a GitHub account, and the maintainer records the outcome. Code owners are listed in `.github/CODEOWNERS`.
-
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full rules, contribution scope, evidence requirements, licensing terms, protected-species policy, and the code owners list.
 ## Security
 
-- **Vulnerabilities** in code or dependencies: use GitHub's private vulnerability reporting (Security tab, then "Report a vulnerability") instead of a public issue.
-- **Harmful data errors** (an unsafe cap, a wrong unit, a threshold off by an order of magnitude): report them to `agri-knowledge` with a citation and the `fact_id`. If you believe there is immediate risk, report it privately as above.
-- The library makes no network calls. Pack loading verifies hashes and opens SQLite read-only with `trusted_schema=OFF`. YAML is read with `safe_load` only.
+- **Vulnerabilities** in code or dependencies: report them privately via GitHub's private vulnerability reporting (Security tab, "Report a vulnerability"), not as a public issue.
+- **Harmful data errors** (an unsafe cap, a wrong unit, a threshold off by an order of magnitude): report to [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge) with a citation and the `fact_id`. For immediate risk, report privately as above.
+- The library makes no network calls; pack loading verifies hashes and opens SQLite read-only with `trusted_schema=OFF`; YAML is read with `safe_load` only.
 
+See [`SECURITY.md`](SECURITY.md) for the full policy, supported versions, scope and security guarantees.
 ## Versioning and releases
 
 - Semantic Versioning applies to the engine and to public contracts: `Outcome` and its members, the JSON Schemas, the dictionary and the exported tool schemas.
+- During the 0.x line a **minor** release may break a public contract; when it does, the breaking change is called out under a `### Changed` (or `### Removed`) heading in `CHANGELOG.md`. A major version is reserved for the point at which the contract is considered stable.
 - Every pack carries a `schema_version` and an `engine_min`. The engine supports two consecutive `schema_version` values and ships `agri-core pack migrate` to move a pack forward. A pack that declares a `schema_version` the engine does not support is rejected; a pack that requires a newer engine than the one running is rejected.
 - Every fact has a stable `fact_id`. A superseded fact is marked with `superseded_by`; a critical correction will be published as an advisory in the pack (planned after M8; the loader currently rejects non-empty `advisories.csv`).
-- Every release pins the `agri-knowledge` version it was tested against, and a canary CI job runs against `agri-knowledge` `main` to surface incompatibilities early.
+- Every release pins the `agri-knowledge` version it was tested against. A canary CI job against `agri-knowledge` `main`, to surface incompatibilities early, is **planned for v0.1.1** (not yet implemented).
 - `dictionary/dictionary.lock` records `<version> <contract_hash>` per dictionary release; the SemVer rule is that adding a key is `MINOR`, removing / renaming / changing shape, unit, phase_set, enum values or narrowing a dimension is `MAJOR`, and description / rationale changes are `PATCH`. `classify_change` enforces this and is exercised by the test suite.
 - Releases are git tags and GitHub Releases (wheel, sample pack, built packs, hashes). They are not published on PyPI.
 
@@ -431,9 +409,9 @@ If you use the engine in research or in a product, cite this repository with the
 | **M6** Build | Done | `scaffold` (opaque taxon IDs, never reused) plus `build` (CSV → SQLite + manifest, reproducible). | Wheel and pack build reproducibly (identical SHA-256 twice). |
 | **M7** Validate, diff, coverage, license gate | Done | Trapezoid order, scope validity, unit resolution, duplicate detection, tier derivation (T0–T3), `diff` report, `coverage`, license gate. | Sample pack passes validate with 0 errors; `diff` matches fixtures; coverage assigns tiers; license gate rejects NC + `commercial_use=yes`. |
 | **M8** `resolve_taxon` and `resolve_fact` | Done | Deterministic resolution per the fixed policy (ADR-004); `meta()`; `show` CLI with three modes (`--name`, `--taxon`, `--fact`). | `resolve_taxon` p95 ≤ 5 ms on a 10k-taxa pack (measured ≈ 12 µs); resolution contract tests pass (taxon, fact, schema drift, perf); `show` CLI usable. |
-| **M9** Offline, performance, docs, tag `v0.1.0` | Not started | Socket-blocking pytest plugin; additional performance budget tests for pack load, batch suitability and memory (resolver perf test ships in M8); the remaining `docs/` skeleton (`DICTIONARY`, `RESOLUTION_POLICY`, `SAFETY`, `ADDING_A_TAXON`); tag `v0.1.0`. | Every test passes with network blocked; performance budget met; tag `v0.1.0`. |
+| **M9** Offline, performance, docs, tag `v0.1.0` | Done | Socket-blocking pytest plugin (`pytest-socket`, `--disable-socket`, `offline-wheel` CI job under `unshare -n`); performance budget tests for pack load and peak memory (batch suitability deferred to M12); the `docs/` skeleton (`DICTIONARY` generated, `RESOLUTION_POLICY`, `SAFETY`, `ADDING_A_TAXON` executed by test); Windows smoke job; release workflow; tag `v0.1.0`. | Every test passes with network blocked; performance budget met; Windows `windows-smoke` green; `release.yml` dry-run green; tag `v0.1.0`. |
 | **M10** Climate, thresholds and stages | Not started | VPD, GDD, DLI, ET0 with fallback, temperature from elevation, threshold checks, stage resolver. | Golden tests pass; phases resolve per archetype; perennials use caller-supplied events. |
-| **M11** Irrigation, fertilizer, media and water | Not started | Registry of irrigation modes (`container_band`, `field_etc`, `paddy_awd`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. | `v0.1.0` passes against the sample pack and against `agri-knowledge` `v0.1.0`; irrigation results match scenario fixtures. |
+| **M11** Irrigation, fertilizer, media and water | Not started | Registry of irrigation modes (`container_band`, `field_etc`, `paddy_awd`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. | The M11 release passes against the sample pack and against the pinned `agri-knowledge` version; irrigation results match scenario fixtures. |
 | **M12** Suitability and propagation | Not started | Single and batch site suitability, per-factor reasons, hazard flags, dated propagation plans. | Batch mode within the performance budget; scenario tests including an `unsuitable` case. |
 | **M13** Exports and documentation | Not started | `tool_schemas.json`, `edge_thresholds.json` per site, `review_sheet.csv` per tier, quickstart notebook, `docs/`. | A release tag includes exports, generated from the same Pydantic models as the library, with a stable contract test. |
 
@@ -452,14 +430,14 @@ agri-core validate --pack sample
 agri-core lint-sources --pack sample
 ```
 
-Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout, pre-commit and pip-audit. Socket-blocking pytest plugin and Windows smoke job are planned for `v0.1.0`.
+Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout, pre-commit, pip-audit, and pytest-socket. The full suite runs with network access blocked (`--disable-socket`). A `windows-smoke` CI job runs the non-perf suite on `windows-latest`, Python 3.11.
 
 **Test kinds**
 
 - `contract`: `Outcome`, dictionary, exported tool schemas and JSON Schemas stay stable. Includes the M8 resolution contract tests (`tests/contract/test_resolve_taxon.py`, `test_resolve_fact.py`, `test_resolution_schemas.py`, `test_unknown_code_registry.py`).
 - `golden`: results validated against published worked examples, or against independent permissively licensed implementations.
-- `offline` (from `v0.1.0`): network access is blocked; any attempt to open a socket fails the test.
-- `perf`: pack load and resolution stay within the published budget (resolver perf test ships in M8; wider coverage from `v0.1.0`). Exclude with `-m 'not perf'` on slow runners.
+- `offline`: network access is blocked; any attempt to open a socket fails the test.
+- `perf`: pack load and resolution stay within the published budget. The resolver test shipped in M8; built-pack load and peak memory joined in v0.1.0. Exclude with `-m 'not perf'` on slow runners.
 - `property`: Hypothesis checks such as unit round-trips, no negative amounts, and monotonic behavior with area.
 - `scenario`: end-to-end expectations, for example a taxon whose every suitability factor is `unsuitable` in the requested scope must return `unsuitable`.
 - `unit`: functions in isolation.
@@ -478,7 +456,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 
 - Every test runs with network access blocked.
 - The performance budget is met (see [Performance](#performance)).
-- A Windows smoke job runs alongside the Python 3.11–3.14 matrix on Ubuntu.
+- A `windows-smoke` job runs on `windows-latest` in parallel with the Python 3.11–3.14 matrix on Ubuntu.
 
 **Additional release gates from `v0.2.0`**
 
@@ -486,7 +464,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 
 ## Performance
 
-These targets are measured in CI and in Colab from `v0.1.0`, and will be recalibrated once real pack sizes are known.
+These targets are measured in CI and in Colab at v0.1.0 on a synthetic pack (10k taxa, 30k names, 200k facts). They will be recalibrated once real `agri-knowledge` pack sizes are known.
 
 | Operation | Budget |
 |---|---|

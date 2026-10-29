@@ -7,8 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_No unreleased changes._
 
-### Added
+## [0.1.0] - 2026-10-29
+
+Foundation release. **Data contract, pack lifecycle, and deterministic
+resolution.** The calculation engine (VPD, GDD, ET0, irrigation,
+fertilizer, media, suitability, propagation) ships in v0.2+; at v0.1.0
+the library loads a verified knowledge pack, resolves a taxon name and
+a fact deterministically, and refuses to guess.
+
+### Highlights
+
+- Offline by construction: `--disable-socket` and a `unshare -n` CI
+  job. The full test suite runs with the network blocked.
+- Deterministic fact resolution (`resolve_taxon`, `resolve_fact`)
+  following a fixed policy, with 12 worked examples, each backed by a
+  test in the repository.
+- 10k-taxa built-pack load: min-of-5 895.6 ms, peak `tracemalloc`
+  61.7 MB (measured on Colab-class CPU). A Windows smoke job runs the
+  full suite on `windows-latest`.
+
+### Added (M9)
+
+- **Offline guard.** `pytest-socket` with `--disable-socket` in
+  `addopts`. `tests/offline/test_socket_guard.py` is the permanent
+  negative control; the `offline-wheel` CI job runs `agri-core validate`
+  under `unshare -n`. The full suite passes with no network access.
+- **Performance budget tests.** Synthetic 10k-taxa pack (30k names,
+  200k facts): built-pack load min-of-5 <= 1 s (measured 895.6 ms),
+  peak `tracemalloc` <= 200 MB (measured 61.7 MB); source-pack canary
+  <= 40 s (measured 25.6 s). New `perf` CI job runs with `--no-cov` so
+  timing is not distorted by coverage instrumentation.
+- **Built-pack load fast path.** `_read_raw_rows_for_index` passes every
+  defaulted field explicitly to `model_construct`, sidestepping
+  Pydantic 2.14's per-call `default_factory` resolution. Measured
+  2726 ms -> 917 ms (3.0x). The SQLite artifact is hashed in 1 MiB
+  chunks instead of `read_bytes()`: identical digest, safe for larger
+  packs.
+- **Docs skeleton, anti-drift.** `docs/DICTIONARY.md` is generated from
+  `dictionary/parameters.core.yaml` by `scripts/gen_dictionary_doc.py`
+  with a `--check` pre-commit hook. `docs/RESOLUTION_POLICY.md` is the
+  normative spec with 12 worked examples, each naming the enforcing
+  test. `docs/SAFETY.md` separates enforced-now from planned-M11+ and
+  names the test for each claim. `docs/ADDING_A_TAXON.md` is executed
+  end-to-end by `tests/scenario/test_adding_a_taxon.py` via
+  `CliRunner`. `tests/unit/test_docs_links.py` verifies every relative
+  link and README anchor.
+- **Windows CI.** New `windows-smoke` job (`windows-latest`,
+  Python 3.11) runs the full non-perf suite, `agri-core validate`, and
+  a cross-OS `pack lock` + `git diff` determinism check.
+  `_sqlite_uri` emits `file:///C:/...` for drive-letter paths so the
+  SQLite artifact opens on Windows; three POSIX-only tests are skipped
+  on `os.name == "nt"`.
+- **Release workflow.** `release.yml` calls `ci.yml` via `workflow_call`
+  as the release gate (no duplicated checks). `workflow_dispatch`
+  provides a dry-run; the tag-triggered path creates a draft GitHub
+  Release with wheel, sdist, `sample_pack.zip`, `SHA256SUMS`, and the
+  `agri-knowledge` built pack when a matching release exists.
+- **Dependency pin.** `tornado>=6.6` pinned in dev extras to close
+  CVE-2026-116577 / -115927 / -116578 (transitive via nbmake).
+
+### Added (M0-M8, pre-release development)
 
 - `agri-core pack build --pack PATH --out DIR` validates a source pack
   and writes `pack.sqlite` plus a built `pack.toml`. Prints
@@ -279,9 +339,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-
-
-### Added
 
 - Dictionary `1.0.0` finalized (c-3b): `dictionary_version: 1.0.0`
   (was `1.0.0-dev`). 31 parameters.
