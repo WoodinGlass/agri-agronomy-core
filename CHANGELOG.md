@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _No unreleased changes._
 
+## [0.1.1] - 2026-10-29
+
+### Fixed
+
+- `agri-core pack lock` now repairs a stale or missing `content_hash`
+  instead of rejecting it with `PACK_HASH_MISMATCH`. Structural
+  validation still runs; only the hash-consistency check is dropped
+  before rewriting, matching `agri-core pack build --update-source-hash`.
+
 ## [0.1.0] - 2026-10-29
 
 Foundation release. **Data contract, pack lifecycle, and deterministic
