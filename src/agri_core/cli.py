@@ -32,7 +32,7 @@ from agri_core.pack import (
     parse_manifest_bytes,
     read_pack_bytes,
 )
-from agri_core.pack.build import build_pack, render_source_manifest
+from agri_core.pack.build import build_pack, render_source_manifest, strip_content_hash
 from agri_core.pack.loader import _default_dictionary
 from agri_core.pack.scaffold import scaffold_taxon
 from agri_core.pack.validate import validate_pack, validate_pack_report
@@ -294,7 +294,11 @@ def pack_lock(
     try:
         files = read_pack_bytes(path)
         manifest = parse_manifest_bytes(files["pack.toml"])
-        validate_pack(files, allow_synthetic=True)
+        # Validate structure, but strip content_hash first: this command
+        # exists to repair a stale or missing hash, so a hash mismatch is
+        # expected input, not an error. Matches build_pack(--update-source-hash).
+        stripped = {**files, "pack.toml": strip_content_hash(files["pack.toml"])}
+        validate_pack(stripped, allow_synthetic=True)
     except PackError as exc:
         typer.echo(f"error: {exc.code}: {exc}", err=True)
         for finding in getattr(exc, "findings", ()):

@@ -189,3 +189,27 @@ def test_pack_lock_atomic_no_partial_on_error(
     after = (root / "pack.toml").read_bytes()
     assert before == after
     assert not (root / "pack.toml.tmp").exists()
+
+
+def test_pack_lock_repairs_stale_hash(tmp_path: Path) -> None:
+    """pack lock must repair a stale hash, not reject it (regression).
+
+    Before the fix, validate_pack(files) inside pack_lock raised
+    PACK_HASH_MISMATCH on the very pack the command was meant to repair.
+    Matches build_pack(--update-source-hash), which already strips the
+    hash before validating.
+    """
+    root = tmp_path / "pack"
+    _make_pack(root, with_hash=True)
+    toml_path = root / "pack.toml"
+    toml_path.write_text(
+        toml_path.read_text(encoding="utf-8").replace('name = "test"', 'name = "test2"'),
+        encoding="utf-8",
+    )
+    assert _read_hash(root) != compute_pack_hash(root)
+
+    result = CliRunner().invoke(app, ["pack", "lock", "--pack", str(root)])
+
+    assert result.exit_code == 0, result.stdout + result.stderr
+    assert "wrote content_hash" in result.stdout
+    assert _read_hash(root) == compute_pack_hash(root)
