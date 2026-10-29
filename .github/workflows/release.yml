@@ -1,0 +1,236 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to simulate (e.g. v0.1.0)"
+        required: true
+        type: string
+      dry_run:
+        description: "Skip strict checks and draft Release creation"
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  validate:
+    name: Validate tag and extract changelog
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      release-tag: ${{ steps.resolve.outputs.tag }}
+      publish: ${{ steps.resolve.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Resolve tag, mode, and CHANGELOG section
+        id: resolve
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            TAG="$INPUT_TAG"
+            DRY_RUN="$INPUT_DRY_RUN"
+          else
+            TAG="$REF_NAME"
+            DRY_RUN="false"
+          fi
+          echo "tag=$TAG dry_run=$DRY_RUN"
+
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::tag $TAG does not match vX.Y.Z"
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+
+          if [ "$DRY_RUN" != "true" ]; then
+            git fetch origin main --depth=1
+            if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+              echo "::error::tagged commit $GITHUB_SHA is not an ancestor of origin/main"
+              exit 1
+            fi
+          fi
+
+          PYPROJECT_VERSION=$(python -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "pyproject version: $PYPROJECT_VERSION"
+          if [ "$DRY_RUN" != "true" ] && [ "$VERSION" != "$PYPROJECT_VERSION" ]; then
+            echo "::error::tag $TAG does not match pyproject.toml version $PYPROJECT_VERSION"
+            exit 1
+          fi
+
+          BODY_FILE="$GITHUB_WORKSPACE/release-body.md"
+          if grep -q "^## \[$VERSION\]" CHANGELOG.md; then
+            python - "$VERSION" CHANGELOG.md "$BODY_FILE" <<'PY'
+          import re, sys
+          version, src, dst = sys.argv[1:4]
+          text = open(src, encoding="utf-8").read()
+          pattern = re.compile(
+              rf"^## \[{re.escape(version)}\][^\n]*\n(.*?)(?=^## \[|\Z)",
+              re.MULTILINE | re.DOTALL,
+          )
+          m = pattern.search(text)
+          if not m:
+              sys.exit("CHANGELOG section extraction failed")
+          open(dst, "w", encoding="utf-8").write(m.group(1).strip() + "\n")
+          PY
+          else
+            echo "::warning::CHANGELOG.md has no '## [$VERSION]' section"
+            if [ "$DRY_RUN" != "true" ]; then
+              echo "::error::cannot publish without a CHANGELOG section"
+              exit 1
+            fi
+            echo "Dry-run placeholder for $VERSION" > "$BODY_FILE"
+          fi
+
+          PUBLISH=$([ "$DRY_RUN" = "true" ] && echo false || echo true)
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
+      - name: Upload release body
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-body
+          path: release-body.md
+          if-no-files-found: error
+
+  gate:
+    name: CI gate (full ci.yml)
+    needs: validate
+    uses: ./.github/workflows/ci.yml
+
+  artifacts:
+    name: Assemble release assets
+    needs: [validate, gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download wheel
+        uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: dist/wheel
+      - name: Download sdist
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist/sdist
+      - name: Download release body
+        uses: actions/download-artifact@v4
+        with:
+          name: release-body
+          path: .
+      - name: Zip sample pack (top-level sample_pack/ inside)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd src/agri_core/_samples
+          zip -r "$GITHUB_WORKSPACE/sample_pack.zip" sample_pack
+          cd "$GITHUB_WORKSPACE"
+          unzip -l sample_pack.zip
+      - name: Fetch agri-knowledge built pack (fail-soft, public URL)
+        shell: bash
+        env:
+          TAG: ${{ needs.validate.outputs.release-tag }}
+        run: |
+          set -euo pipefail
+          URL="https://github.com/WoodinGlass/agri-knowledge/releases/download/${TAG}/built-pack.zip"
+          if curl -fsSL --max-time 30 "$URL" -o built-pack.zip 2>/dev/null; then
+            echo "Fetched $URL"
+            ls -la built-pack.zip
+          else
+            echo "::warning::$URL not found; agri-knowledge ${TAG} not yet released - skipping built pack"
+            rm -f built-pack.zip
+          fi
+      - name: Build SHA256SUMS
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILES=(dist/wheel/*.whl dist/sdist/*.tar.gz sample_pack.zip)
+          if [ -f built-pack.zip ]; then FILES+=(built-pack.zip); fi
+          sha256sum "${FILES[@]}" > SHA256SUMS
+          echo "----- SHA256SUMS -----"
+          cat SHA256SUMS
+      - name: Upload release-assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-assets
+          path: |
+            dist/wheel/*.whl
+            dist/sdist/*.tar.gz
+            sample_pack.zip
+            SHA256SUMS
+            built-pack.zip
+            release-body.md
+          if-no-files-found: warn
+
+  release:
+    name: Create draft GitHub Release
+    needs: [validate, artifacts]
+    if: needs.validate.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download release-assets
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: release-assets
+      - name: List assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -laR release-assets
+      - name: Create draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.validate.outputs.release-tag }}
+        run: |
+          set -euo pipefail
+          cd release-assets
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::release $TAG already exists; fix-forward to a new tag"
+            exit 1
+          fi
+
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --title "$TAG" \
+            --notes-file release-body.md \
+            --verify-tag \
+            dist/wheel/*.whl dist/sdist/*.tar.gz sample_pack.zip SHA256SUMS
+
+          if [ -f built-pack.zip ]; then
+            gh release upload "$TAG" built-pack.zip --repo "$GITHUB_REPOSITORY"
+          fi
+
+          echo "Created draft release $TAG"
