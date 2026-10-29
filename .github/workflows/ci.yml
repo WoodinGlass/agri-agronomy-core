@@ -309,6 +309,23 @@ jobs:
       - name: Show taxon with network blocked
         run: sudo unshare -n -- "${{ github.workspace }}/.offline-venv/bin/agri-core" show --pack sample --name "Testus annualis" --json
 
+  perf:
+    name: Performance budget
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install from lock
+        run: |
+          pip install -r requirements.lock
+          pip install -e . --no-deps --no-build-isolation
+      - name: Run perf tests
+        run: pytest tests/perf/ -m perf --no-cov -q -p no:nbmake -W ignore::DeprecationWarning
+
   sdist-roundtrip:
     name: Sdist round-trip
     runs-on: ubuntu-latest
