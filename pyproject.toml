@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agri-agronomy-core"
-version = "0.0.0"
-description = "Offline, deterministic crop profiles and agronomy calculators."
+version = "0.1.0"
+description = "Offline, deterministic data contract and resolution engine for agronomic knowledge."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
@@ -13,7 +13,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "WoodinGlass and the agri-agronomy-core contributors" }]
 keywords = ["agronomy", "crop-profiles", "offline", "deterministic", "agriculture"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
