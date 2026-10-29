@@ -40,3 +40,10 @@ repos:
         files: '^(src/agri_core/_samples|schema)/.*\.(csv|ya?ml|json|toml)$'
         pass_filenames: false
         verbose: true
+      - id: gen-dictionary-doc
+        name: dictionary doc up to date
+        entry: python3 scripts/gen_dictionary_doc.py --check
+        language: system
+        files: '^(dictionary/parameters\.core\.yaml|docs/DICTIONARY\.md)$'
+        pass_filenames: false
+        verbose: true
