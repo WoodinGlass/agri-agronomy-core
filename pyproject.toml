@@ -36,6 +36,7 @@ dependencies = [
 dev = [
     "pytest>=9.0.3,<10",
     "pytest-cov>=6.1.1,<8",
+    "pytest-socket>=0.8,<1",
     "hypothesis>=6.100,<7",
     "ruff>=0.14,<0.18",
     "mypy>=1.20,<3",
@@ -106,7 +107,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-addopts = "-ra --strict-markers --strict-config --cov=agri_core --cov-report=term-missing"
+addopts = "-ra --strict-markers --strict-config --cov=agri_core --cov-report=term-missing --disable-socket"
 testpaths = ["tests"]
 filterwarnings = [
     "error",
