@@ -55,6 +55,10 @@ definition.
 
 ## Decision — License gate (finalized M7-4)
 
+> **Superseded by ADR-005 (v0.1.2).** The allowlist gate, the
+> `commercial_use` requirement and the PD-basis rule now live in
+> ADR-005. The section below is kept for historical context.
+
 Two rules, identical in `validate_pack_report` and therefore in
 `agri-core validate`, `agri-core pack build`, and `agri-core coverage`
 (all use the single validation pipeline).

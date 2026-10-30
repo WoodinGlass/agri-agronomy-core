@@ -351,6 +351,95 @@ jobs:
           agri-core pack lock --pack src/agri_core/_samples/sample_pack
           git diff --exit-code src/agri_core/_samples/sample_pack/pack.toml
 
+  licenses:
+    name: Runtime dependency licenses
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: build-wheel
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install runtime dependencies in a clean venv
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv .lic-venv
+          .lic-venv/bin/pip install --upgrade pip
+          .lic-venv/bin/pip install .
+      - name: Check permissive licenses (PEP 639-aware)
+        shell: bash
+        run: |
+          .lic-venv/bin/python - <<'PY'
+          import sys
+          from importlib.metadata import PackageNotFoundError, metadata
+
+          # Canonical PEP 639 identifiers accepted for runtime dependencies.
+          ALLOWLIST = {
+              "MIT", "BSD-2-Clause", "BSD-3-Clause",
+              "Apache-2.0", "ISC", "PSF-2.0",
+          }
+          # Leaf license label (from legacy `License:` field or from the last
+          # `License :: ... :: X` classifier) -> canonical ID.
+          LEGACY_MAP = {
+              "MIT": "MIT", "MIT License": "MIT",
+              "BSD": "BSD-3-Clause", "BSD License": "BSD-3-Clause",
+              "BSD-2-Clause": "BSD-2-Clause", "BSD-3-Clause": "BSD-3-Clause",
+              "Apache": "Apache-2.0", "Apache 2.0": "Apache-2.0",
+              "Apache-2.0": "Apache-2.0", "Apache Software License": "Apache-2.0",
+              "ISC": "ISC", "ISC License": "ISC",
+              "Python Software Foundation License": "PSF-2.0", "PSF-2.0": "PSF-2.0",
+          }
+          REQUIRED = ["pydantic", "jsonschema", "pyyaml", "pint", "typer", "packaging"]
+
+          def resolve(pkg):
+              md = metadata(pkg)
+              expr = md.get("License-Expression")
+              if expr:
+                  return expr.strip(), "License-Expression"
+              lic = (md.get("License") or "").strip()
+              if lic:
+                  return lic.splitlines()[0].strip(), "License"
+              classifiers = [c for c in (md.get_all("Classifier") or []) if c.startswith("License ::")]
+              if classifiers:
+                  leaf = classifiers[-1].split(" :: ")[-1]
+                  return leaf, "Classifier"
+              return "", "missing"
+
+          def is_permissive(expr):
+              e = expr.strip()
+              if not e or " WITH " in e:
+                  return False
+              if " AND " in e:
+                  return all(is_permissive(p) for p in e.split(" AND "))
+              if " OR " in e:
+                  return any(is_permissive(p) for p in e.split(" OR "))
+              if e in ALLOWLIST:
+                  return True
+              mapped = LEGACY_MAP.get(e)
+              return bool(mapped and mapped in ALLOWLIST)
+
+          bad = []
+          for pkg in REQUIRED:
+              try:
+                  expr, source = resolve(pkg)
+              except PackageNotFoundError:
+                  print(f"  BAD {pkg}: package not installed")
+                  bad.append((pkg, "<missing>", "missing"))
+                  continue
+              ok = is_permissive(expr)
+              print(f"  {'OK ' if ok else 'BAD'} {pkg:12s} {expr!r:45s} (from {source})")
+              if not ok:
+                  bad.append((pkg, expr, source))
+
+          if bad:
+              print(f"\n{len(bad)} non-permissive runtime dependency license(s)")
+              sys.exit(1)
+          print(f"\nOK: {len(REQUIRED)} runtime dependencies, all permissive")
+          PY
+
   sdist-roundtrip:
     name: Sdist round-trip
     runs-on: ubuntu-latest

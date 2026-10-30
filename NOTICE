@@ -1,0 +1,14 @@
+agri-agronomy-core
+Copyright 2026 WoodinGlass and the agri-agronomy-core contributors
+
+This product includes software developed at
+WoodinGlass/agri-agronomy-core (https://github.com/WoodinGlass/agri-agronomy-core).
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party material reproduced in this repository: none.
+
+Runtime dependencies are licensed under their own terms and are not
+distributed with this package's source. Real data lives in the
+agri-knowledge repository; each pack carries the license and the
+attribution text of its sources in sources.csv.

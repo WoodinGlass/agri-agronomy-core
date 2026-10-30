@@ -331,7 +331,7 @@ Planned next: maize, chili pepper, broccoli, potato, lettuce, grape, apple, wate
 
 **International by design.** Profiles are not tied to a country. Each value declares its scope (elevation, variety, growing system) and its source, so the same crop can carry different values for different conditions. Crop names carry aliases in several languages, and new aliases are welcome. Region-specific material, such as soil-test interpretation tables, is tagged with the region and method it applies to.
 
-## Exports
+## Exports (M13)
 
 - `bundle.json`: all profiles, the sources table (including license, `commercial_use` and attribution text) and metadata in one versioned file.
 - `tool_schemas.json`: function-calling schemas for LLM agents, generated from the same Pydantic models as the library so tools and code cannot drift apart.

@@ -60,6 +60,79 @@ def is_nd_license(license_id: str) -> bool:
     return "nd" in tokens or "noderiv" in tokens or "noderivatives" in tokens
 
 
+_ALLOWED_LICENSES: frozenset[str] = frozenset(
+    {
+        "CC0-1.0",
+        "CC-BY-3.0",
+        "CC-BY-4.0",
+        "MIT",
+        "BSD-2-Clause",
+        "BSD-3-Clause",
+        "Apache-2.0",
+        "LicenseRef-PublicDomain",
+    }
+)
+"""Commercial-use allowlist for data sources (exact-match SPDX IDs).
+
+See ADR-005. Adding a license here requires an ADR amendment and a
+CHANGELOG entry.
+"""
+
+_ALLOWED_LICENSES_DATASET: frozenset[str] = _ALLOWED_LICENSES - {"LicenseRef-PublicDomain"}
+"""Dataset allowlist: same as sources, without LicenseRef-PublicDomain.
+
+Datasets have no ``citation`` column in 0.1.2, so a PD dataset cannot
+record the ``basis:`` justification required for sources. PD datasets
+are rejected outright until a schema change lands.
+"""
+
+_PD_SENTINEL = "LicenseRef-PublicDomain"
+_PD_BASIS_PREFIX = "basis:"
+
+_COMPOSITE_MARKERS = (" AND ", " OR ", " WITH ", "+")
+"""Any of these in a license id means a composite SPDX expression.
+
+Rejected unconditionally: a pack row records exactly one license it
+relies on. A dual-license source is recorded as the single license the
+pack uses.
+"""
+
+
+def is_allowed_license(license_id: str, *, for_dataset: bool = False) -> bool:
+    """True if *license_id* is on the commercial-use allowlist.
+
+    Fail-closed and exact-match on SPDX canonical identifiers. Rejected
+    regardless of which allowlist is used:
+
+    - Empty string, ``unclear``, ``NOASSERTION``.
+    - Composite SPDX expressions (``AND``, ``OR``, ``WITH``, ``+``).
+    - Unknown ``LicenseRef-*`` ids (only ``LicenseRef-PublicDomain`` is
+      accepted, and only for sources with a ``basis:`` citation).
+
+    ``LicenseRef-PublicDomain`` is rejected for datasets in 0.1.2: the
+    dataset table has no ``citation`` column to record the basis.
+
+    Blocklist findings remain as independent checks (ADR-005 point 4).
+    """
+    if not license_id or license_id == "unclear" or license_id == "NOASSERTION":
+        return False
+    if any(marker in license_id for marker in _COMPOSITE_MARKERS):
+        return False
+    if license_id.startswith("LicenseRef-") and license_id != _PD_SENTINEL:
+        return False
+    if is_nc_license(license_id) or is_sa_license(license_id) or is_nd_license(license_id):
+        return False
+    allowed = _ALLOWED_LICENSES_DATASET if for_dataset else _ALLOWED_LICENSES
+    return license_id in allowed
+
+
+def has_pd_basis(citation: str | None) -> bool:
+    """True if *citation* begins with ``basis:`` (case-sensitive)."""
+    if not citation:
+        return False
+    return citation.startswith(_PD_BASIS_PREFIX)
+
+
 def _is_valid_license(license_id: str) -> bool:
     if license_id == "unclear":
         return True
@@ -119,6 +192,18 @@ def _row_findings(row: SourceRow, line: int, *, today: date, filename: str) -> l
                 code="SRC004",
                 severity=FindingSeverity.ERROR,
                 message=f"{row.id}: access_date {row.access_date} is in the future",
+                location=FindingLocation(file=filename, line=line),
+            )
+        )
+    if row.commercial_use != "yes":
+        out.append(
+            Finding(
+                code="SRC005",
+                severity=FindingSeverity.ERROR,
+                message=(
+                    f"{row.id}: commercial_use={row.commercial_use!r} is not "
+                    f"permitted; every source must be commercial_use=yes (ADR-005)"
+                ),
                 location=FindingLocation(file=filename, line=line),
             )
         )

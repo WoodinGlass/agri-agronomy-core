@@ -424,6 +424,9 @@ all is accepted.
 | `PACK_FACT_KEY_DUPLICATE` | two live facts share `(taxon, parameter, phase, canonical_scope)` with different values |
 | `PACK_LICENSE_NC_COMMERCIAL` | NC source with `commercial_use=yes` |
 | `PACK_LICENSE_DATASET_SA_ND` | SA/ND dataset referenced by a fact |
+| `PACK_LICENSE_NOT_COMMERCIALLY_USABLE` | Source has `commercial_use` other than `yes` (ADR-005) |
+| `PACK_LICENSE_OUTSIDE_ALLOWLIST` | Source or dataset license not on the allowlist (ADR-005) |
+| `PACK_LICENSE_PD_BASIS_MISSING` | `LicenseRef-PublicDomain` source without a `basis:` citation (ADR-005) |
 | `PACK_SAFETY_DOUBLE_REVIEW_MISSING` | safety-critical fact at `approved` with <2 reviewers |
 
 ## Size limit

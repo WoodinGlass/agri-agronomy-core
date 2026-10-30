@@ -19,7 +19,7 @@ replace a domain expert.
 
 | Grade | Meaning | Typical source |
 |---|---|---|
-| `A` | Strongest. Direct empirical or official guidance. | Peer-reviewed field trial with replication; a national extension service publication; an official standards body (ISO, FAO, national ministry). |
+| `A` | Strongest. Direct empirical or official guidance. | Peer-reviewed field trial with replication; a national extension service publication; an official standards body (ISO, national ministry, or an equivalent standards body). |
 | `B` | Strong but indirect. Expert consensus without a single authoritative source. | Reviewed agronomy handbook; widely adopted commercial growing guide from a recognised institution; extension service fact sheet for a neighbouring region. |
 | `C` | Weak. Single-source, context-bound, or product-specific. | One field trial with no replication; a single producer's documented practice; a manufacturer datasheet for a specific product. |
 | `D` | Weakest. Anecdotal. | Blog post, forum thread, personal communication, marketing copy, unsourced claim. |
@@ -55,7 +55,7 @@ or internal review — never for production decisions.
   NoDerivatives) is checked separately during pack build (M7). See
   `README.md` → Data and provenance.
 - **Not a protected-species policy.** The rules for CITES, Permen LHK
-  106/2018 and the IUCN Red List live in
+  106/2018 live in
   `docs/design/plant_wishlist_v4_rationale.md`. A fact can have grade
   `A` and still describe a taxon that must not be included in a pack.
 - **Not a substitute for a domain expert.** A reviewer assigns grades;
@@ -84,7 +84,7 @@ For every fact proposed for `approved`:
       context, and the fields left empty are empty on purpose.
 - [ ] Units are canonical per `dictionary/unit_registry.yaml`.
 - [ ] If the fact touches a species subject to CITES, Permen LHK
-      106/2018 or IUCN CR/EN/VU, the pathway is documented in
+      106/2018, the pathway is documented in
       `docs/design/plant_wishlist_v4_rationale.md`.
 ## Tier derivation (T0–T3)
 
