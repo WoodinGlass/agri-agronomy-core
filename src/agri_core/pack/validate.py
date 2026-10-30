@@ -20,6 +20,8 @@ from agri_core.pack.knowledge_set import KnowledgeSet
 from agri_core.pack.loader import _default_dictionary, load_knowledge_set_from_files
 from agri_core.pack.tables import TABLES, read_table
 from agri_core.registry.sources import (
+    has_pd_basis,
+    is_allowed_license,
     is_nc_license,
     is_nd_license,
     is_sa_license,
@@ -236,6 +238,107 @@ def check_license_dataset_sa_nd(
             )
 
 
+def check_license_source_commercial_use_required(
+    ks: KnowledgeSet, files: Mapping[str, bytes], dictionary: Dictionary
+) -> Iterable[Finding]:
+    """Flag sources with ``commercial_use`` not equal to ``yes``.
+
+    Every shipped source must be commercially usable (ADR-005, point 2).
+    ``no`` and ``unclear`` are errors, not warnings: a pack that ships a
+    non-commercial source grants rights the source's own terms forbid.
+    """
+    table = read_table(TABLES["sources"], files["sources.csv"], source_name="sources.csv")
+    for row in table.rows:
+        if row.get("commercial_use") != "yes":
+            sid = row["id"]
+            yield Finding(
+                code="PACK_LICENSE_NOT_COMMERCIALLY_USABLE",
+                severity=FindingSeverity.ERROR,
+                message=(
+                    f"source {sid} has commercial_use={row.get('commercial_use')!r}; "
+                    f"every shipped source must be commercial_use=yes"
+                ),
+                location=FindingLocation(file="sources.csv", key=sid),
+            )
+
+
+def check_license_source_allowlist(
+    ks: KnowledgeSet, files: Mapping[str, bytes], dictionary: Dictionary
+) -> Iterable[Finding]:
+    """Flag source licenses that are not on the commercial-use allowlist.
+
+    Exact-match SPDX identifiers only (ADR-005, point 1). Composite
+    expressions, unknown ``LicenseRef-*`` ids, empty strings,
+    ``NOASSERTION`` and ``unclear`` are rejected.
+    """
+    table = read_table(TABLES["sources"], files["sources.csv"], source_name="sources.csv")
+    for row in table.rows:
+        lic = row.get("license", "")
+        if not is_allowed_license(lic, for_dataset=False):
+            sid = row["id"]
+            yield Finding(
+                code="PACK_LICENSE_OUTSIDE_ALLOWLIST",
+                severity=FindingSeverity.ERROR,
+                message=(
+                    f"source {sid} has license {lic!r}, not on the "
+                    f"commercial-use allowlist (see ADR-005)"
+                ),
+                location=FindingLocation(file="sources.csv", key=sid),
+            )
+
+
+def check_license_dataset_allowlist(
+    ks: KnowledgeSet, files: Mapping[str, bytes], dictionary: Dictionary
+) -> Iterable[Finding]:
+    """Flag dataset licenses that are not on the dataset allowlist.
+
+    Same allowlist as sources, minus ``LicenseRef-PublicDomain``
+    (ADR-005, point 3): the dataset table has no ``citation`` column in
+    0.1.2, so a PD dataset cannot record the ``basis:`` justification.
+    """
+    table = read_table(TABLES["datasets"], files["datasets.csv"], source_name="datasets.csv")
+    for row in table.rows:
+        lic = row.get("license", "")
+        if not is_allowed_license(lic, for_dataset=True):
+            did = row["dataset_id"]
+            yield Finding(
+                code="PACK_LICENSE_OUTSIDE_ALLOWLIST",
+                severity=FindingSeverity.ERROR,
+                message=(
+                    f"dataset {did} has license {lic!r}, not on the dataset "
+                    f"allowlist (see ADR-005; LicenseRef-PublicDomain is not "
+                    f"supported for datasets in 0.1.2)"
+                ),
+                location=FindingLocation(file="datasets.csv", key=did),
+            )
+
+
+def check_license_source_pd_basis(
+    ks: KnowledgeSet, files: Mapping[str, bytes], dictionary: Dictionary
+) -> Iterable[Finding]:
+    """Flag ``LicenseRef-PublicDomain`` sources without a ``basis:`` citation.
+
+    Public-domain status depends on jurisdiction. The pack records the
+    basis (a national copyright statute, a specific dedication, etc.) in
+    the ``citation`` column, prefixed with ``basis:`` (ADR-005, point 3).
+    """
+    table = read_table(TABLES["sources"], files["sources.csv"], source_name="sources.csv")
+    for row in table.rows:
+        if row.get("license") != "LicenseRef-PublicDomain":
+            continue
+        if not has_pd_basis(row.get("citation")):
+            sid = row["id"]
+            yield Finding(
+                code="PACK_LICENSE_PD_BASIS_MISSING",
+                severity=FindingSeverity.ERROR,
+                message=(
+                    f"source {sid} is LicenseRef-PublicDomain but its "
+                    f"citation does not begin with 'basis:'"
+                ),
+                location=FindingLocation(file="sources.csv", key=sid),
+            )
+
+
 def check_safety_double_review(
     ks: KnowledgeSet, files: Mapping[str, bytes], dictionary: Dictionary
 ) -> Iterable[Finding]:
@@ -279,6 +382,10 @@ RULES: tuple[RuleFn, ...] = (
     check_fact_key_duplicate,
     check_license_source_nc_commercial,
     check_license_dataset_sa_nd,
+    check_license_source_commercial_use_required,
+    check_license_source_allowlist,
+    check_license_dataset_allowlist,
+    check_license_source_pd_basis,
     check_safety_double_review,
 )
 """Registered rules. Explicit tuple, not auto-import.

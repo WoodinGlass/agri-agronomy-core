@@ -10,6 +10,8 @@ import pytest
 from agri_core.registry.sources import (
     CSV_HEADER,
     Finding,
+    has_pd_basis,
+    is_allowed_license,
     lint_csv_file,
     lint_csv_text,
 )
@@ -74,20 +76,23 @@ def test_unclear_with_yes() -> None:
     assert _codes(findings) == ["SRC002"]
 
 
-def test_nc_with_no_ok() -> None:
+def test_nc_with_no_flagged() -> None:
+    """ADR-005: commercial_use=no is an error even with an NC license."""
     text = HEADER_LINE + "S001,https://x,CC-BY-NC-4.0,no,2026-01-15,doc\n"
     findings = lint_csv_text(text, today=TODAY)
-    assert findings == []
+    assert "SRC005" in _codes(findings)
 
 
-def test_unclear_with_unclear_ok() -> None:
+def test_unclear_with_unclear_flagged() -> None:
+    """ADR-005: commercial_use=unclear is an error."""
     text = HEADER_LINE + "S001,https://x,unclear,unclear,2026-01-15,doc\n"
     findings = lint_csv_text(text, today=TODAY)
-    assert findings == []
+    assert "SRC005" in _codes(findings)
 
 
 def test_future_date() -> None:
-    text = HEADER_LINE + "S001,https://x,MIT,no,2099-01-01,doc\n"
+    # commercial_use=yes so SRC005 does not fire; isolates SRC004
+    text = HEADER_LINE + "S001,https://x,MIT,yes,2099-01-01,doc\n"
     findings = lint_csv_text(text, today=TODAY)
     assert _codes(findings) == ["SRC004"]
 
@@ -99,7 +104,8 @@ def test_utf8_bom_is_stripped() -> None:
 
 
 def test_crlf_is_handled() -> None:
-    text = (HEADER_LINE + "S001,https://x,MIT,no,2026-01-15,doc\n").replace("\n", "\r\n")
+    # commercial_use=yes so SRC005 does not fire; isolates CRLF handling
+    text = (HEADER_LINE + "S001,https://x,MIT,yes,2026-01-15,doc\n").replace("\n", "\r\n")
     findings = lint_csv_text(text, today=TODAY)
     assert findings == []
 
@@ -185,3 +191,99 @@ def test_is_nd_license(license_id: str, expected: bool) -> None:
     from agri_core.registry.sources import is_nd_license
 
     assert is_nd_license(license_id) is expected
+
+
+# ============================================================
+# ADR-005: allowlist + PD basis (Cell C)
+# ============================================================
+
+
+@pytest.mark.parametrize(
+    ("license_id", "expected"),
+    [
+        ("CC0-1.0", True),
+        ("CC-BY-3.0", True),
+        ("CC-BY-4.0", True),
+        ("MIT", True),
+        ("BSD-2-Clause", True),
+        ("BSD-3-Clause", True),
+        ("Apache-2.0", True),
+        ("LicenseRef-PublicDomain", True),
+        ("CC-BY-NC-4.0", False),
+        ("CC-BY-SA-4.0", False),
+        ("CC-BY-ND-4.0", False),
+        ("ODbL-1.0", False),
+        ("GPL-3.0", False),
+        ("ISC", False),
+        ("PSF-2.0", False),
+        ("", False),
+        ("unclear", False),
+        ("NOASSERTION", False),
+        ("MIT OR Apache-2.0", False),
+        ("MIT AND Apache-2.0", False),
+        ("GPL-2.0+", False),
+        ("Apache-2.0 WITH LLVM-exception", False),
+        ("LicenseRef-Foo", False),
+        ("LicenseRef-Apa-Saja", False),
+    ],
+)
+def test_is_allowed_license_sources(license_id: str, expected: bool) -> None:
+    assert is_allowed_license(license_id, for_dataset=False) is expected
+
+
+@pytest.mark.parametrize(
+    ("license_id", "expected"),
+    [
+        ("CC0-1.0", True),
+        ("CC-BY-4.0", True),
+        ("MIT", True),
+        ("LicenseRef-PublicDomain", False),
+        ("ODbL-1.0", False),
+        ("CC-BY-NC-4.0", False),
+    ],
+)
+def test_is_allowed_license_datasets(license_id: str, expected: bool) -> None:
+    assert is_allowed_license(license_id, for_dataset=True) is expected
+
+
+@pytest.mark.parametrize(
+    ("citation", "expected"),
+    [
+        ("basis: public domain under Indonesian copyright law", True),
+        ("basis:", True),
+        ("", False),
+        (None, False),
+        ("no prefix", False),
+        ("Basis: uppercase", False),
+    ],
+)
+def test_has_pd_basis(citation: str | None, expected: bool) -> None:
+    assert has_pd_basis(citation) is expected
+
+
+# ============================================================
+# ADR-005: SRC005 — commercial_use must be yes (Cell B2)
+# ============================================================
+
+
+def test_no_with_valid_license_flagged() -> None:
+    """commercial_use=no is an error even with a valid license."""
+    text = HEADER_LINE + "S001,https://x,CC-BY-4.0,no,2026-01-15,doc\n"
+    findings = lint_csv_text(text, today=TODAY)
+    assert "SRC005" in _codes(findings)
+
+
+def test_yes_with_valid_license_ok() -> None:
+    """commercial_use=yes + valid license → no SRC005."""
+    text = HEADER_LINE + "S001,https://x,CC-BY-4.0,yes,2026-01-15,doc\n"
+    findings = lint_csv_text(text, today=TODAY)
+    assert "SRC005" not in _codes(findings)
+
+
+def test_src005_message_names_the_source() -> None:
+    text = HEADER_LINE + "S042,https://x,CC-BY-4.0,no,2026-01-15,doc\n"
+    findings = lint_csv_text(text, today=TODAY)
+    src005 = [f for f in findings if f.code == "SRC005"]
+    assert len(src005) == 1
+    assert "S042" in src005[0].message
+    assert "commercial_use=yes" in src005[0].message

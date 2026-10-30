@@ -351,6 +351,55 @@ jobs:
           agri-core pack lock --pack src/agri_core/_samples/sample_pack
           git diff --exit-code src/agri_core/_samples/sample_pack/pack.toml
 
+  licenses:
+    name: Runtime dependency licenses
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: build-wheel
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install runtime dependencies in a clean venv
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv .lic-venv
+          .lic-venv/bin/pip install --upgrade pip
+          .lic-venv/bin/pip install .
+          .lic-venv/bin/pip install "pip-licenses==5.0.0"
+      - name: Check permissive licenses
+        shell: bash
+        run: |
+          set -euo pipefail
+          .lic-venv/bin/pip-licenses --from=mixed --format=json > /tmp/licenses.json
+          python - <<'PY'
+          import json, sys
+          allowed = {
+              "MIT", "MIT License",
+              "BSD License", "BSD-2-Clause", "BSD-3-Clause",
+              "Apache Software License", "Apache-2.0",
+              "ISC License", "ISC",
+              "Python Software Foundation License",
+          }
+          required = {"pydantic", "jsonschema", "pyyaml", "pint", "typer", "packaging"}
+          data = json.load(open("/tmp/licenses.json"))
+          by_name = {d["Name"].lower().replace("-", "_"): d for d in data}
+          missing = required - set(by_name.keys())
+          if missing:
+              print(f"Missing packages: {sorted(missing)}")
+              sys.exit(1)
+          bad = [by_name[n] for n in required if by_name[n]["License"] not in allowed]
+          if bad:
+              print("Non-permissive licenses found:")
+              for d in bad:
+                  print(f"  {d['Name']} {d['Version']}: {d['License']}")
+              sys.exit(1)
+          print(f"OK: {len(required)} runtime dependencies, all permissive")
+          PY
+
   sdist-roundtrip:
     name: Sdist round-trip
     runs-on: ubuntu-latest

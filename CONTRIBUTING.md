@@ -16,7 +16,9 @@ Code contributions (this repository):
 
 - improvements to the pack loader, validator and diff
 - new irrigation modes, calculation archetypes or parameter types, registered in the appropriate registry
-- tests and golden vectors from published worked examples or independent permissively licensed implementations
+- tests and golden vectors derived independently: a hand derivation from
+  published equations, or the output of a permissively licensed
+  implementation whose name and version are recorded
 
 Rules:
 
@@ -26,6 +28,37 @@ Rules:
 4. **Everything is in English:** code, schema keys, identifiers and documentation. Local-language taxon names go in `names.csv`.
 5. **Code changes need tests.** Changes under `safety/` also need 100% coverage, a maintainer review and, for safety-critical parameters, a second independent review.
 6. **Licensing.** By submitting a contribution you confirm that you have the right to contribute it and that it is licensed under the same terms as the files it changes.
-7. **Protected species need a documented pathway.** Before proposing a taxon listed on CITES (any appendix), Permen LHK 106/2018 or the IUCN Red List at CR, EN or VU, cite the lawful cultivation pathway (an artificial-propagation exemption, a cultivated variety, or equivalent). Wild-collected material is not accepted.
+7. **Protected species need a documented pathway.** Before proposing a taxon
+   listed on CITES (any appendix) or protected under a national regulation
+   such as Permen LHK 106/2018, cite the lawful cultivation pathway (an
+   artificial-propagation exemption, a cultivated variety, or equivalent).
+   Wild-collected material is not accepted. Conservation status from
+   restricted databases is not used as an input. A maintainer decision
+   may only ADD an exclusion, never justify the inclusion of a taxon that
+   would otherwise be protected; per-taxon decisions are recorded in
+   `docs/design/`, not in `CHANGELOG.md`.
 
 Domain experts can review through `review_sheet.csv` without a GitHub account, and the maintainer records the outcome. Code owners are listed in `.github/CODEOWNERS`.
+
+
+## Data source license policy
+
+Every source in a pack's `sources.csv` must have `commercial_use=yes`
+(`unclear` counts as `no`) and a license on the allowlist below.
+`datasets.csv` uses a narrower allowlist: `LicenseRef-PublicDomain` is
+not supported for datasets in 0.1.2 because the dataset row has no
+`citation` column to record the required `basis:` prefix.
+
+A dual-license source is recorded as the single license the pack relies
+on; composite SPDX expressions (`AND`, `OR`, `WITH`, `+`) are rejected.
+CC BY 4.0 is preferred over CC BY 3.0 for datasets: CC BY 3.0 unported
+does not explicitly cover database rights, while 4.0 does.
+
+The allowlist (exact-match SPDX canonical identifiers):
+
+- CC0-1.0, CC-BY-3.0, CC-BY-4.0
+- MIT, BSD-2-Clause, BSD-3-Clause, Apache-2.0
+- `LicenseRef-PublicDomain` (sources only; requires a `citation`
+  beginning with `basis:`)
+
+See `docs/decisions/ADR-005-license-allowlist.md`.

@@ -166,6 +166,27 @@ jobs:
             echo "::warning::$URL not found; agri-knowledge ${TAG} not yet released - skipping built pack"
             rm -f built-pack.zip
           fi
+      - name: Validate strict on agri-knowledge built pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f built-pack.zip ]; then
+            echo "::notice::built-pack.zip not present — skipping strict validation (agri-knowledge tag not released yet)"
+            exit 0
+          fi
+          mkdir -p unpacked
+          unzip -q built-pack.zip -d unpacked
+          PACK_DIR=$(find unpacked -name "pack.toml" -maxdepth 3 -exec dirname {} \; | head -n1)
+          if [ -z "$PACK_DIR" ]; then
+            echo "::error::could not locate pack.toml in built-pack.zip"
+            exit 1
+          fi
+          echo "Validating strict: $PACK_DIR"
+          python -m venv .strict-venv
+          .strict-venv/bin/pip install --upgrade pip
+          .strict-venv/bin/pip install dist/wheel/*.whl
+          .strict-venv/bin/agri-core validate --pack "$PACK_DIR" --strict
+
       - name: Build SHA256SUMS
         shell: bash
         run: |

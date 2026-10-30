@@ -81,7 +81,7 @@ This wishlist excludes every taxon with a legal conservation status that
 carries regulatory consequences, and replaces each 1:1 with a non-protected
 equivalent so that archetype coverage stays intact.
 
-### Removed (9 taxa, all CITES- or Indonesian-protected or IUCN CR/EN/VU)
+### Removed (protected taxa)
 
 | Taxon | Legal status | Replaced by |
 |---|---|---|
@@ -90,10 +90,11 @@ equivalent so that archetype coverage stays intact.
 | `cyathea` | Permen LHK 106/2018 (some species) | `nephrolepis` |
 | `orchid` | CITES App I/II (Orchidaceae); Permen LHK for many genera | `hoya` |
 | `dionaea` | CITES App II | `byblis` |
-| `heliamphora` | IUCN assessed, endemic to Venezuelan tepuis | `drosophyllum` |
-| `ginkgo` | IUCN EN (wild populations) | `pinus` |
-| `araucaria` | IUCN VU (wild populations) | `cupressus` |
-| `sequoia` | IUCN EN (wild populations) | `picea` |
+An earlier revision of this list also excluded taxa using a restricted
+conservation database. That criterion is withdrawn (ADR-005). The v4
+list is unchanged; taxa affected by the withdrawn criterion are
+re-evaluated under the legal-instrument rules in the next wishlist
+revision.
 
 ### Retained: `vanilla`
 
@@ -112,7 +113,7 @@ constitute possession, trade, or propagation of a physical protected plant.
 UU 5/1990 regulates the plant, not information about the plant.
 
 However, this wishlist goes further than the strict legal minimum: any taxon
-that is CITES-listed, Permen LHK-listed, or IUCN-listed at CR/EN/VU is
+that is CITES-listed or Permen LHK-listed is
 removed entirely, both to eliminate legal ambiguity and to avoid reputational
 risk. This is a design choice for a project that intends to be long-lived and
 publicly readable.
@@ -123,7 +124,8 @@ All replacement taxa are:
 
 - not CITES-listed at any appendix;
 - not in Permen LHK 106/2018;
-- not IUCN CR/EN/VU (either LC or unassessed at species level);
+- not protected under a national regulation in the relevant
+  jurisdiction, or a documented lawful cultivation pathway exists;
 - commercially cultivated at scale in Indonesia or globally.
 
 The genus-level names (`pinus`, `cupressus`, `picea`, `hoya`) are placeholders

@@ -37,3 +37,16 @@ This document describes how to report a vulnerability or a harmful data error, w
 - **Read-only SQLite.** Built packs are opened with `mode=ro&immutable=1`, `PRAGMA query_only = ON`, and `PRAGMA trusted_schema = OFF`. A TOCTOU guard raises `PackStaleArtifactError` if the artifact changes after load.
 - **YAML safety.** Any YAML is read with `yaml.safe_load`; no other YAML entry point exists.
 - **No actuation.** The library returns values and plans. It does not operate pumps, valves, dosing units or any other actuator.
+
+## Takedown requests
+
+If you believe material in this repository or in an `agri-knowledge`
+pack infringes your rights, contact **woodinglass@gmail.com** with:
+
+- The specific material (file path or `fact_id`).
+- The basis of your claim.
+- Your preferred remediation (removal, correction, attribution).
+
+We will acknowledge within 5 working days and aim to resolve or
+escalate within 30 days. This is a maintenance commitment, not a legal
+representation.

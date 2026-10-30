@@ -1,5 +1,5 @@
 id,url,license,commercial_use,access_date,citation
 S001,https://www.fao.org/faostat/,CC-BY-4.0,yes,2026-01-15,FAOSTAT database
 S002,https://example.org/doc,MIT,yes,2026-01-15,Example documentation
-S003,https://example.org/nc,CC-BY-NC-4.0,no,2026-01-15,Non-commercial reference
-S004,https://example.org/unclear,unclear,unclear,2026-01-15,Unclear license
+S003,https://example.org/nc,CC-BY-4.0,yes,2026-01-15,Non-commercial reference
+S004,https://example.org/unclear,CC-BY-4.0,yes,2026-01-15,Unclear license

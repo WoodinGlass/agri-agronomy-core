@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _No unreleased changes._
 
+## [0.1.2] - 2026-10-31
+
+### Changed
+
+- **Data license gate is now default-deny.** A pack whose `sources.csv`
+  or `datasets.csv` has any row with `commercial_use != yes`, or a
+  license outside the allowlist, or a `LicenseRef-PublicDomain` source
+  without a `basis:` citation, no longer passes
+  `agri-core validate --strict`, `agri-core lint-sources`, or
+  `agri-core pack build`. See
+  `docs/decisions/ADR-005-license-allowlist.md` (supersedes the
+  license-gate section of ADR-003). Breaking for any 0.1.0/0.1.1 pack
+  that used `commercial_use=no` or `unclear` sources, or a restricted
+  database as input. Those packs must be fixed by removing the affected
+  facts, replacing the source, or obtaining written permission —
+  re-labelling a row to pass the gate is not an acceptable fix.
+- `release.yml` runs `agri-core validate --strict` on the
+  `agri-knowledge` built pack before attaching it to a GitHub Release.
+  A pack that fails strict never ships.
+
+### Added
+
+- `NOTICE` file and `license-files = ["LICENSE", "NOTICE"]`.
+- `docs/decisions/ADR-005-license-allowlist.md`; license-gate section
+  of ADR-003 marked superseded.
+- CI job `licenses` checks that runtime dependencies use permissive
+  licenses. The dependency allowlist is separate from the data
+  allowlist.
+- `.github/pull_request_template.md` with a license and
+  contribution-rights checklist.
+- `SECURITY.md` takedown procedure (contact and response targets).
+
+### Removed
+
+- Restricted-database category labels and the IUCN criterion from
+  `docs/design/plant_wishlist_v4_rationale.md` and
+  `docs/REVIEW_GUIDE.md`.
+- `FAO` as an example in `docs/REVIEW_GUIDE.md`.
+- "Published worked examples" as a golden-vector source in
+  `CONTRIBUTING.md` and the `golden` pytest marker.
+
 ## [0.1.1] - 2026-10-29
 
 ### Fixed
