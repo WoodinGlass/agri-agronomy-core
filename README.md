@@ -1,7 +1,7 @@
 <h1 align="center">agri-agronomy-core</h1>
 
 <p align="center"><strong>Offline, deterministic calculation engine and data contract for cultivation knowledge across countries and taxa.</strong><br>
-Every number comes from a verified knowledge pack, never from a language model.</p>
+Every crop-specific value comes from a verified knowledge pack, never from a language model.</p>
 
 <p align="center">
   <a href="https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml"><img src="https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -22,9 +22,9 @@ Every number comes from a verified knowledge pack, never from a language model.<
 1. **A data contract.** JSON Schemas, a parameter dictionary, a pack format (CSV tables, hashed at lock time and verified at load) and a deterministic fact-resolution policy. The contract lives here. The data lives in [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge).
 2. **A calculation engine.** Pure-Python functions that read a knowledge pack and compute climate indices, threshold checks, irrigation, fertilizer amounts, growing-media recipes, site suitability and propagation plans.
 
-The engine covers vegetables, fruit, staple carbohydrates, fodder (grown for feed, not rations), ornamental plants and cultivated fungi. Rare species are carried as conservation attributes. "Agronomy" is used loosely to mean cultivation.
+The engine covers vegetables, fruit, staple carbohydrates, fodder (grown for feed, not rations), ornamental plants and cultivated fungi. Rare species are carried with a legal-status attribute taken from legal instruments, not from restricted databases (see [Protected species](#protected-species)). "Agronomy" is used loosely to mean cultivation.
 
-Adding a taxon or a country is a data change in `agri-knowledge`, not a code change here. Every number the engine returns comes from a pack with a citation.
+Adding a taxon or a country is a data change in `agri-knowledge`, not a code change here. Every crop-specific value the engine uses comes from a pack with a citation. Equations and physical constants live in tested code and are referenced in the documentation.
 
 It runs fully offline: no network access, database server, API key or GPU. The pack is a single immutable file; loading it never touches the network.
 
@@ -55,6 +55,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
    - *Data only* (taxa, names, facts, countries, sources): a new pack release in `agri-knowledge`. No engine release.
    - *Dictionary* (core parameters used by calculators): an engine **minor** release. Extension parameters that are informational only are declared inside the pack and validated by the engine, with no engine release.
    - *Code* (a new calculation mode or archetype registered in the code): an engine release.
+10. **Commercially usable throughout.** The code is Apache-2.0, and every source behind a shipped pack must allow commercial use. See [Licensing policy](#licensing-policy).
 
 ## Features
 
@@ -63,7 +64,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 | 1 | Data contract | JSON Schemas for `outcome`, `source`, `taxon`, `name`, `fact`, `hazard`, `parameter`, `dataset`, `manifest`. Core dictionary (`parameters.core.yaml`) with physical ranges, `applies_to`, tier requirements, phases per archetype, safety-class taxonomy and an append-only lock. | M2–M4 | Done |
 | 2 | Pack lifecycle | `load` (hash-verified, eager `KnowledgeSet`) in M5; `scaffold`, `build` (CSV → SQLite + manifest, reproducible) in M6; full `validate`, `diff`, `coverage` in M7. | M5–M7 | Done |
 | 3 | Registry | `resolve_taxon(name, language?)` returns `ok`, `ambiguous` or `unknown`. `resolve_fact` applies the deterministic resolution policy. `meta()` reports engine version, pack version, `schema_version` and pack hash. | M8 | Done |
-| 4 | Climate | Vapor pressure deficit (VPD), growing degree days (GDD), daily light integral (DLI) and reference evapotranspiration (ET0: FAO-56 Penman–Monteith, with a Hargreaves–Samani fallback). Temperature estimate from elevation. | M10 | Not started |
+| 4 | Climate | Vapor pressure deficit (VPD), growing degree days (GDD), daily light integral (DLI) and reference evapotranspiration (ET0: Penman–Monteith reference-crop method, with a Hargreaves–Samani fallback). Temperature estimate from elevation. | M10 | Not started |
 | 5 | Thresholds and stages | Four-point trapezoid checks that return `optimal`, `suboptimal` or `critical`. Stage resolver from planting age and GDD; perennials driven by dated events supplied by the caller. | M10 | Not started |
 | 6 | Irrigation, fertilizer, media and water | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. Every mode declares the parameters it requires; missing → `unknown` or `insufficient_input`. | M11 | Not started |
 | 7 | Suitability and propagation | Single and batch site suitability with `suitable`/`marginal`/`unsuitable` and per-factor reasons; dated propagation plans. | M12 | Not started |
@@ -311,7 +312,7 @@ Adding a **core** parameter is a minor engine release. Adding an **extension** p
 
 ## Coverage
 
-First release line (six profiles across five archetypes):
+Planned first release line in `agri-knowledge` (six profiles across five archetypes):
 
 | Profile | Archetype | Notes |
 |---|---|---|
@@ -324,7 +325,7 @@ First release line (six profiles across five archetypes):
 
 The propagation planner returns the `not_applicable` outcome for rice, tomato and black truffle.
 
-**Protected species are excluded.** Taxa listed under CITES Appendix I or II, Permen LHK 106/2018 (Indonesia), or the IUCN Red List at CR, EN or VU are not included in the sample pack or in the initial `agri-knowledge` release unless a documented lawful cultivation pathway exists (for example, an artificial-propagation exemption under CITES, or data on commercially cultivated varieties rather than wild-type material). *Vanilla planifolia* is listed under CITES Appendix II as part of the Orchidaceae family and is retained under the CITES exemption for artificially propagated pods and seeds; it is not listed in Permen LHK 106/2018. The design rationale and the per-taxon decisions are recorded in `docs/design/plant_wishlist_v4_rationale.md` and `docs/design/plant_wishlist_v4_migration.md`.
+**Protected species are excluded.** Taxa listed in the Appendices to CITES (any appendix) or protected under national regulations such as Permen LHK 106/2018 (Indonesia) are not included in the sample pack or in the initial `agri-knowledge` release unless a documented lawful cultivation pathway exists (for example, an artificial-propagation exemption, or data on commercially cultivated varieties rather than wild-type material). The policy is described in [Protected species](#protected-species). Per-taxon decisions are recorded in `docs/design/plant_wishlist_v4_rationale.md` and `docs/design/plant_wishlist_v4_migration.md`, citing legal instruments only.
 
 Planned next: maize, chili pepper, broccoli, potato, lettuce, grape, apple, watermelon, melon, blueberry, lychee, wasabi and bonsai (per species, with a technique module for pruning, wiring and repotting). Carnivorous plants are split by genus; the wishlist covers Genlisea, Byblis, Drosophyllum, Drosera, Pinguicula, Utricularia and Roridula.
 
@@ -332,10 +333,12 @@ Planned next: maize, chili pepper, broccoli, potato, lettuce, grape, apple, wate
 
 ## Exports
 
-- `bundle.json`: all profiles, the sources table (including `commercial_use`) and metadata in one versioned file.
+- `bundle.json`: all profiles, the sources table (including license, `commercial_use` and attribution text) and metadata in one versioned file.
 - `tool_schemas.json`: function-calling schemas for LLM agents, generated from the same Pydantic models as the library so tools and code cannot drift apart.
 - `edge_thresholds.json`: compact thresholds for gateways and devices that must keep working offline.
 - `review_sheet.csv`: one row per value, so domain experts can review in a spreadsheet without using GitHub.
+
+Every export carries the license and the attribution text of the sources behind its values.
 
 ## Safety and limitations
 
@@ -354,25 +357,37 @@ Planned next: maize, chili pepper, broccoli, potato, lettuce, grape, apple, wate
 The engine enforces provenance; the data lives in [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge).
 
 - Every fact is an individual value (a number, a range or a rule) written in our own words and structure, with a citation.
-- Passages, tables and figures are not copied from sources, and third-party datasets are not bulk-imported without a compatible license. Imports from open datasets (CC0, CC BY, public domain) happen only after the license gate.
+- Passages, tables and figures are not copied from sources, and third-party datasets are not bulk-imported. A dataset is imported only when its license is on the accepted list in the [Licensing policy](#licensing-policy) and the license gate passes.
 - `sources.csv` has one row per source: ID, URL, license, `commercial_use`, access date and citation details.
-- `commercial_use` is `yes`, `no` or `unclear`. It records what the source's own license permits, as read by a maintainer, and defaults to `unclear` for sources with no stated license. It is a convenience for filtering, not legal advice or a guarantee.
-- `agri-core lint-sources` fails when `commercial_use` is `yes` but `license` names a non-commercial license (such as CC BY-NC). The license gate also rejects datasets whose license is ShareAlike (SA) or NoDerivatives (ND) when the pack would have to redistribute derived values.
-- Golden tests use published numerical examples as test vectors, with citations. Where a published example is not openly licensed, an independent permissively licensed implementation is used instead. No text from a restricted source is copied.
+- Golden tests use vectors we derive ourselves: a hand derivation from the published equations, or the output of an independent, permissively licensed implementation whose name and version are recorded next to the vectors. Worked examples, tables and figures are not copied from standards or handbooks.
+- Equations are implemented from the primary literature and referenced in the documentation. A method name such as "Penman–Monteith" or "Hargreaves–Samani" identifies a published method; it does not mean that text, tables or figures of a handbook are included.
 - Reviewers are identified by ID; names appear only with consent. Packs and exports contain no personal data.
 - Organizations and publications are named only to identify sources. There is no affiliation or endorsement.
 
+### Licensing policy
+
+Everything this project ships can be used commercially.
+
+- **Rule.** A source is accepted only if its license lets anyone use, modify and redistribute the values commercially, with attribution at most.
+- **Accepted.** CC0 1.0 and other public-domain dedications; works that are in the public domain under the law that applies to them (the basis is recorded in `sources.csv`); CC BY 3.0 and 4.0; MIT, BSD and Apache-2.0 for values taken from software.
+- **Rejected.** Any NonCommercial, ShareAlike or NoDerivatives variant of a Creative Commons license; ODbL and GPL-family licenses; "free for research or non-commercial use" terms; "all rights reserved" material without a written permission on file; sources with no stated license.
+- **Terms of use count.** Website, database and API terms bind users even when individual facts are not protected by copyright. A source whose terms restrict commercial use is rejected, even if the same value could be found elsewhere. At the time of writing this includes the IUCN Red List and the Species+/CITES Checklist database, whose terms require written permission for commercial use.
+- **`commercial_use`** records a maintainer's reading of a source's license: `yes`, `no` or `unclear`. A pack can be released only when every source is `yes`. `agri-core validate --strict` rejects `no` and `unclear`, and `unclear` counts as `no` until a maintainer resolves it. It is a record of a review, not legal advice or a guarantee.
+- **License gate.** `agri-core validate --strict` also rejects any license outside the accepted list, and `agri-core lint-sources` fails when `commercial_use` and `license` contradict each other.
+- **Attribution.** Packs and exports carry each source's license and the attribution text it requires.
+
 ### Protected species
 
-- A taxon listed on CITES (any appendix), Permen LHK 106/2018 (Indonesia), or the IUCN Red List at CR, EN or VU is not included in the sample pack or in the initial `agri-knowledge` release unless a documented lawful cultivation pathway exists.
-- Acceptable pathways include: artificial propagation explicitly exempted by the source treaty (such as the *Vanilla* pod and seed exemption under CITES), or data on commercially cultivated varieties rather than wild-type material.
-- Facts about a protected taxon recorded by a third party must cite their source and state the conservation status; they are not added to `agri-knowledge` without the maintainer confirming the pathway.
+- A taxon listed in the Appendices to CITES (any appendix) or protected under a national regulation such as Permen LHK 106/2018 (Indonesia) is not included in the sample pack or in the initial `agri-knowledge` release unless a documented lawful cultivation pathway exists.
+- Acceptable pathways include: artificial propagation explicitly exempted by the source instrument, or data on commercially cultivated varieties rather than wild-type material.
+- Decisions cite legal instruments (the text of the Appendices, national regulations). They do not copy data from restricted databases, and the IUCN Red List is not used as an input because its terms restrict commercial use. Maintainers may still decline a taxon on conservation grounds; the reasoning is recorded without importing data from restricted databases.
+- Facts about a protected taxon recorded by a third party must cite their source and state the legal status; they are not added to `agri-knowledge` without the maintainer confirming the pathway.
 - The detailed policy, the list of excluded taxa and the replacements are recorded in `docs/design/plant_wishlist_v4_rationale.md`.
 - This is a design choice, not a legal opinion. Users redistributing data for commercial purposes should verify CITES and national rules for each species independently.
 
 ## Contributing
 
-Contributions are welcome. Data contributions go to [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge); code contributions go here.
+Contributions are welcome. Data contributions go to [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge); code contributions go here. Every data contribution must meet the [Licensing policy](#licensing-policy).
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full rules, contribution scope, evidence requirements, licensing terms, protected-species policy, and the code owners list.
 
@@ -396,7 +411,7 @@ See [`SECURITY.md`](SECURITY.md) for the full policy, supported versions, scope 
 
 ## Citing
 
-If you use the engine in research or in a product, cite this repository with the release tag you used. If you rely on specific facts, also cite the original sources recorded in the pack's `sources.csv`.
+If you use the engine in research or in a product, please cite this repository with the release tag you used. If you rely on specific facts, please also cite the original sources recorded in the pack's `sources.csv`. Citation is a request, not a condition of the license.
 
 ## Milestones
 
@@ -412,7 +427,7 @@ If you use the engine in research or in a product, cite this repository with the
 | **M7** Validate, diff, coverage, license gate | Done | Trapezoid order, scope validity, unit resolution, duplicate detection, tier derivation (T0–T3), `diff` report, `coverage`, license gate. | Sample pack passes validate with 0 errors; `diff` matches fixtures; coverage assigns tiers; license gate rejects NC + `commercial_use=yes`. |
 | **M8** `resolve_taxon` and `resolve_fact` | Done | Deterministic resolution per the fixed policy (ADR-004); `meta()`; `show` CLI with three modes (`--name`, `--taxon`, `--fact`). | `resolve_taxon` p95 ≤ 5 ms on a 10k-taxa pack (measured ≈ 12 µs); resolution contract tests pass (taxon, fact, schema drift, perf); `show` CLI usable. |
 | **M9** Offline, performance, docs, tag `v0.1.0` | Done | Socket-blocking pytest plugin (`pytest-socket`, `--disable-socket`, `offline-wheel` CI job under `unshare -n`); performance budget tests for pack load and peak memory (batch suitability deferred to M12); the `docs/` skeleton (`DICTIONARY` generated, `RESOLUTION_POLICY`, `SAFETY`, `ADDING_A_TAXON` executed by test); Windows smoke job; release workflow; tag `v0.1.0`. | Every test passes with network blocked; performance budget met; Windows `windows-smoke` green; `release.yml` dry-run green; tag `v0.1.0`. |
-| **M10** Climate, thresholds and stages | Not started | VPD, GDD, DLI, ET0 with fallback, temperature from elevation, threshold checks, stage resolver. | Golden tests pass; phases resolve per archetype; perennials use caller-supplied events. |
+| **M10** Climate, thresholds and stages | Not started | VPD, GDD, DLI, ET0 with fallback, temperature from elevation, threshold checks, stage resolver. Methods documented with primary-literature references. | Golden tests (independently derived vectors) pass; phases resolve per archetype; perennials use caller-supplied events. |
 | **M11** Irrigation, fertilizer, media and water | Not started | Registry of irrigation modes (`container_band`, `field_etc`, `paddy_awd`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. | The M11 release passes against the sample pack and against the pinned `agri-knowledge` version; irrigation results match scenario fixtures. |
 | **M12** Suitability and propagation | Not started | Single and batch site suitability, per-factor reasons, hazard flags, dated propagation plans. | Batch mode within the performance budget; scenario tests including an `unsuitable` case. |
 | **M13** Exports and documentation | Not started | `tool_schemas.json`, `edge_thresholds.json` per site, `review_sheet.csv` per tier, quickstart notebook, `docs/`. | A release tag includes exports, generated from the same Pydantic models as the library, with a stable contract test. |
@@ -437,7 +452,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 **Test kinds**
 
 - `contract`: `Outcome`, dictionary, exported tool schemas and JSON Schemas stay stable. Includes the M8 resolution contract tests (`tests/contract/test_resolve_taxon.py`, `test_resolve_fact.py`, `test_resolution_schemas.py`, `test_unknown_code_registry.py`).
-- `golden`: results validated against published worked examples, or against independent permissively licensed implementations.
+- `golden`: results validated against independently derived vectors: a hand derivation from the published equations, or the output of a permissively licensed implementation with its name and version recorded.
 - `offline`: network access is blocked; any attempt to open a socket fails the test.
 - `perf`: pack load and resolution stay within the published budget. The resolver test shipped in M8; built-pack load and peak memory joined in v0.1.0. Exclude with `-m 'not perf'` on slow runners.
 - `property`: Hypothesis checks such as unit round-trips, no negative amounts, and monotonic behavior with area.
@@ -449,6 +464,8 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 - ruff and mypy (strict) are clean.
 - Coverage is at least 90%, and 100% for `safety/`.
 - CI is green on Python 3.11, 3.12, 3.13 and 3.14; `pip-audit` runs in CI.
+- Runtime dependencies use permissive licenses (checked in CI).
+- `agri-core validate --strict` passes on the sample pack, including the license gate.
 - `dictionary.lock` matches the running dictionary (`contract_hash` verified).
 - The pack and the wheel are reproducible: identical SHA-256 when built twice from the same inputs.
 - `CHANGELOG.md` is updated.
@@ -493,7 +510,8 @@ agri-agronomy-core/
 │                            #   climate_zones, growth_habits, establishment_states,
 │                            #   yield_targets, scope_keys, modules, safety_classes
 ├─ docs/                     # PACK_FORMAT.md, REVIEW_GUIDE.md;
-│                            #   ADDING_A_TAXON, DICTIONARY, RESOLUTION_POLICY, SAFETY (M9)
+│                            #   ADDING_A_TAXON, DICTIONARY, RESOLUTION_POLICY, SAFETY (M9);
+│                            #   METHODS (M10)
 │  ├─ decisions/             # ADR-001-knowledge-set.md, ADR-002-build-and-hash.md,
 │  │                         #   ADR-003-tiers-license-duplicates.md,
 │  │                         #   ADR-004-resolution-policy.md
@@ -529,7 +547,7 @@ agri-agronomy-core/
 ├─ tests/
 │  ├─ contract/              # Outcome, dictionary, exported schemas, resolution stay stable
 │  ├─ fixtures/              # synthetic data for behavior tests only
-│  ├─ golden/                # validated against published examples or independent permissive implementations
+│  ├─ golden/                # independently derived vectors
 │  ├─ offline/               # socket blocker (from v0.1.0)
 │  ├─ perf/                  # performance budget (resolver perf test ships in M8)
 │  ├─ property/              # Hypothesis checks
@@ -540,6 +558,7 @@ agri-agronomy-core/
 ├─ CONTRIBUTING.md
 ├─ SECURITY.md
 ├─ LICENSE                   # Apache-2.0
+├─ NOTICE
 ├─ Makefile
 ├─ pyproject.toml
 └─ requirements.lock         # pinned dev dependencies (pip-compile)
@@ -549,15 +568,16 @@ agri-agronomy-core/
 
 | Part | License | File |
 |---|---|---|
-| Code, tests, schemas, dictionary and documentation | Apache License 2.0 | `LICENSE` |
+| Code, tests, schemas, dictionary and documentation | Apache License 2.0 | `LICENSE`, `NOTICE` |
 | Sample pack in `src/agri_core/_samples/sample_pack/` (synthetic data, no third-party facts) | Apache License 2.0 | `src/agri_core/_samples/sample_pack/` |
-| Third-party sources cited by a pack | Their own licenses, which this project does not change | `<pack>/sources.csv` |
+| Real data packs and the facts in them | Declared by the `agri-knowledge` repository; every source must meet the [Licensing policy](#licensing-policy) | `agri-knowledge` and `<pack>/sources.csv` |
 
 - **No third-party data in this repository.** The sample pack is synthetic. Real facts, including their licenses, live in `agri-knowledge` and each pack carries its own `sources.csv`.
-- **Attribution.** When you redistribute a pack, credit the pack authors, link to the source repository, and indicate any changes you made. Each source keeps its own license; check it before commercial use.
+- **Redistribution.** Redistributing the code, the documentation or the sample pack follows section 4 of the Apache License 2.0: keep the license and the notices, and mark the files you changed. Real packs are governed by the license stated in `agri-knowledge` and by the licenses of their sources, which this project does not change.
+- **Notices.** `NOTICE` lists attributions for third-party material used in tests or documentation, if any.
 - **No warranty.** The software and data are provided "as is", without warranties of any kind. To the maximum extent permitted by law, the authors and contributors are not liable for any loss or damage, including crop loss, arising from their use. The license text contains the binding terms.
 - **No affiliation or endorsement.** Names of organizations, publications and datasets are used only to identify sources. This project is not affiliated with, endorsed by or sponsored by them. The license does not grant rights to any trademark.
-- **Contributions** are licensed under the same terms (see [Contributing](#contributing)).
-- **Dependencies** carry their own licenses.
+- **Contributions** are licensed under the Apache License 2.0, as set out in section 5 of the license (see [Contributing](#contributing)).
+- **Dependencies.** Runtime dependencies use permissive licenses (MIT, BSD, Apache-2.0), and CI checks this. Development tools carry their own licenses and are not distributed with the package.
 
 Copyright 2026 WoodinGlass and the agri-agronomy-core contributors.
