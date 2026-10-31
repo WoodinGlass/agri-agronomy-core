@@ -5,7 +5,7 @@ Every crop-specific value comes from a verified knowledge pack, never from a lan
 
 <p align="center">
   <a href="https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml"><img src="https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/status-0.1.1--foundation-blue" alt="Status">
+  <img src="https://img.shields.io/badge/status-0.1.2--licensing-blue" alt="Status">
   <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue" alt="Python">
   <img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License">
   <img src="https://img.shields.io/badge/mypy-strict-blue" alt="mypy">
@@ -13,7 +13,7 @@ Every crop-specific value comes from a verified knowledge pack, never from a lan
   <img src="https://img.shields.io/github/last-commit/WoodinGlass/agri-agronomy-core" alt="Last commit">
 </p>
 
-> **0.1.1 (foundation release, patch).** This release covers the data contract, the pack lifecycle, and deterministic fact resolution. Patch v0.1.1 fixes `agri-core pack lock` on a stale `content_hash` (see [CHANGELOG](CHANGELOG.md)). The calculation engine (VPD, GDD, ET0, irrigation, fertilizer, media, suitability, propagation) ships in v0.2+. Interfaces, the pack format and the JSON Schemas may still change in the 0.x line; see [Versioning and releases](#versioning-and-releases). This project provides a calculation engine and a data contract; it is not professional agronomic advice. Read [Safety and limitations](#safety-and-limitations) before relying on any output.
+> **0.1.2 (foundation release, licensing patch).** This release covers the data contract, the pack lifecycle, and deterministic fact resolution. Patch v0.1.1 fixed `agri-core pack lock` on a stale `content_hash`; patch v0.1.2 makes the data license gate default-deny with an explicit allowlist and adds `NOTICE`, `ADR-005`, and related CI checks (see [CHANGELOG](CHANGELOG.md)). The calculation engine (VPD, GDD, ET0, irrigation, fertilizer, media, suitability, propagation) ships in v0.2+. Interfaces, the pack format and the JSON Schemas may still change in the 0.x line; see [Versioning and releases](#versioning-and-releases). This project provides a calculation engine and a data contract; it is not professional agronomic advice. Read [Safety and limitations](#safety-and-limitations) before relying on any output.
 
 ## What this is
 
@@ -78,10 +78,10 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 Releases are distributed as git tags. Pin one:
 
 ```bash
-pip install "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.1"
+pip install "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.2"
 ```
 
-`v0.1.1` is the current patch release; `v0.1.0` is the foundation release. Either tag can be pinned. To track the main branch instead, replace `@v0.1.1` with `@main` (development only; not recommended for anything you deploy).
+`v0.1.2` is the current patch release; `v0.1.0` is the foundation release. `v0.1.1` remains available but does not enforce the license allowlist; use `v0.1.2` for new work. To track the main branch instead, replace `@v0.1.2` with `@main` (development only; not recommended for anything you deploy).
 
 Requires Python 3.11 or newer (tested on 3.11, 3.12, 3.13 and 3.14 on Ubuntu-latest, and on 3.11 on Windows-latest). Runtime dependencies: Pydantic v2, jsonschema, PyYAML (`safe_load` only), pint, Typer, packaging and `sqlite3` (Python stdlib). Pure Python, CPU only.
 
@@ -90,7 +90,7 @@ Requires Python 3.11 or newer (tested on 3.11, 3.12, 3.13 and 3.14 on Ubuntu-lat
 Install in any Colab cell:
 
 ```python
-!pip install -q "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.1"
+!pip install -q "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.2"
 ```
 
 No API key or GPU is needed. Pure Python, CPU only.
@@ -483,7 +483,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 
 ## Performance
 
-These targets are measured in CI and in Colab at v0.1.0 (unchanged in the v0.1.1 patch) on a synthetic pack (10k taxa, 30k names, 200k facts). They will be recalibrated once real `agri-knowledge` pack sizes are known.
+These targets are measured in CI and in Colab at v0.1.0 (unchanged in the v0.1.1 and v0.1.2 patches) on a synthetic pack (10k taxa, 30k names, 200k facts). They will be recalibrated once real `agri-knowledge` pack sizes are known.
 
 | Operation | Budget |
 |---|---|
