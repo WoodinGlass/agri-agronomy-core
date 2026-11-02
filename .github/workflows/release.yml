@@ -130,17 +130,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Download wheel
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: wheel
           path: dist/wheel
       - name: Download sdist
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: sdist
           path: dist/sdist
       - name: Download release body
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: release-body
           path: .
@@ -219,7 +219,7 @@ jobs:
       contents: write
     steps:
       - name: Download release-assets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: release-assets
           path: release-assets
