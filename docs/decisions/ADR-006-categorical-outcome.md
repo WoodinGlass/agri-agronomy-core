@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed 2026-11-02. Blocks M10 (climate calculators).
+Accepted 2026-11-02. Implemented in the same release cycle.
 
 ## Context
 
