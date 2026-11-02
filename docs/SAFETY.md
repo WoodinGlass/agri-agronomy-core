@@ -1,5 +1,16 @@
 # Safety and limitations
 
+## Plant-protection scope
+
+Chemical control (products, active ingredients, doses,
+concentrations, spray volumes, intervals, resistance-management
+schedules) is **out of scope**. Questions about it return
+`refer_to_label` or `refer_to_authority`. A two-tier guard
+(`PACK_PROTECTION_OUT_OF_SCOPE`, `PACK_HAZARD_CODE_OUT_OF_SCOPE`)
+rejects any parameter or hazard code that carries a
+chemical-control token. The full scope is in
+[ADR-007](decisions/ADR-007-plant-protection-scope.md).
+
 What this library enforces today (v0.1.0). Where a claim is backed by a
 test, the test is named in backticks; where a claim is a design decision
 that is **not** covered by a test, it is marked
