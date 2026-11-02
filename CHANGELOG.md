@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Plant-protection scope and guard (ADR-007, Accepted). Two-tier
+  guard: (a) **global** chemical-control token check on every
+  parameter of every stage (`-cide` suffix, `adjuvant`,
+  `surfactant`, `moa`, `frac`, `irac`, `hrac`; `tank mix`,
+  `active ingredient`, `trade name`, `mode of action`), plus
+  (b) **domain-only** default-deny unit check (allowlist
+  {centimeter, day, degree_Celsius, degree_day, kilopascal, meter, percent}),
+  dose/control token and phrase check, `kind="extension"`
+  rejection, `tier_required=True` rejection, and
+  `shape="rule"` rejection on protection-domain parameters.
+  New codes: `PACK_PROTECTION_OUT_OF_SCOPE`,
+  `PACK_HAZARD_CODE_OUT_OF_SCOPE` (hazard_code check). Guard is
+  **dormant** until a protection parameter is added (none today).
 - `CategoricalResult` (status `"ok_category"`) and `ok_category()`
   factory for M10 calculators whose answer is a category, not a
   number. The `Outcome` union gains the new variant; `is_success()`

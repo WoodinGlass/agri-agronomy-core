@@ -428,6 +428,8 @@ all is accepted.
 | `PACK_LICENSE_OUTSIDE_ALLOWLIST` | Source or dataset license not on the allowlist (ADR-005) |
 | `PACK_LICENSE_PD_BASIS_MISSING` | `LicenseRef-PublicDomain` source without a `basis:` citation (ADR-005) |
 | `PACK_SAFETY_DOUBLE_REVIEW_MISSING` | safety-critical fact at `approved` with <2 reviewers |
+| `PACK_PROTECTION_OUT_OF_SCOPE` | parameter is in protection domain or carries a global chemical-control token (ADR-007) |
+| `PACK_HAZARD_CODE_OUT_OF_SCOPE` | `hazard_code` carries a chemical-control token (ADR-007) |
 
 ## Size limit
 
