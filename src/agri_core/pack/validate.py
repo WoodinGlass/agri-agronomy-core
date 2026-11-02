@@ -18,6 +18,10 @@ from agri_core.models.finding import (
 from agri_core.pack.errors import PackError
 from agri_core.pack.knowledge_set import KnowledgeSet
 from agri_core.pack.loader import _default_dictionary, load_knowledge_set_from_files
+from agri_core.pack.protection import (
+    find_hazard_code_violations,
+    find_protection_violations,
+)
 from agri_core.pack.tables import TABLES, read_table
 from agri_core.registry.sources import (
     has_pd_basis,
@@ -375,6 +379,50 @@ def check_safety_double_review(
             )
 
 
+def check_protection_out_of_scope(
+    ks: KnowledgeSet,
+    files: Mapping[str, bytes],
+    dictionary: Dictionary,
+) -> list[Finding]:
+    """ADR-007: protection-domain + global chemical-control guard."""
+    findings: list[Finding] = []
+    for v in find_protection_violations(dictionary.parameters):
+        findings.append(
+            Finding(
+                code="PACK_PROTECTION_OUT_OF_SCOPE",
+                severity=FindingSeverity.ERROR,
+                message=(f"parameter {v.parameter!r} is out of scope: " + "; ".join(v.reasons)),
+                location=FindingLocation(parameter=v.parameter),
+            )
+        )
+    return findings
+
+
+def check_hazard_code_out_of_scope(
+    ks: KnowledgeSet,
+    files: Mapping[str, bytes],
+    dictionary: Dictionary,
+) -> list[Finding]:
+    """ADR-007: hazard_code values must not carry chemical-control tokens."""
+    codes: set[str] = set()
+    try:
+        for hz in ks.hazards():
+            codes.add(hz.hazard_code)
+    except Exception:
+        return []
+    findings: list[Finding] = []
+    for v in find_hazard_code_violations(codes):
+        findings.append(
+            Finding(
+                code="PACK_HAZARD_CODE_OUT_OF_SCOPE",
+                severity=FindingSeverity.ERROR,
+                message=(f"hazard code {v.hazard_code!r} is out of scope: " + "; ".join(v.reasons)),
+                location=FindingLocation(key=v.hazard_code),
+            )
+        )
+    return findings
+
+
 RULES: tuple[RuleFn, ...] = (
     check_trapezoid_not_degenerate,
     check_superseded_self,
@@ -387,6 +435,8 @@ RULES: tuple[RuleFn, ...] = (
     check_license_dataset_allowlist,
     check_license_source_pd_basis,
     check_safety_double_review,
+    check_protection_out_of_scope,
+    check_hazard_code_out_of_scope,
 )
 """Registered rules. Explicit tuple, not auto-import.
 

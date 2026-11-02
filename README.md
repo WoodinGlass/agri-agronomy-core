@@ -32,7 +32,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 
 - **Not a data repository.** This repository contains the engine, the schemas, the dictionary and the sample pack used by tests. Real data lives in `agri-knowledge`.
 - **Not a substitute for an agronomist, extension service, product label or local law.** It supports decisions; it does not make them.
-- **Not a pesticide tool.** It never calculates pesticide, herbicide or fungicide doses. Such requests return `refer_to_label` or `refer_to_authority`.
+- **Not a pesticide tool.** It never calculates pesticide, herbicide or fungicide doses. Such requests return `refer_to_label` or `refer_to_authority`. The scope of plant-protection data is defined in [ADR-007](docs/decisions/ADR-007-plant-protection-scope.md); a two-tier guard rejects chemical-control tokens in every parameter (`PACK_PROTECTION_OUT_OF_SCOPE`).
 - **Not a controller.** It does not operate pumps, valves, dosing units or any other actuator. It returns values and plans for systems that have their own safeguards.
 - **Not a server, database or user interface.** There is no HTTP API or web editor, only a Python package and a command-line tool.
 - **Not a sensor pipeline.** It does not read, clean or store sensor streams. Callers pass values in, with explicit units.
