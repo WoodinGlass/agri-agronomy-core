@@ -49,6 +49,7 @@ def test_outcome_status_set_is_exact() -> None:
     walk(schema)
     assert found == {
         "ok",
+        "ok_category",
         "insufficient_input",
         "unknown",
         "not_applicable",
@@ -63,7 +64,7 @@ def test_every_outcome_member_has_required_status() -> None:
 
     union, _ = get_args(Outcome)
     members = get_args(union)
-    assert len(members) == 7
+    assert len(members) == 8
     for m in members:
         sf = m.model_fields["status"]
         assert sf.is_required(), f"{m.__name__}.status must be required"

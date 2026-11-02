@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_No unreleased changes._
+### Added
+
+- `CategoricalResult` (status `"ok_category"`) and `ok_category()`
+  factory for M10 calculators whose answer is a category, not a
+  number. The `Outcome` union gains the new variant; `is_success()`
+  returns `True` for both `Result` and `CategoricalResult`. No
+  change to `Result`, `TaxonOk`, `FactResolved`, or any refusal
+  model. See `docs/decisions/ADR-006-categorical-outcome.md` (now
+  Accepted).
 
 ## [0.1.2] - 2026-10-31
 

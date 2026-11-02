@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from agri_core.models.notices import EvidenceGrade, Notice
 from agri_core.models.provenance import Provenance
@@ -34,6 +34,30 @@ class Result(BaseModel):
     capped: bool
 
 
+class CategoricalResult(BaseModel):
+    """A successful calculation whose answer is a category, not a number.
+
+    ``status`` is always ``"ok_category"``. ``category`` is a stable code
+    (e.g. ``"optimal"``); ``label`` is English display text and may change
+    between minor releases. No unit, no ``capped`` -- categories carry
+    neither. See ADR-006.
+
+    Construct through :func:`ok_category` rather than directly, so that
+    the ``status`` literal cannot be forgotten.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    status: Literal["ok_category"]
+    category: str = Field(min_length=1, pattern=r"^[a-z][a-z0-9_]*$")
+    label: str = Field(min_length=1)
+    method: str
+    provenance: Provenance
+    evidence: list[EvidenceGrade]
+    assumptions: list[Notice]
+    warnings: list[Notice]
+
+
 def ok(
     *,
     value: float,
@@ -61,3 +85,32 @@ def ok(
         warnings=list(warnings or []),
         capped=capped,
     )
+
+
+def ok_category(
+    *,
+    category: str,
+    label: str,
+    method: str,
+    provenance: Provenance,
+    evidence: list[EvidenceGrade],
+    assumptions: list[Notice] | None = None,
+    warnings: list[Notice] | None = None,
+) -> CategoricalResult:
+    """Build a successful :class:`CategoricalResult`.
+
+    Keyword-only like :func:`ok`, so future fields are non-breaking.
+    """
+    return CategoricalResult(
+        status="ok_category",
+        category=category,
+        label=label,
+        method=method,
+        provenance=provenance,
+        evidence=list(evidence),
+        assumptions=list(assumptions or []),
+        warnings=list(warnings or []),
+    )
+
+
+__all__ = ["CategoricalResult", "Result", "ok", "ok_category"]

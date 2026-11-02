@@ -65,6 +65,74 @@
       "title": "AmbiguousCandidate",
       "type": "object"
     },
+    "CategoricalResult": {
+      "additionalProperties": false,
+      "description": "A successful calculation whose answer is a category, not a number.\n\n``status`` is always ``\"ok_category\"``. ``category`` is a stable code\n(e.g. ``\"optimal\"``); ``label`` is English display text and may change\nbetween minor releases. No unit, no ``capped`` -- categories carry\nneither. See ADR-006.\n\nConstruct through :func:`ok_category` rather than directly, so that\nthe ``status`` literal cannot be forgotten.",
+      "properties": {
+        "assumptions": {
+          "items": {
+            "$ref": "#/$defs/Notice"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "category": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Category",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "status": {
+          "const": "ok_category",
+          "title": "Status",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/Notice"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "category",
+        "label",
+        "method",
+        "provenance",
+        "evidence",
+        "assumptions",
+        "warnings"
+      ],
+      "title": "CategoricalResult",
+      "type": "object"
+    },
     "InsufficientInput": {
       "additionalProperties": false,
       "description": "A required input is missing.\n\n``missing`` names each missing input in the caller's vocabulary (for\nexample ``\"temp_c\"`` or ``\"ec_to_ppm_factor (choose 0.5, 0.64 or 0.7)\"``).\nEach entry must be a non-empty string.",
@@ -345,6 +413,7 @@
       "insufficient_input": "#/$defs/InsufficientInput",
       "not_applicable": "#/$defs/NotApplicable",
       "ok": "#/$defs/Result",
+      "ok_category": "#/$defs/CategoricalResult",
       "refer_to_authority": "#/$defs/ReferToAuthority",
       "refer_to_label": "#/$defs/ReferToLabel",
       "unknown": "#/$defs/Unknown"
@@ -354,6 +423,9 @@
   "oneOf": [
     {
       "$ref": "#/$defs/Result"
+    },
+    {
+      "$ref": "#/$defs/CategoricalResult"
     },
     {
       "$ref": "#/$defs/InsufficientInput"

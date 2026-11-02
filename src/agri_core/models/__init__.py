@@ -33,6 +33,7 @@ from agri_core.models.name import NameKind, NameRow
 from agri_core.models.notices import EvidenceGrade, Notice
 from agri_core.models.outcome import (
     Ambiguous,
+    CategoricalResult,
     InsufficientInput,
     NotApplicable,
     Outcome,
@@ -41,6 +42,7 @@ from agri_core.models.outcome import (
     ReferToLabel,
     Result,
     Unknown,
+    is_success,
 )
 from agri_core.models.parameter import AppliesTo, ParameterDef
 from agri_core.models.phase_set import PhaseSet
@@ -55,7 +57,7 @@ from agri_core.models.refusals import (
     refer_to_label,
     unknown,
 )
-from agri_core.models.result import ok
+from agri_core.models.result import ok, ok_category
 from agri_core.models.scope_key import ScopeKey
 from agri_core.models.taxon import TaxonRank, TaxonRow
 from agri_core.models.units import (
@@ -74,6 +76,7 @@ __all__ = [
     "AmbiguousCandidate",
     "AppliesTo",
     "BoolValue",
+    "CategoricalResult",
     "DatasetId",
     "DatasetRow",
     "Dictionary",
@@ -116,8 +119,10 @@ __all__ = [
     "canonical_json",
     "ensure_src_or_dataset",
     "insufficient_input",
+    "is_success",
     "not_applicable",
     "ok",
+    "ok_category",
     "refer_to_authority",
     "refer_to_label",
     "unknown",

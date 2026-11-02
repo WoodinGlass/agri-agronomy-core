@@ -14,10 +14,11 @@ from agri_core.models.refusals import (
     ReferToLabel,
     Unknown,
 )
-from agri_core.models.result import Result
+from agri_core.models.result import CategoricalResult, Result
 
 Outcome = Annotated[
     Result
+    | CategoricalResult
     | InsufficientInput
     | Unknown
     | NotApplicable
@@ -34,8 +35,19 @@ Outcome = Annotated[
 OutcomeAdapter: TypeAdapter[Outcome] = TypeAdapter(Outcome)  # type: ignore[arg-type, unused-ignore]
 """Validate or serialize any :data:`Outcome` value."""
 
+
+def is_success(outcome: Outcome) -> bool:
+    """Return ``True`` for ``Result`` and ``CategoricalResult``.
+
+    Both success variants carry ``status`` in ``{"ok", "ok_category"}``;
+    every refusal variant returns ``False``. See ADR-006.
+    """
+    return outcome.status in ("ok", "ok_category")
+
+
 __all__ = [
     "Ambiguous",
+    "CategoricalResult",
     "InsufficientInput",
     "NotApplicable",
     "Outcome",
@@ -44,4 +56,5 @@ __all__ = [
     "ReferToLabel",
     "Result",
     "Unknown",
+    "is_success",
 ]
