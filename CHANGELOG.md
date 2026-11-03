@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Subject` and `request_id` on every `Outcome` (ADR-009, Accepted).
+  `Subject` carries taxon_id/taxon_name, the scope used for fact
+  lookup, and the calculation name + version. `request_id` is a
+  deterministic `"req_<32 hex>"` hash of subject + inputs +
+  engine_version + pack_hash. Optional (default `None`); existing
+  callers are unaffected. Consistency rule: `request_id` without
+  `subject` is rejected. New `agri_core.models.Subject` and
+  `agri_core.models.compute_request_id`.
 - Plant-protection scope and guard (ADR-007, Accepted). Two-tier
   guard: (a) **global** chemical-control token check on every
   parameter of every stage (`-cide` suffix, `adjuvant`,
