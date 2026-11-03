@@ -1,1 +1,10 @@
 * @WoodinGlass
+
+# Sensitive paths — changes here need an explicit review before merge.
+# require_code_owner_reviews is OFF while the project has a single
+# maintainer; see SECURITY.md "Repository process controls".
+.github/workflows/  @WoodinGlass
+dictionary/  @WoodinGlass
+schema/  @WoodinGlass
+safety/  @WoodinGlass
+release.yml  @WoodinGlass

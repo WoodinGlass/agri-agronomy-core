@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Zip-slip guard in `release.yml` before extracting `built-pack.zip`:
+  absolute paths and `..` components are rejected before `unzip`
+  runs (defence-in-depth on top of the trusted agri-knowledge source).
+- `SECURITY.md`: new sections **Repository process controls** (branch
+  and tag protection, workflow permissions, action SHA pinning, CodeQL,
+  dependency review, attestation, PyPI Trusted Publishing, CODEOWNERS
+  status) and **Engine has no persistent state** (caller responsibility
+  for logs, traces, and checkpoints).
+- `CODEOWNERS`: sensitive paths added
 - Pack hardening (Step 5): free-text `max_length` on `NameRow.name`,
   `DatasetRow.name/version/url/locator`, `ParameterDef.description/
   rationale`, `HazardRow.reason/authority`, `TaxonRow.scientific_name/
