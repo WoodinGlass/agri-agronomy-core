@@ -426,6 +426,16 @@ gh attestation verify sample_pack.zip \
   --repo WoodinGlass/agri-agronomy-core
 ```
 
+Every release also ships an SBOM (`sbom.cdx.json`), CycloneDX 1.6
+JSON. It lists the wheel's **runtime** dependencies, built from an
+isolated virtual environment, not the engine's development tooling.
+Verify it with the same mechanism:
+
+```bash
+gh attestation verify sbom.cdx.json \
+  --repo WoodinGlass/agri-agronomy-core
+```
+
 Also verify the release `SHA256SUMS`. GitHub flattens release
 asset names to their basenames, so check with `--ignore-missing`
 if you only downloaded some assets:
