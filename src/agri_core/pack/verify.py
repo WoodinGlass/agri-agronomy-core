@@ -20,6 +20,7 @@ _HASH_DOMAIN = b"agri-pack-hash-v1\n"
 """Domain-separation prefix. Changing this value is a hash-algorithm change."""
 
 __all__ = [
+    "compute_file_sha256",
     "compute_pack_hash",
     "hash_pack_files",
     "verify_pack_hash",
@@ -88,6 +89,22 @@ def compute_pack_hash(root: Path, *, max_bytes: int = DEFAULT_MAX_BYTES) -> str:
     """Read allowlisted files under *root* and return ``hash_pack_files(files)``."""
     files = read_pack_bytes(Path(root), max_bytes=max_bytes)
     return hash_pack_files(files)
+
+
+def compute_file_sha256(path: Path) -> str:
+    """Chunked SHA-256 of a file's bytes, as ``sha256:<hex>``.
+
+    Reads in 1 MiB chunks so a 100 MB+ artifact does not spike RSS. The
+    digest is identical to reading the whole file. The algorithm matches
+    the built-pack artifact hash; keeping it in one place means the
+    verification in ``_load_built_pack`` and any future re-verification
+    use the same code.
+    """
+    h = hashlib.sha256()
+    with Path(path).open("rb") as f:
+        while chunk := f.read(1 << 20):
+            h.update(chunk)
+    return "sha256:" + h.hexdigest()
 
 
 def verify_pack_hash(root: Path, manifest: PackManifest) -> None:
