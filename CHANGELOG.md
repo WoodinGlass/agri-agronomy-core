@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- CycloneDX SBOM (`sbom.cdx.json`) in the release workflow, generated
+  from the wheel's runtime dependencies in an isolated virtual
+  environment. CycloneDX 1.6 JSON. The SBOM is hashed in
+  `SHA256SUMS`, attested via `actions/attest-build-provenance`, and
+  published as a release asset.
 - Zip-slip guard in `release.yml` before extracting `built-pack.zip`:
   absolute paths and `..` components are rejected before `unzip`
   runs (defence-in-depth on top of the trusted agri-knowledge source).
