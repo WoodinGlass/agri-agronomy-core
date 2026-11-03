@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it with the release tag you used."
+title: "agri-agronomy-core"
+abstract: >-
+  Offline, deterministic data contract and resolution engine for
+  cultivation knowledge. The engine reads a versioned knowledge pack,
+  verifies its hash, and returns deterministic outcomes; the data
+  itself lives in the separate agri-knowledge repository.
+type: software
+authors:
+  - name: "WoodinGlass and the agri-agronomy-core contributors"
+version: "0.1.2"
+date-released: "2026-10-31"
+license: "Apache-2.0"
+repository-code: "https://github.com/WoodinGlass/agri-agronomy-core"
+url: "https://github.com/WoodinGlass/agri-agronomy-core"
+keywords:
+  - agronomy
+  - knowledge-pack
+  - data-contract
+  - offline
+  - deterministic
+  - agriculture

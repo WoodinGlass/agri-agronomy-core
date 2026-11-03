@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `CITATION.cff` (CFF 1.2.0), the machine-readable citation record.
+  GitHub reads it for the "Cite this repository" button. Version and
+  release date track `pyproject.toml` and `CHANGELOG.md`; a
+  contract test enforces consistency.
 - CycloneDX SBOM (`sbom.cdx.json`) in the release workflow, generated
   from the wheel's runtime dependencies in an isolated virtual
   environment. CycloneDX 1.6 JSON. The SBOM is hashed in

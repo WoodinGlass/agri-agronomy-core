@@ -462,6 +462,8 @@ does not match.
 
 If you use the engine in research or in a product, please cite this repository with the release tag you used. If you rely on specific facts, please also cite the original sources recorded in the pack's `sources.csv`. Citation is a request, not a condition of the license.
 
+A machine-readable citation is available in [`CITATION.cff`](CITATION.cff); GitHub's "Cite this repository" button reads it directly.
+
 ## Milestones
 
 | Milestone | Status | Scope | Done when |
