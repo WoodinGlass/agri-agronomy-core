@@ -16,6 +16,43 @@ This document describes how to report a vulnerability or a harmful data error, w
 - **Harmful data errors** (an unsafe cap, a wrong unit, a threshold off by an order of magnitude): report them to `agri-knowledge` with a citation and the `fact_id`. If you believe there is immediate risk, report it privately as above.
 - The library makes no network calls. Pack loading verifies hashes and opens SQLite read-only with `trusted_schema=OFF`. YAML is read with `safe_load` only.
 
+
+## Repository process controls
+
+These controls protect the supply chain of the library itself
+(releases and CI), separate from the runtime guarantees above.
+
+| Control | State |
+|---|---|
+| Branch protection on `main` | required status checks (19), linear history off, force-push off, deletion off |
+| Tag protection on `v*` | ruleset: deletion and non-fast-forward forbidden, update forbidden |
+| Workflow default permissions | `read` (write must be opted in per workflow) |
+| Third-party actions | pinned by 40-char commit SHA with the tag as a comment |
+| Secret scanning + push protection | enabled |
+| Dependabot alerts + automated security fixes | enabled |
+| CodeQL | default setup (GitHub-hosted, `python`); alerts in the Security tab |
+| Dependency review | runs on every pull request (`.github/workflows/dependency-review.yml`) |
+| Release attestation | `actions/attest-build-provenance` on wheel, sdist, sample_pack.zip, SHA256SUMS |
+| PyPI publishing | Trusted Publishing (OIDC) via `.github/workflows/publish.yml`; no static token in the repository |
+| `CODEOWNERS` | lists sensitive paths (`.github/workflows/`, `dictionary/`, `schema/`, `safety/`, `release.yml`) |
+| `require_code_owner_reviews` | **off while the project has one maintainer**. A single person cannot self-approve; enabling it would block every change to a sensitive path. Turn on when a second maintainer joins. |
+
+`CODEOWNERS` maps sensitive paths to the current maintainer, so a
+future GitHub App or co-maintainer can be added without changing
+every workflow.
+
+## Engine has no persistent state
+
+The engine is pure: no database, no logger, no telemetry, no
+network calls. It reads a pack, computes, and returns an `Outcome`.
+An outcome's `subject` (ADR-009) and `request_id` identify what
+was asked and tie the result back to its inputs, but the engine
+does not record them anywhere. Any persistence — request logs,
+per-run traces, ``run_id`` checkpoints — is the caller's
+responsibility. The engine does not store location, identity, or
+any user-supplied data. Data-protection obligations belong to the
+application that calls the engine.
+
 ## Scope
 
 **In scope for security reports:**
