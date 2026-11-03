@@ -96,7 +96,7 @@ def _param_satisfied(
 
 def derive_tier(ks: KnowledgeSet, taxon_id: str, dictionary: Dictionary) -> TierResult:
     taxon = ks.taxon(taxon_id)
-    taxon_facts = [f for f in ks.facts() if f.taxon_id == taxon_id]
+    taxon_facts = list(ks.facts_for(taxon_id))
     live_facts = [f for f in taxon_facts if f.superseded_by is None]
 
     if not live_facts:
