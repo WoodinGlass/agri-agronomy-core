@@ -77,12 +77,12 @@ def test_coverage_scaling_is_linear(tmp_path: Path) -> None:
     ratio = large_min / small_min if small_min > 0 else float("inf")
 
     print(
-        f"\n  small ({_N_SMALL} taxa): derive min={small_min*1000:.1f} ms  "
-        f"runs={[f'{t*1000:.1f}' for t in small_times]}"
+        f"\n  small ({_N_SMALL} taxa): derive min={small_min * 1000:.1f} ms  "
+        f"runs={[f'{t * 1000:.1f}' for t in small_times]}"
     )
     print(
-        f"  large ({_N_LARGE} taxa): derive min={large_min*1000:.1f} ms  "
-        f"runs={[f'{t*1000:.1f}' for t in large_times]}"
+        f"  large ({_N_LARGE} taxa): derive min={large_min * 1000:.1f} ms  "
+        f"runs={[f'{t * 1000:.1f}' for t in large_times]}"
     )
     print(f"  ratio: {ratio:.2f}x (threshold {_RATIO_MAX}x)")
 
