@@ -13,10 +13,34 @@
           "title": "Candidates",
           "type": "array"
         },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
         "status": {
           "const": "ambiguous",
           "title": "Status",
           "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "truncated": {
           "default": false,
@@ -572,6 +596,59 @@
       "title": "ScalarValue",
       "type": "object"
     },
+    "Subject": {
+      "additionalProperties": false,
+      "description": "What a calculation was about (ADR-009).\n\n``taxon_id`` and ``scope`` are ``None``/empty for calculations with\nno taxon (VPD from weather, temperature from elevation).\n``calculation`` is the stable name of the calculation function.\n``calculation_version`` is semver; starts at ``\"0.1.0\"`` for M10.",
+      "properties": {
+        "calculation": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Calculation",
+          "type": "string"
+        },
+        "calculation_version": {
+          "minLength": 1,
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Calculation Version",
+          "type": "string"
+        },
+        "scope": {
+          "additionalProperties": true,
+          "title": "Scope",
+          "type": "object"
+        },
+        "taxon_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Taxon Id"
+        },
+        "taxon_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Taxon Name"
+        }
+      },
+      "required": [
+        "calculation",
+        "calculation_version"
+      ],
+      "title": "Subject",
+      "type": "object"
+    },
     "TrapezoidValue": {
       "additionalProperties": false,
       "description": "Four-point trapezoid: abs_min <= opt_min <= opt_max <= abs_max.",
@@ -638,10 +715,34 @@
           "title": "Reason",
           "type": "string"
         },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
         "status": {
           "const": "unknown",
           "title": "Status",
           "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [

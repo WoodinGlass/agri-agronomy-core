@@ -13,10 +13,34 @@
           "title": "Candidates",
           "type": "array"
         },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
         "status": {
           "const": "ambiguous",
           "title": "Status",
           "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "truncated": {
           "default": false,
@@ -107,10 +131,34 @@
         "provenance": {
           "$ref": "#/$defs/Provenance"
         },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
         "status": {
           "const": "ok_category",
           "title": "Status",
           "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "warnings": {
           "items": {
@@ -144,10 +192,34 @@
           "title": "Missing",
           "type": "array"
         },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
         "status": {
           "const": "insufficient_input",
           "title": "Status",
           "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -166,10 +238,34 @@
           "title": "Reason",
           "type": "string"
         },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
         "status": {
           "const": "not_applicable",
           "title": "Status",
           "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -265,10 +361,34 @@
           "title": "Reason",
           "type": "string"
         },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
         "status": {
           "const": "refer_to_authority",
           "title": "Status",
           "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -287,10 +407,34 @@
           "title": "Reason",
           "type": "string"
         },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
         "status": {
           "const": "refer_to_label",
           "title": "Status",
           "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -335,10 +479,34 @@
         "provenance": {
           "$ref": "#/$defs/Provenance"
         },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
         "status": {
           "const": "ok",
           "title": "Status",
           "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "unit": {
           "title": "Unit",
@@ -370,6 +538,59 @@
       "title": "Result",
       "type": "object"
     },
+    "Subject": {
+      "additionalProperties": false,
+      "description": "What a calculation was about (ADR-009).\n\n``taxon_id`` and ``scope`` are ``None``/empty for calculations with\nno taxon (VPD from weather, temperature from elevation).\n``calculation`` is the stable name of the calculation function.\n``calculation_version`` is semver; starts at ``\"0.1.0\"`` for M10.",
+      "properties": {
+        "calculation": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Calculation",
+          "type": "string"
+        },
+        "calculation_version": {
+          "minLength": 1,
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Calculation Version",
+          "type": "string"
+        },
+        "scope": {
+          "additionalProperties": true,
+          "title": "Scope",
+          "type": "object"
+        },
+        "taxon_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Taxon Id"
+        },
+        "taxon_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Taxon Name"
+        }
+      },
+      "required": [
+        "calculation",
+        "calculation_version"
+      ],
+      "title": "Subject",
+      "type": "object"
+    },
     "Unknown": {
       "additionalProperties": false,
       "description": "The answer needs a value the profile marks as unknown.\n\nThis includes the case where no value covers the requested scope.",
@@ -393,10 +614,34 @@
           "title": "Reason",
           "type": "string"
         },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
         "status": {
           "const": "unknown",
           "title": "Status",
           "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [

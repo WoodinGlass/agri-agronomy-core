@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from agri_core.models.envelope import Subject
 
 FlagCode = Annotated[str, Field(pattern=r"^[A-Z][A-Z0-9_]{1,63}$")]
 """Stable uppercase code for ``ReferToAuthority.flags``."""
@@ -23,6 +25,9 @@ class InsufficientInput(BaseModel):
     status: Literal["insufficient_input"]
     missing: list[str]
 
+    subject: Subject | None = None
+    request_id: str | None = Field(default=None, pattern=r"^req_[0-9a-f]{32}$")
+
     @field_validator("missing")
     @classmethod
     def _non_empty(cls, v: list[str]) -> list[str]:
@@ -32,6 +37,12 @@ class InsufficientInput(BaseModel):
             if not item:
                 raise ValueError("missing items must be non-empty strings")
         return v
+
+    @model_validator(mode="after")
+    def _envelope_consistency(self) -> InsufficientInput:
+        if self.request_id is not None and self.subject is None:
+            raise ValueError("request_id requires subject")
+        return self
 
 
 class Unknown(BaseModel):
@@ -45,6 +56,14 @@ class Unknown(BaseModel):
     status: Literal["unknown"]
     reason: str = Field(min_length=1)
     code: Annotated[str, Field(min_length=1, pattern=r"^[a-z][a-z0-9_]*$")] | None = None
+    subject: Subject | None = None
+    request_id: str | None = Field(default=None, pattern=r"^req_[0-9a-f]{32}$")
+
+    @model_validator(mode="after")
+    def _envelope_consistency(self) -> Unknown:
+        if self.request_id is not None and self.subject is None:
+            raise ValueError("request_id requires subject")
+        return self
 
 
 class NotApplicable(BaseModel):
@@ -54,6 +73,14 @@ class NotApplicable(BaseModel):
 
     status: Literal["not_applicable"]
     reason: str = Field(min_length=1)
+    subject: Subject | None = None
+    request_id: str | None = Field(default=None, pattern=r"^req_[0-9a-f]{32}$")
+
+    @model_validator(mode="after")
+    def _envelope_consistency(self) -> NotApplicable:
+        if self.request_id is not None and self.subject is None:
+            raise ValueError("request_id requires subject")
+        return self
 
 
 class ReferToLabel(BaseModel):
@@ -63,6 +90,14 @@ class ReferToLabel(BaseModel):
 
     status: Literal["refer_to_label"]
     reason: str = Field(min_length=1)
+    subject: Subject | None = None
+    request_id: str | None = Field(default=None, pattern=r"^req_[0-9a-f]{32}$")
+
+    @model_validator(mode="after")
+    def _envelope_consistency(self) -> ReferToLabel:
+        if self.request_id is not None and self.subject is None:
+            raise ValueError("request_id requires subject")
+        return self
 
 
 class AmbiguousCandidate(BaseModel):
@@ -84,6 +119,9 @@ class Ambiguous(BaseModel):
     candidates: list[AmbiguousCandidate] = Field(min_length=2, max_length=20)
     truncated: bool = False
 
+    subject: Subject | None = None
+    request_id: str | None = Field(default=None, pattern=r"^req_[0-9a-f]{32}$")
+
     @field_validator("candidates")
     @classmethod
     def _unique_taxon_ids(cls, v: list[AmbiguousCandidate]) -> list[AmbiguousCandidate]:
@@ -91,6 +129,12 @@ class Ambiguous(BaseModel):
         if len(ids) != len(set(ids)):
             raise ValueError("taxon_id must be unique within candidates")
         return v
+
+    @model_validator(mode="after")
+    def _envelope_consistency(self) -> Ambiguous:
+        if self.request_id is not None and self.subject is None:
+            raise ValueError("request_id requires subject")
+        return self
 
 
 class ReferToAuthority(BaseModel):
@@ -102,6 +146,9 @@ class ReferToAuthority(BaseModel):
     reason: str = Field(min_length=1)
     flags: list[FlagCode] = Field(default_factory=list)
 
+    subject: Subject | None = None
+    request_id: str | None = Field(default=None, pattern=r"^req_[0-9a-f]{32}$")
+
     @field_validator("flags")
     @classmethod
     def _unique_sorted(cls, v: list[str]) -> list[str]:
@@ -109,26 +156,76 @@ class ReferToAuthority(BaseModel):
             raise ValueError("flags must be unique")
         return sorted(v)
 
-
-def insufficient_input(missing: list[str]) -> InsufficientInput:
-    return InsufficientInput(status="insufficient_input", missing=missing)
-
-
-def unknown(reason: str, code: str | None = None) -> Unknown:
-    return Unknown(status="unknown", reason=reason, code=code)
+    @model_validator(mode="after")
+    def _envelope_consistency(self) -> ReferToAuthority:
+        if self.request_id is not None and self.subject is None:
+            raise ValueError("request_id requires subject")
+        return self
 
 
-def not_applicable(reason: str) -> NotApplicable:
-    return NotApplicable(status="not_applicable", reason=reason)
+def insufficient_input(
+    missing: list[str], *, subject: Subject | None = None, request_id: str | None = None
+) -> InsufficientInput:
+    return InsufficientInput(
+        status="insufficient_input", missing=missing, subject=subject, request_id=request_id
+    )
 
 
-def refer_to_label(reason: str) -> ReferToLabel:
-    return ReferToLabel(status="refer_to_label", reason=reason)
+def unknown(
+    reason: str,
+    code: str | None = None,
+    *,
+    subject: Subject | None = None,
+    request_id: str | None = None,
+) -> Unknown:
+    return Unknown(
+        status="unknown", reason=reason, code=code, subject=subject, request_id=request_id
+    )
 
 
-def ambiguous(candidates: list[AmbiguousCandidate], *, truncated: bool = False) -> Ambiguous:
-    return Ambiguous(status="ambiguous", candidates=candidates, truncated=truncated)
+def not_applicable(
+    reason: str, *, subject: Subject | None = None, request_id: str | None = None
+) -> NotApplicable:
+    return NotApplicable(
+        status="not_applicable", reason=reason, subject=subject, request_id=request_id
+    )
 
 
-def refer_to_authority(reason: str, flags: list[str] | None = None) -> ReferToAuthority:
-    return ReferToAuthority(status="refer_to_authority", reason=reason, flags=list(flags or []))
+def refer_to_label(
+    reason: str, *, subject: Subject | None = None, request_id: str | None = None
+) -> ReferToLabel:
+    return ReferToLabel(
+        status="refer_to_label", reason=reason, subject=subject, request_id=request_id
+    )
+
+
+def ambiguous(
+    candidates: list[AmbiguousCandidate],
+    *,
+    truncated: bool = False,
+    subject: Subject | None = None,
+    request_id: str | None = None,
+) -> Ambiguous:
+    return Ambiguous(
+        status="ambiguous",
+        candidates=candidates,
+        truncated=truncated,
+        subject=subject,
+        request_id=request_id,
+    )
+
+
+def refer_to_authority(
+    reason: str,
+    flags: list[str] | None = None,
+    *,
+    subject: Subject | None = None,
+    request_id: str | None = None,
+) -> ReferToAuthority:
+    return ReferToAuthority(
+        status="refer_to_authority",
+        reason=reason,
+        flags=list(flags or []),
+        subject=subject,
+        request_id=request_id,
+    )

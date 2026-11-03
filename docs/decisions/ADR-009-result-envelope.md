@@ -2,8 +2,7 @@
 
 ## Status
 
-Proposed 2026-11-03. Blocks M10 (climate calculators). Not yet
-implemented; this ADR records the design.
+Accepted 2026-11-03. Implemented in the same release cycle.
 
 ## Context
 
@@ -102,7 +101,9 @@ break M13 `tool_schemas.json`.
 
 7. **Schema regeneration.** `schema/outcome.schema.json` regenerates:
    `$defs` gains `Subject`; every outcome variant gains `subject` and
-   `request_id`.
+   `request_id`. The dependent schemas `schema/taxon_outcome.schema.json`
+   and `schema/fact_outcome.schema.json` also regenerate, because they
+   share the `Unknown` and `Ambiguous` refusals with `Outcome`.
 
 8. **No change to `is_success()`** -- the two success statuses stay
    `{"ok", "ok_category"}`.
