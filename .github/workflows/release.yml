@@ -179,6 +179,14 @@ jobs:
             exit 0
           fi
           mkdir -p unpacked
+          # Zip-slip guard: reject absolute paths and '..' components
+          # before extraction. The built-pack.zip is fetched from the
+          # trusted agri-knowledge release; this check is
+          # defence-in-depth against a compromised upstream asset.
+          if unzip -l built-pack.zip | awk 'NR>3 {print $4}' | grep -qE '^/|(^|/)\.\.(/|$)'; then
+            echo "::error::built-pack.zip contains unsafe paths (zip-slip)"
+            exit 1
+          fi
           unzip -q built-pack.zip -d unpacked
           PACK_DIR=$(find unpacked -name "pack.toml" -maxdepth 3 -exec dirname {} \; | head -n1)
           if [ -z "$PACK_DIR" ]; then
