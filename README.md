@@ -477,6 +477,7 @@ Architectural decisions are recorded as ADRs under
 - [ADR-006](docs/decisions/ADR-006-categorical-outcome.md) — `CategoricalResult` (`status="ok_category"`) for non-numeric answers.
 - [ADR-007](docs/decisions/ADR-007-plant-protection-scope.md) — Plant-protection scope and two-tier guard; data model deferred to ADR-008.
 - [ADR-009](docs/decisions/ADR-009-result-envelope.md) — Envelope on every `Outcome`: `subject` and deterministic `request_id`.
+- [ADR-010](docs/decisions/ADR-010-perf-budgets.md) — CLI performance budgets for `pack build`, `validate`, `coverage`, `diff`.
 
 ADR-008 is intentionally reserved (plant-protection data model, after
 M12) and will be written as its own ADR when that work starts.
@@ -553,12 +554,21 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 
 These targets are measured in CI and in Colab at v0.1.0 (unchanged in the v0.1.1 and v0.1.2 patches) on a synthetic pack (10k taxa, 30k names, 200k facts). They will be recalibrated once real `agri-knowledge` pack sizes are known.
 
+CLI-level budgets (`build`, `validate`, `coverage`, `diff`) were
+calibrated at v0.1.2 on Colab with a 1.5x margin; see
+[ADR-010](docs/decisions/ADR-010-perf-budgets.md). They will be
+tightened once real CI medians are available.
+
 | Operation | Budget |
 |---|---|
 | Batch suitability, 5,000 taxa | ≤ 200 ms p95 (deferred to M12; suitability module not yet present) |
 | Load a pack with 10,000 taxa (built SQLite) | ≤ 1 s |
 | Peak memory during pack load | ≤ 200 MB |
 | `resolve_taxon` p95 | ≤ 5 ms (measured ≈ 12 µs on a 10k-taxa pack in M8) |
+| `agri-core pack build` on 10k source | ≤ 135 s (Colab min × 1.5; see [ADR-010](docs/decisions/ADR-010-perf-budgets.md)) |
+| `agri-core validate --strict` on 10k source | ≤ 70 s (Colab min × 1.5; see ADR-010) |
+| `agri-core coverage --json` on 10k built | ≤ 27 s (Colab min × 1.5; see ADR-010) |
+| `agri-core diff --json` on 10k built (self-diff) | ≤ 36 s (Colab min × 1.5; see ADR-010) |
 
 **How "peak memory" is measured.** The 200 MB budget refers to memory allocated *during* `load_knowledge_set`, measured with `tracemalloc`. It deliberately excludes the Python interpreter and third-party dependencies (`pydantic`, `jsonschema`, `pint`, `typer`, `pyyaml`), which together consume roughly 200 MB at import time in a Colab-class runtime. Including them would make the budget measure dependency bloat rather than the engine's own footprint, which is what this project controls. If you need a hard total cap, budget `absolute RSS ≤ 400 MB` as a smoke check.
 
