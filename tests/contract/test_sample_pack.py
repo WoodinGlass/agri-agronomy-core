@@ -6,6 +6,7 @@ import re
 import tomllib
 from importlib.resources import files as _resource_files
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 
@@ -85,7 +86,7 @@ def test_sample_pack_sources_example_org() -> None:
     files = read_pack_bytes(SAMPLE)
     table = _load_table(files, "sources")
     for r in table.rows:
-        assert "example.org" in dict(r)["url"]
+        assert urlparse(dict(r)["url"]).hostname == "example.org"
 
 
 def test_sample_pack_all_sources_used() -> None:
