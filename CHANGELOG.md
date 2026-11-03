@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Perf gates for the four main CLI operations on a 10k-taxa pack:
+  `agri-core pack build`, `validate --strict`, `coverage --json`,
+  `diff --json` (self-diff). Budgets and calibration method in
+  `docs/decisions/ADR-010-perf-budgets.md`. Colab × 1.5 margin, to
+  be tightened after 2 weeks of CI data.
 - `CITATION.cff` (CFF 1.2.0), the machine-readable citation record.
   GitHub reads it for the "Cite this repository" button. Version and
   release date track `pyproject.toml` and `CHANGELOG.md`; a
