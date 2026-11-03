@@ -453,16 +453,33 @@ does not match.
 - Semantic Versioning applies to the engine and to public contracts: `Outcome` and its members, the JSON Schemas, the dictionary and the exported tool schemas.
 - During the 0.x line a **minor** release may break a public contract; when it does, the breaking change is called out under a `### Changed` (or `### Removed`) heading in `CHANGELOG.md`. A major version is reserved for the point at which the contract is considered stable.
 - Every pack carries a `schema_version` and an `engine_min`. The engine supports two consecutive `schema_version` values and ships `agri-core pack migrate` to move a pack forward. A pack that declares a `schema_version` the engine does not support is rejected; a pack that requires a newer engine than the one running is rejected.
-- Every fact has a stable `fact_id`. A superseded fact is marked with `superseded_by`; a critical correction will be published as an advisory in the pack (planned after M8; the loader currently rejects non-empty `advisories.csv`).
+- Every fact has a stable `fact_id`. A superseded fact is marked with `superseded_by`; a critical correction will be published as an advisory in the pack (planned; the loader currently rejects non-empty `advisories.csv`).
 - Every release pins the `agri-knowledge` version it was tested against. A canary CI job against `agri-knowledge` `main`, to surface incompatibilities early, is **planned for v0.2.0** (not yet implemented).
 - `dictionary/dictionary.lock` records `<version> <contract_hash>` per dictionary release; the SemVer rule is that adding a key is `MINOR`, removing / renaming / changing shape, unit, phase_set, enum values or narrowing a dimension is `MAJOR`, and description / rationale changes are `PATCH`. `classify_change` enforces this and is exercised by the test suite.
-- Releases are git tags and GitHub Releases (wheel, sdist, sample pack, `SHA256SUMS`, and — when the pinned `agri-knowledge` version has shipped — the built packs of `agri-knowledge`). They are not published on PyPI.
+- Releases are git tags and GitHub Releases (wheel, sdist, sample pack, `SHA256SUMS`, CycloneDX SBOM, and — when the pinned `agri-knowledge` version has shipped — the built packs of `agri-knowledge`). v0.1.x is not on PyPI; v0.2.0 and later are published to PyPI via `.github/workflows/publish.yml` (Trusted Publishing).
 
 ## Citing
 
 If you use the engine in research or in a product, please cite this repository with the release tag you used. If you rely on specific facts, please also cite the original sources recorded in the pack's `sources.csv`. Citation is a request, not a condition of the license.
 
 A machine-readable citation is available in [`CITATION.cff`](CITATION.cff); GitHub's "Cite this repository" button reads it directly.
+
+### Decision records
+
+Architectural decisions are recorded as ADRs under
+[`docs/decisions/`](docs/decisions/):
+
+- [ADR-001](docs/decisions/ADR-001-knowledge-set.md) — `KnowledgeSet` as a `Protocol`; the loader returns an immutable implementation.
+- [ADR-002](docs/decisions/ADR-002-build-and-hash.md) — Two-hash model and deterministic SQLite build.
+- [ADR-003](docs/decisions/ADR-003-tiers-license-duplicates.md) — Tier derivation (T0–T3), license gate, and duplicate-fact detection.
+- [ADR-004](docs/decisions/ADR-004-resolution-policy.md) — Taxon and fact resolution policy (`ok`, `unknown`, `ambiguous`, ...).
+- [ADR-005](docs/decisions/ADR-005-license-allowlist.md) — Default-deny license allowlist. Supersedes the license-gate section of ADR-003.
+- [ADR-006](docs/decisions/ADR-006-categorical-outcome.md) — `CategoricalResult` (`status="ok_category"`) for non-numeric answers.
+- [ADR-007](docs/decisions/ADR-007-plant-protection-scope.md) — Plant-protection scope and two-tier guard; data model deferred to ADR-008.
+- [ADR-009](docs/decisions/ADR-009-result-envelope.md) — Envelope on every `Outcome`: `subject` and deterministic `request_id`.
+
+ADR-008 is intentionally reserved (plant-protection data model, after
+M12) and will be written as its own ADR when that work starts.
 
 ## Milestones
 
