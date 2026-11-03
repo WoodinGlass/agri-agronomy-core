@@ -393,6 +393,15 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full rules, contribution scope,
 
 ## Security
 
+Code scanning uses [CodeQL default setup](https://docs.github.com/en/code-security/code-scanning/introduction-to-code-scanning/about-code-scanning-with-codeql):
+GitHub-hosted CodeQL analysis runs against the repository's
+default branch and pull requests. The retired
+`github/codeql-action` workflow-file approach is not used.
+
+Dependency review runs on every pull request via
+`actions/dependency-review-action` (SHA-pinned in
+`.github/workflows/dependency-review.yml`).
+
 - **Vulnerabilities** in code or dependencies: report them privately via GitHub's private vulnerability reporting (Security tab, "Report a vulnerability"), not as a public issue.
 - **Harmful data errors** (an unsafe cap, a wrong unit, a threshold off by an order of magnitude): report to [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge) with a citation and the `fact_id`. For immediate risk, report privately as above.
 - The library makes no network calls; pack loading verifies hashes and opens SQLite read-only with `trusted_schema=OFF`; YAML is read with `safe_load` only.
