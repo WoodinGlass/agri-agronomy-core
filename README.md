@@ -83,6 +83,8 @@ pip install "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.2"
 
 `v0.1.2` is the current patch release; `v0.1.0` is the foundation release. `v0.1.1` remains available but does not enforce the license allowlist; use `v0.1.2` for new work. To track the main branch instead, replace `@v0.1.2` with `@main` (development only; not recommended for anything you deploy).
 
+Each published release is also on PyPI: `pip install agri-agronomy-core==<version>` (verify the `SHA256SUMS` from the matching GitHub Release).
+
 Requires Python 3.11 or newer (tested on 3.11, 3.12, 3.13 and 3.14 on Ubuntu-latest, and on 3.11 on Windows-latest). Runtime dependencies: Pydantic v2, jsonschema, PyYAML (`safe_load` only), pint, Typer, packaging and `sqlite3` (Python stdlib). Pure Python, CPU only.
 
 ### Google Colab

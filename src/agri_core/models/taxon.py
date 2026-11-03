@@ -37,8 +37,8 @@ class TaxonRow(BaseModel):
 
     taxon_id: TaxonId
     rank: TaxonRank
-    scientific_name: str = Field(min_length=1)
-    accepted_name: str | None = None
+    scientific_name: str = Field(min_length=1, max_length=200)
+    accepted_name: str | None = Field(default=None, max_length=200)
     organism_group: str = Field(min_length=1)
     archetype: str = Field(min_length=1)
     uses: list[str] = Field(min_length=1)

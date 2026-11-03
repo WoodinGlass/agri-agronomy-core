@@ -17,7 +17,12 @@ from types import MappingProxyType
 from typing import Any, Literal
 
 from agri_core.models.canonical import canonical_json
-from agri_core.pack.errors import PackTableInvalidError
+from agri_core.pack.errors import (
+    PackFieldTooLargeError,
+    PackRowTooLargeError,
+    PackTableInvalidError,
+)
+from agri_core.pack.unicode_guard import find_forbidden
 
 ColumnType = Literal[
     "str",
@@ -365,6 +370,13 @@ def _encode_cell(value: Any, col: ColumnSpec, *, line: int) -> str:
     raise PackTableInvalidError(f"unknown column type {col.type!r}", line=line, key=col.name)
 
 
+MAX_FIELD_BYTES: int = 16 * 1024
+"""Maximum UTF-8 byte size of one CSV cell (16 KB)."""
+
+MAX_ROW_BYTES: int = 64 * 1024
+"""Maximum UTF-8 byte size of one CSV row (64 KB)."""
+
+
 def read_table(spec: TableSpec, data: bytes, *, source_name: str) -> Table:
     """Parse CSV bytes into a Table.
 
@@ -401,6 +413,15 @@ def read_table(spec: TableSpec, data: bytes, *, source_name: str) -> Table:
                 file=source_name,
                 line=line,
             )
+        hit = find_forbidden(ch)
+        if hit is not None:
+            cp, category = hit
+            line = text.count("\n", 0, offset) + 1
+            raise PackTableInvalidError(
+                f"{category} character U+{cp:04X} not allowed",
+                file=source_name,
+                line=line,
+            )
 
     reader = csv.reader(io.StringIO(text))
     try:
@@ -434,6 +455,22 @@ def read_table(spec: TableSpec, data: bytes, *, source_name: str) -> Table:
                     file=source_name,
                     line=line_num,
                 )
+        row_bytes = 0
+        for cell in raw_row:
+            cell_bytes = len(cell.encode("utf-8"))
+            if cell_bytes > MAX_FIELD_BYTES:
+                raise PackFieldTooLargeError(
+                    f"cell exceeds {MAX_FIELD_BYTES} bytes (got {cell_bytes})",
+                    file=source_name,
+                    line=line_num,
+                )
+            row_bytes += cell_bytes
+        if row_bytes > MAX_ROW_BYTES:
+            raise PackRowTooLargeError(
+                f"row exceeds {MAX_ROW_BYTES} bytes (got {row_bytes})",
+                file=source_name,
+                line=line_num,
+            )
         record: dict[str, Any] = {}
         for col, cell in zip(spec.columns, raw_row, strict=True):
             record[col.name] = _decode_cell(cell, col, file=source_name, line=line_num)

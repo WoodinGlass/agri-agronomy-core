@@ -113,3 +113,11 @@ class PackSafetyViolationError(PackError):
 
 class PackStaleArtifactError(PackError):
     code = "PACK_STALE_ARTIFACT"
+
+
+class PackFieldTooLargeError(PackError):
+    code = "PACK_FIELD_TOO_LARGE"
+
+
+class PackRowTooLargeError(PackError):
+    code = "PACK_ROW_TOO_LARGE"

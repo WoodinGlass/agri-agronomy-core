@@ -40,7 +40,7 @@ class NameRow(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", str_strip_whitespace=True)
 
     taxon_id: TaxonId
-    name: str = Field(min_length=1)
+    name: str = Field(min_length=1, max_length=200)
     language: str
     script: str
     kind: NameKind

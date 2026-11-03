@@ -29,9 +29,9 @@ class HazardRow(BaseModel):
     taxon_id: TaxonId
     hazard_code: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
     severity: HazardSeverity
-    reason: str = Field(min_length=1)
+    reason: str = Field(min_length=1, max_length=500)
     as_of: date
-    authority: str = Field(min_length=1)
+    authority: str = Field(min_length=1, max_length=200)
     src: list[SourceId] | None = None
     dataset_id: DatasetId | None = None
 
