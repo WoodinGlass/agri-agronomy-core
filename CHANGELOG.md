@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Pack hardening (Step 5): free-text `max_length` on `NameRow.name`,
+  `DatasetRow.name/version/url/locator`, `ParameterDef.description/
+  rationale`, `HazardRow.reason/authority`, `TaxonRow.scientific_name/
+  accepted_name`, `Notice.message`; per-cell (16 KB) and per-row
+  (64 KB) size limits in `read_table` (`PACK_FIELD_TOO_LARGE`,
+  `PACK_ROW_TOO_LARGE`); Unicode guard (bidi override, zero-width,
+  invisible chars) in `read_table` raising the existing
+  `PACK_TABLE_INVALID` code; Hypothesis fuzz
+  test for arbitrary CSV bytes; PyPI Trusted Publishing workflow
+  (`.github/workflows/publish.yml`).
 - `Subject` and `request_id` on every `Outcome` (ADR-009, Accepted).
   `Subject` carries taxon_id/taxon_name, the scope used for fact
   lookup, and the calculation name + version. `request_id` is a

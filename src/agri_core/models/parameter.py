@@ -83,9 +83,9 @@ class ParameterDef(BaseModel):
     used_by: list[str] = Field(default_factory=list)
     tier_required: bool = False
     safety_class: SafetyClass = "none"
-    rationale: str | None = None
+    rationale: str | None = Field(default=None, max_length=2000)
     kind: ParameterKind
-    description: str = Field(min_length=1)
+    description: str = Field(min_length=1, max_length=500)
     introduced_in: str
     deprecated_in: str | None = None
     replaced_by: str | None = None

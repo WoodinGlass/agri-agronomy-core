@@ -114,6 +114,7 @@
       "title": "Deprecated In"
     },
     "description": {
+      "maxLength": 500,
       "minLength": 1,
       "title": "Description",
       "type": "string"
@@ -192,6 +193,7 @@
     "rationale": {
       "anyOf": [
         {
+          "maxLength": 2000,
           "type": "string"
         },
         {

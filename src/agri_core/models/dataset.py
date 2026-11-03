@@ -35,12 +35,12 @@ class DatasetRow(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", str_strip_whitespace=True)
 
     dataset_id: DatasetId
-    name: str = Field(min_length=1)
-    version: str = Field(min_length=1)
+    name: str = Field(min_length=1, max_length=200)
+    version: str = Field(min_length=1, max_length=50)
     license: str
     checksum: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
-    url: str | None = None
-    locator: str | None = None
+    url: str | None = Field(default=None, max_length=500)
+    locator: str | None = Field(default=None, max_length=500)
     access_date: date
 
     @field_validator("license")

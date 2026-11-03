@@ -430,6 +430,8 @@ all is accepted.
 | `PACK_SAFETY_DOUBLE_REVIEW_MISSING` | safety-critical fact at `approved` with <2 reviewers |
 | `PACK_PROTECTION_OUT_OF_SCOPE` | parameter is in protection domain or carries a global chemical-control token (ADR-007) |
 | `PACK_HAZARD_CODE_OUT_OF_SCOPE` | `hazard_code` carries a chemical-control token (ADR-007) |
+| `PACK_FIELD_TOO_LARGE` | a CSV cell exceeds 16 KB after UTF-8 encoding |
+| `PACK_ROW_TOO_LARGE` | a CSV row exceeds 64 KB after UTF-8 encoding |
 
 ## Size limit
 

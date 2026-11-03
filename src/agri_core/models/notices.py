@@ -24,4 +24,4 @@ class Notice(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     code: str = Field(min_length=1, pattern=r"^[a-z][a-z0-9_]*$")
-    message: str = Field(min_length=1)
+    message: str = Field(min_length=1, max_length=500)
