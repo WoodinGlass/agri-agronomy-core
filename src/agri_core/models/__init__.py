@@ -5,6 +5,7 @@ from __future__ import annotations
 from agri_core.models.canonical import canonical_json
 from agri_core.models.dataset import DatasetRow
 from agri_core.models.dictionary import Dictionary
+from agri_core.models.envelope import Subject, compute_request_id
 from agri_core.models.fact import (
     BoolValue,
     EnumSetValue,
@@ -109,6 +110,7 @@ __all__ = [
     "ScalarValue",
     "ScopeKey",
     "SourceId",
+    "Subject",
     "TaxonId",
     "TaxonRank",
     "TaxonRow",
@@ -117,6 +119,7 @@ __all__ = [
     "UnknownValue",
     "ambiguous",
     "canonical_json",
+    "compute_request_id",
     "ensure_src_or_dataset",
     "insufficient_input",
     "is_success",

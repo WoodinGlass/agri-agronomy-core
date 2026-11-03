@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from agri_core.models.envelope import Subject
 from agri_core.models.notices import EvidenceGrade, Notice
 from agri_core.models.provenance import Provenance
 
@@ -32,6 +33,14 @@ class Result(BaseModel):
     assumptions: list[Notice]
     warnings: list[Notice]
     capped: bool
+    subject: Subject | None = None
+    request_id: str | None = Field(default=None, pattern=r"^req_[0-9a-f]{32}$")
+
+    @model_validator(mode="after")
+    def _envelope_consistency(self) -> Result:
+        if self.request_id is not None and self.subject is None:
+            raise ValueError("request_id requires subject")
+        return self
 
 
 class CategoricalResult(BaseModel):
@@ -56,6 +65,14 @@ class CategoricalResult(BaseModel):
     evidence: list[EvidenceGrade]
     assumptions: list[Notice]
     warnings: list[Notice]
+    subject: Subject | None = None
+    request_id: str | None = Field(default=None, pattern=r"^req_[0-9a-f]{32}$")
+
+    @model_validator(mode="after")
+    def _envelope_consistency(self) -> CategoricalResult:
+        if self.request_id is not None and self.subject is None:
+            raise ValueError("request_id requires subject")
+        return self
 
 
 def ok(
@@ -68,6 +85,8 @@ def ok(
     assumptions: list[Notice] | None = None,
     warnings: list[Notice] | None = None,
     capped: bool = False,
+    subject: Subject | None = None,
+    request_id: str | None = None,
 ) -> Result:
     """Build a successful :class:`Result`.
 
@@ -84,6 +103,8 @@ def ok(
         assumptions=list(assumptions or []),
         warnings=list(warnings or []),
         capped=capped,
+        subject=subject,
+        request_id=request_id,
     )
 
 
@@ -96,6 +117,8 @@ def ok_category(
     evidence: list[EvidenceGrade],
     assumptions: list[Notice] | None = None,
     warnings: list[Notice] | None = None,
+    subject: Subject | None = None,
+    request_id: str | None = None,
 ) -> CategoricalResult:
     """Build a successful :class:`CategoricalResult`.
 
@@ -110,6 +133,8 @@ def ok_category(
         evidence=list(evidence),
         assumptions=list(assumptions or []),
         warnings=list(warnings or []),
+        subject=subject,
+        request_id=request_id,
     )
 
 
