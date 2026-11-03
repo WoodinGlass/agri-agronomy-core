@@ -202,3 +202,29 @@ first, benchmark later.
   and the ADR decision table above.
 - The DDL pin is friction by design: schema changes need explicit
   `SQLITE_SCHEMA_VERSION` bumps and pin updates in the test suite.
+
+## Amendment (2026-11-04): file hash vs data hash
+
+Two hashes travel through a pack, and they answer different questions:
+
+- **`content_hash`** (in the source pack, preserved into the built pack's
+  `metadata` table) is the **portable data hash**: SHA-256 over the
+  canonical CSV content, as defined by `verify.hash_pack_files`. It
+  survives a build — the source pack and its built artifact carry the
+  same `content_hash`.
+
+- **`artifact_sha256`** (in the built `pack.toml` only) is the **file
+  hash**: SHA-256 over the bytes of `pack.sqlite`. It is created at
+  build time and cannot survive a rebuild — a rebuilt file has a new
+  hash even when the data is identical.
+
+The implementation gained two tightenings in the same change:
+
+- `artifact_sha256` is verified **before** `sqlite3.connect` opens, via
+  `verify.compute_file_sha256` (chunked, 1 MiB, no whole-file read).
+- A `stat()` re-check after metadata verification catches a TOCTOU
+  swap between the hash we trust and the file the query engine reads.
+
+Neither hash proves **who** released the pack. That is the role of an
+attestation mechanism, not yet specified; this ADR's scope is integrity,
+not authenticity.

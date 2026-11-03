@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import sqlite3
 import tomllib
 from collections.abc import Mapping
@@ -59,7 +58,7 @@ from agri_core.pack.knowledge_set import (
 from agri_core.pack.manifest import SUPPORTED_SCHEMA_VERSIONS, PackManifest
 from agri_core.pack.sqlite_schema import SQLITE_SCHEMA_VERSION
 from agri_core.pack.tables import TABLES, Table, read_table
-from agri_core.pack.verify import hash_pack_files
+from agri_core.pack.verify import compute_file_sha256, hash_pack_files
 from agri_core.registry.sources import SourceRow
 
 _DEFAULT_DICTIONARY_SOURCE = "dictionary/parameters.core.yaml"
@@ -670,20 +669,12 @@ def _load_built_pack(
             f"!= engine SQLITE_SCHEMA_VERSION {SQLITE_SCHEMA_VERSION}"
         )
 
-    # Hash the artifact in fixed-size chunks instead of reading the whole
-    # file into memory as a single allocation. Digest is identical. This
-    # does not reduce ru_maxrss peak for the current 55 MB sample pack
-    # (dominated by the import baseline), but it is safe for larger
-    # packs: real agri-knowledge artifacts can be hundreds of MB, where
-    # ``read_bytes`` would either spike RSS or fail allocation outright.
-    _h = hashlib.sha256()
-    with pack_sqlite.open("rb") as _f:
-        while True:
-            _chunk = _f.read(1 << 20)  # 1 MiB
-            if not _chunk:
-                break
-            _h.update(_chunk)
-    actual_artifact = "sha256:" + _h.hexdigest()
+    # Hash before opening any SQLite connection, and re-stat after the
+    # metadata check to close the TOCTOU window between the hash we
+    # trust and the file the query engine reads. The helper is chunked
+    # (1 MiB) so a 100 MB+ pack does not spike RSS.
+    _stat_before = pack_sqlite.stat()
+    actual_artifact = compute_file_sha256(pack_sqlite)
     if artifact_sha256 != actual_artifact:
         raise PackHashMismatchError(
             f"artifact_sha256 mismatch: manifest={artifact_sha256} computed={actual_artifact}",
@@ -712,6 +703,19 @@ def _load_built_pack(
         content_hash=content_hash,
         built_by=built_by,
     )
+
+    _stat_after = pack_sqlite.stat()
+    if (
+        _stat_before.st_ino != _stat_after.st_ino
+        or _stat_before.st_mtime_ns != _stat_after.st_mtime_ns
+        or _stat_before.st_size != _stat_after.st_size
+    ):
+        raise PackHashMismatchError(
+            "pack.sqlite changed between hash verification and metadata "
+            "check (TOCTOU guard): re-run the load; if this repeats, "
+            "the file is being modified concurrently",
+            file="pack.sqlite",
+        )
 
     return SQLiteKnowledgeSet._build(
         sqlite_path=pack_sqlite,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import tomllib
 from importlib.resources import files as _resource_files
 from pathlib import Path
@@ -10,7 +11,14 @@ from urllib.parse import urlparse
 
 import pytest
 
-from agri_core.pack import TABLES, compute_pack_hash, read_pack_bytes, read_table
+from agri_core.pack import (
+    TABLES,
+    compute_pack_hash,
+    load_knowledge_set,
+    read_pack_bytes,
+    read_table,
+)
+from agri_core.pack.errors import PackHashMismatchError
 
 pytestmark = pytest.mark.contract
 
@@ -164,3 +172,80 @@ def test_sample_pack_shape_coverage() -> None:
             shapes.add(v["shape"])
     expected = {"scalar", "range", "trapezoid", "enum", "enum_set", "unknown"}
     assert shapes == expected, f"missing={expected - shapes} extra={shapes - expected}"
+
+
+# Expected content_hash of the sample pack at this commit. If a change
+# to the sample pack data or format is intentional, update the literal
+# here. This is a known-answer test: it does not re-derive the value,
+# it pins it.
+SAMPLE_PACK_CONTENT_HASH = "sha256:0a8f1589d788e26ae9ab7c7497cc5e28611391eff0342b6b42195f264b772cbf"
+
+
+def test_sample_pack_content_hash_kat() -> None:
+    """Known-Answer Test: pin the sample pack content_hash.
+
+    A failure means either the sample pack changed (data or format) or
+    the hash algorithm changed. In both cases, review the diff before
+    updating the constant. Do not re-derive the expected value; that
+    would defeat the point of a KAT.
+    """
+    manifest = tomllib.loads((SAMPLE / "pack.toml").read_text(encoding="utf-8"))
+    assert manifest["content_hash"] == SAMPLE_PACK_CONTENT_HASH
+    assert compute_pack_hash(SAMPLE) == SAMPLE_PACK_CONTENT_HASH
+
+
+def test_load_source_equals_load_built(tmp_path: Path) -> None:
+    """`load(source)` and `load(build(source))` expose the same data.
+
+    Catches build-time data loss: dropped rows, changed types,
+    reordered lists. The `pack_hash` (content_hash) is preserved
+    through the build; the `artifact_sha256` differs by design.
+    """
+    built = tmp_path / "built"
+    built.mkdir()
+    r = subprocess.run(
+        ["agri-core", "pack", "build", "--pack", str(SAMPLE), "--out", str(built)],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    if r.returncode != 0:
+        pytest.fail(f"agri-core pack build failed: {r.stderr[-1000:]}")
+
+    ks_src = load_knowledge_set(SAMPLE, allow_synthetic=True)
+    ks_built = load_knowledge_set(built, allow_synthetic=True)
+
+    # Same content_hash (portable data hash, preserved into the built pack)
+    assert ks_src.pack_hash == ks_built.pack_hash
+
+    # Same data, row-for-row
+    assert list(ks_src.taxa()) == list(ks_built.taxa())
+    assert list(ks_src.names()) == list(ks_built.names())
+    assert list(ks_src.facts()) == list(ks_built.facts())
+    assert list(ks_src.hazards()) == list(ks_built.hazards())
+
+
+def test_built_pack_tampered_artifact_rejected(tmp_path: Path) -> None:
+    """Flipping a byte in pack.sqlite triggers PACK_HASH_MISMATCH.
+
+    The hash is verified before any SQLite connection opens; a
+    tampered artifact cannot be queried.
+    """
+    built = tmp_path / "built"
+    built.mkdir()
+    r = subprocess.run(
+        ["agri-core", "pack", "build", "--pack", str(SAMPLE), "--out", str(built)],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    if r.returncode != 0:
+        pytest.fail(f"agri-core pack build failed: {r.stderr[-1000:]}")
+
+    sqlite_path = built / "pack.sqlite"
+    data = bytearray(sqlite_path.read_bytes())
+    data[-1] ^= 0xFF
+    sqlite_path.write_bytes(data)
+
+    with pytest.raises(PackHashMismatchError, match="artifact_sha256 mismatch"):
+        load_knowledge_set(built, allow_synthetic=True)
