@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
-from agri_core import __version__
+from agri_core import RESOLUTION_POLICY_VERSION, __version__
 from agri_core.models.fact import FactRow, FactStatus, FactValue, format_value
 from agri_core.models.notices import Notice
 from agri_core.models.parameter import ParameterDef
@@ -450,6 +450,7 @@ def resolve_fact(
         pack_version=pack.manifest.version,
         pack_hash=pack.pack_hash,
         source_ids=source_ids,
+        resolution_policy_version=RESOLUTION_POLICY_VERSION,
     )
 
     return FactResolved(
@@ -478,6 +479,7 @@ class MetaInfo(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     engine_version: str
+    resolution_policy_version: str
     pack_version: str
     schema_version: int
     dictionary_version: str
@@ -510,6 +512,7 @@ def meta(pack: KnowledgeSet) -> MetaInfo:
     """
     return MetaInfo(
         engine_version=__version__,
+        resolution_policy_version=RESOLUTION_POLICY_VERSION,
         pack_version=pack.manifest.version,
         schema_version=pack.manifest.schema_version,
         dictionary_version=pack.dictionary_version,

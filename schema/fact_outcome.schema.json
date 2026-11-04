@@ -472,7 +472,7 @@
     },
     "Provenance": {
       "additionalProperties": false,
-      "description": "Where a calculation's numbers came from.\n\n``fact_ids`` names the facts that contributed values.\n``pack_version`` is the version of the pack that supplied those facts;\nit is ``None`` when the calculation does not read a pack (for example,\nraw VPD from weather inputs).\n``pack_hash`` is the pack's ``content_hash`` (``sha256:<hex>``), which\npins the exact data used; it is ``None`` under the same conditions as\n``pack_version``.\n``source_ids`` lists the ``src`` IDs from ``sources.csv`` behind the\nvalues used.",
+      "description": "Where a calculation's numbers came from.\n\n``fact_ids`` names the facts that contributed values.\n``pack_version`` is the version of the pack that supplied those facts;\nit is ``None`` when the calculation does not read a pack (for example,\nraw VPD from weather inputs).\n``pack_hash`` is the pack's ``content_hash`` (``sha256:<hex>``), which\npins the exact data used; it is ``None`` under the same conditions as\n``pack_version``.\n``source_ids`` lists the ``src`` IDs from ``sources.csv`` behind the\nvalues used.\n``resolution_policy_version`` is the ``RESOLUTION_POLICY_VERSION``\nat the time this provenance was produced. Defaults to the current\nversion; explicit for results stored across engine upgrades.",
       "properties": {
         "fact_ids": {
           "items": {
@@ -504,6 +504,11 @@
           ],
           "default": null,
           "title": "Pack Version"
+        },
+        "resolution_policy_version": {
+          "default": "1.0.0",
+          "title": "Resolution Policy Version",
+          "type": "string"
         },
         "source_ids": {
           "items": {
