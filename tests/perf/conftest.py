@@ -44,3 +44,31 @@ def perf_pack(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Path]:
             f"stdout:\n{r.stdout}\nstderr:\n{r.stderr}"
         )
     return src, built
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Skip perf tests when coverage tracing is active.
+
+    ``coverage.py`` traces every executed line. Under perf tests the trace
+    hook dominates the measured cost (~4x per call), so timing on a
+    coverage-instrumented run says nothing about production performance.
+
+    CI's ``perf`` job runs ``pytest -m perf --no-cov``; this hook makes
+    that environment mandatory for anyone invoking perf tests locally.
+    Without it, a plain ``pytest`` (which enables ``--cov`` via
+    ``pyproject.toml`` ``addopts``) would fail every tight perf budget
+    for a reason unrelated to the code under test.
+    """
+    from coverage import Coverage
+
+    if Coverage.current() is None:
+        return
+    skip = pytest.mark.skip(
+        reason=(
+            "perf tests require --no-cov; coverage tracing inflates timing "
+            "~4x. Run: pytest -m perf --no-cov"
+        )
+    )
+    for item in items:
+        if "perf" in item.keywords:
+            item.add_marker(skip)
