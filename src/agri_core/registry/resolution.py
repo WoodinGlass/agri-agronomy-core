@@ -203,6 +203,7 @@ class FactResolved(BaseModel):
     alternatives: list[FactRow]
     provenance: Provenance
     warnings: list[Notice]
+    min_status_applied: FactStatus
 
 
 _STATUS_RANK: dict[str, int] = {
@@ -461,6 +462,7 @@ def resolve_fact(
         alternatives=alternatives,
         provenance=provenance,
         warnings=warnings,
+        min_status_applied=effective_min if effective_min is not None else "imported",
     )
 
 

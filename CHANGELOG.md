@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `FactResolved.min_status_applied: FactStatus` records the effective
+  status floor after default and safety-floor adjustments — `"imported"`
+  when no floor applies (`min_status=None`). `RESOLUTION_POLICY_VERSION`
+  moves to `1.1.0` (MINOR — additive; existing behavior unchanged).
+  ADR-004 gains §"status policy" (M8 review G5). Schema regenerated.
 - Resolution policy version (`RESOLUTION_POLICY_VERSION = "1.0.0"`,
   ADR-004 section "resolution policy version"). Surfaces in
   `MetaInfo.resolution_policy_version` (pack-level, required) and

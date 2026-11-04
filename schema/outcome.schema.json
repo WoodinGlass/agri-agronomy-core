@@ -335,7 +335,7 @@
           "title": "Pack Version"
         },
         "resolution_policy_version": {
-          "default": "1.0.0",
+          "default": "1.1.0",
           "title": "Resolution Policy Version",
           "type": "string"
         },

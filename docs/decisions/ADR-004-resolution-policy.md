@@ -448,6 +448,71 @@ pass automatically when M9+ implements the target policy. When that
 happens, the xfail marker should be removed and the test becomes a
 positive assertion that `FactConflict` is returned.
 
+## Status policy — default minimum, safety floor, and applied floor (added M8 review G5, 2026-11-04)
+
+`resolve_fact` applies a **status floor**: a fact whose `status` ranks
+below the floor is excluded. The floor has three parts.
+
+### G5-1 — Default minimum is `approved`
+
+`min_status` defaults to `"approved"`. A caller who does not pass
+`min_status` sees only approved facts. Lower-status facts (`reviewed`,
+`draft`, `imported`) are excluded silently; the caller learns nothing
+about them from the result.
+
+`min_status=None` disables the filter entirely — every non-superseded,
+scope-matching fact is a candidate, whatever its status. `"imported"` is
+the lowest status rank, so `min_status=None` and `min_status="imported"`
+yield identical candidate sets; the difference is caller intent, not
+behavior.
+
+### G5-2 — Safety floor raises the minimum to `reviewed`
+
+Parameters with `safety_critical=True` raise the effective floor to
+`"reviewed"` regardless of `min_status`:
+
+- `min_status=None` or any rank below `"reviewed"` → effective floor
+  becomes `"reviewed"`;
+- `min_status="approved"` → effective floor stays `"approved"` (already
+  above);
+- the raise emits `Notice(code="safety_min_status_raised")` so a caller
+  can tell the floor was elevated.
+
+### G5-3 — `FactResolved.min_status_applied` records the effective floor
+
+`FactResolved` gains a required field `min_status_applied: FactStatus`.
+Its value is the **effective** floor after all adjustments (default,
+safety raise), not the caller-supplied `min_status`. When the effective
+floor is "no filter" (`min_status=None` and no safety raise), the field
+is `"imported"` — the lowest rank — so the field is always a concrete
+`FactStatus`, never `None`.
+
+A caller that wants to know *what floor actually applied* (rather than
+recompute it from arguments) reads this field directly.
+
+### G5-4 — `FactResolved.fact.status` reflects the winner's actual status, not the floor
+
+`fact.status` is the **actual** status of the winning `FactRow`; it is
+not rewritten to the floor value. The two fields can differ: a
+`reviewed` fact can win under `min_status="reviewed"` (or under a safety
+raise), in which case `fact.status == "reviewed"` and
+`min_status_applied == "reviewed"`. Under the default
+`min_status="approved"`, `fact.status` is always `"approved"` and
+`min_status_applied` is `"approved"`.
+
+**Why both fields.** `fact.status` describes the chosen fact;
+`min_status_applied` describes the filter. A caller who cares "is this
+fact approved?" reads `fact.status`. A caller who cares "what floor did
+the resolver use?" reads `min_status_applied`.
+
+### G5-5 — Policy version MINOR bump
+
+This is a **MINOR** change per §"resolution policy version": existing
+behavior is unchanged (default floor was already `"approved"`, safety
+raise was already in place); the change is the addition of a field that
+exposes existing behavior. `RESOLUTION_POLICY_VERSION` moves from
+`1.0.0` to `1.1.0`.
+
 ## Decision — `meta()` and show CLI (finalized M8-4)
 
 `meta(pack) -> MetaInfo` is a pure function over the loaded pack:
@@ -494,7 +559,7 @@ matching, safety-min-status behavior, and every rule that decides
 between competing facts — is versioned. `RESOLUTION_POLICY_VERSION`
 is a SemVer string in `src/agri_core/__init__.py`, currently:
 
-    RESOLUTION_POLICY_VERSION = "1.0.0"
+    RESOLUTION_POLICY_VERSION = "1.1.0"
 
 It surfaces in two places:
 

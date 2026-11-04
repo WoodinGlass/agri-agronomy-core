@@ -170,6 +170,16 @@
         "fact": {
           "$ref": "#/$defs/FactRow"
         },
+        "min_status_applied": {
+          "enum": [
+            "imported",
+            "draft",
+            "reviewed",
+            "approved"
+          ],
+          "title": "Min Status Applied",
+          "type": "string"
+        },
         "provenance": {
           "$ref": "#/$defs/Provenance"
         },
@@ -239,7 +249,8 @@
         "value_pretty",
         "alternatives",
         "provenance",
-        "warnings"
+        "warnings",
+        "min_status_applied"
       ],
       "title": "FactResolved",
       "type": "object"
@@ -506,7 +517,7 @@
           "title": "Pack Version"
         },
         "resolution_policy_version": {
-          "default": "1.0.0",
+          "default": "1.1.0",
           "title": "Resolution Policy Version",
           "type": "string"
         },
