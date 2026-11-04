@@ -212,6 +212,43 @@ def test_superseded_excluded() -> None:
     assert r.fact.fact_id == "F00000000002"
 
 
+def test_superseded_never_in_alternatives() -> None:
+    """G2-1: a superseded fact must not leak into ``alternatives``."""
+    ks = _ks(
+        facts=[
+            _fact(
+                "F00000000001",
+                value=6.5,
+                superseded_by="F00000000002",
+                scope={"country": "ID"},
+            ),
+            _fact("F00000000002", value=7.0),
+            _fact("F00000000003", value=6.8),
+        ]
+    )
+    r = resolve_fact(ks, "T000000001", "soil_ph", scope={"country": "ID"})
+    assert isinstance(r, FactResolved)
+    assert r.fact.fact_id == "F00000000002"
+    alt_ids = {a.fact_id for a in r.alternatives}
+    assert "F00000000001" not in alt_ids
+    assert alt_ids == {"F00000000003"}
+
+
+def test_superseded_only_match_returns_no_match() -> None:
+    """G2-2: if the only query-matching fact is superseded, ``no_match``."""
+    ks = _ks(
+        facts=[
+            _fact("F00000000001", value=6.5, superseded_by="F00000000002"),
+            _fact("F00000000002", value=7.0, scope={"country": "TH"}),
+        ]
+    )
+    r = resolve_fact(ks, "T000000001", "soil_ph", scope={"country": "ID"})
+    assert isinstance(r, Unknown)
+    assert r.code == "no_match"
+    assert "F00000000001" not in r.reason
+    assert "F00000000002" not in r.reason
+
+
 def test_alternatives_populated() -> None:
     ks = _ks(
         facts=[
