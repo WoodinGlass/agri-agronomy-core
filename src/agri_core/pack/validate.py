@@ -423,6 +423,59 @@ def check_hazard_code_out_of_scope(
     return findings
 
 
+def check_id_ledger_absent(
+    ks: KnowledgeSet,
+    files: Mapping[str, bytes],
+    dictionary: Dictionary,
+) -> list[Finding]:
+    """ADR-011: pack must declare ids.lock."""
+    if "ids.lock" in files:
+        return []
+    return [
+        Finding(
+            code="PACK_ID_LEDGER_ABSENT",
+            severity=FindingSeverity.ERROR,
+            message=(
+                "pack must declare ids.lock (ADR-011). "
+                "Bootstrap: `agri-core pack scaffold` on the pack (auto-creates "
+                "ids.lock from current taxa.csv), or `sort taxa.csv > ids.lock`."
+            ),
+            location=FindingLocation(file="ids.lock"),
+        )
+    ]
+
+
+def check_id_ledger_drift(
+    ks: KnowledgeSet,
+    files: Mapping[str, bytes],
+    dictionary: Dictionary,
+) -> list[Finding]:
+    """ADR-011: every taxon ID in taxa.csv must be in ids.lock.
+
+    Missing ID in lock -> drift. ID in lock but not in taxa.csv is OK
+    (reserved historical slot; append-only guarantee).
+    """
+    if "ids.lock" not in files:
+        return []  # absent check handles this
+    lock_text = files["ids.lock"].decode("utf-8")
+    lock_ids = {ln.strip() for ln in lock_text.splitlines() if ln.strip()}
+    findings: list[Finding] = []
+    for taxon in ks.taxa():
+        if taxon.taxon_id not in lock_ids:
+            findings.append(
+                Finding(
+                    code="PACK_ID_LEDGER_DRIFT",
+                    severity=FindingSeverity.ERROR,
+                    message=(
+                        f"taxon {taxon.taxon_id!r} is in taxa.csv but not in ids.lock; "
+                        "append it to ids.lock (do not re-derive; append-only)"
+                    ),
+                    location=FindingLocation(file="taxa.csv", taxon_id=taxon.taxon_id),
+                )
+            )
+    return findings
+
+
 RULES: tuple[RuleFn, ...] = (
     check_trapezoid_not_degenerate,
     check_superseded_self,
@@ -437,6 +490,8 @@ RULES: tuple[RuleFn, ...] = (
     check_safety_double_review,
     check_protection_out_of_scope,
     check_hazard_code_out_of_scope,
+    check_id_ledger_absent,
+    check_id_ledger_drift,
 )
 """Registered rules. Explicit tuple, not auto-import.
 

@@ -112,7 +112,12 @@ class DiffViolation(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    kind: Literal["taxon_removed", "fact_removed", "fact_id_reused"]
+    kind: Literal[
+        "taxon_removed",
+        "fact_removed",
+        "fact_id_reused",
+        "id_removed_from_ledger",
+    ]
     entity_id: str
     message: str
 
@@ -229,6 +234,21 @@ def diff_packs(old: KnowledgeSet, new: KnowledgeSet) -> DiffReport:
         and not facts_removed
         and not facts_changed
     )
+
+    # ADR-011: ids.lock is append-only. If both sides expose it, IDs
+    # removed from the ledger are violations. Built packs don't preserve
+    # ids.lock, so comparison is skipped when either side returns None.
+    old_lock = old.ids_lock()
+    new_lock = new.ids_lock()
+    if old_lock is not None and new_lock is not None:
+        for tid in sorted(old_lock - new_lock):
+            violations.append(
+                DiffViolation(
+                    kind="id_removed_from_ledger",
+                    entity_id=tid,
+                    message=(f"taxon ID {tid!r} removed from ids.lock; append-only (ADR-011)"),
+                )
+            )
 
     return DiffReport(
         old_pack_hash=old.pack_hash,

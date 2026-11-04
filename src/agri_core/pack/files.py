@@ -40,13 +40,21 @@ _FACTS_IGNORED: frozenset[str] = frozenset({".gitkeep", ".DS_Store", "Thumbs.db"
 _ADVISORIES_FILENAME: str = "advisories.csv"
 """Optional at pack root. Returned byte-exact; content validation is in the loader (F1)."""
 
+ID_LOCK_FILENAME: str = "ids.lock"
+"""Required at pack root per ADR-011; one taxon ID per line, sorted, no header."""
+
 _TAXON_STEM_RE: re.Pattern[str] = re.compile(TAXON_ID_PATTERN)
 """Compiled from models/ids.py (F6). Do not redefine the pattern here."""
 
 _os_read = os.read
 """Module-level alias; tests replace this to simulate concurrent file growth (T4)."""
 
-__all__ = ["DEFAULT_MAX_BYTES", "REQUIRED_TABLES", "read_pack_bytes"]
+__all__ = [
+    "DEFAULT_MAX_BYTES",
+    "ID_LOCK_FILENAME",
+    "REQUIRED_TABLES",
+    "read_pack_bytes",
+]
 
 
 def _safe_name(name: str, *, max_len: int = 80) -> str:
@@ -253,6 +261,7 @@ def read_pack_bytes(
         "pack.toml",
         *required_filenames,
         _ADVISORIES_FILENAME,
+        ID_LOCK_FILENAME,
         "facts",
     )
 
@@ -301,7 +310,18 @@ def read_pack_bytes(
         total += len(data)
         files[_ADVISORIES_FILENAME] = data
 
-    # 4. facts/ — optional
+    # 4. ids.lock — optional at read level; validate requires it (ADR-011)
+    if ID_LOCK_FILENAME in root_entries:
+        _reject_if_symlink(root_entries[ID_LOCK_FILENAME], relpath=ID_LOCK_FILENAME)
+        data = _open_and_read_regular(
+            root_entries[ID_LOCK_FILENAME].path,
+            remaining=max_bytes - total,
+            relpath=ID_LOCK_FILENAME,
+        )
+        total += len(data)
+        files[ID_LOCK_FILENAME] = data
+
+    # 5. facts/ — optional
     if "facts" in root_entries:
         facts_entry = root_entries["facts"]
         _reject_if_symlink(facts_entry, relpath="facts")

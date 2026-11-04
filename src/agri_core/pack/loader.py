@@ -545,8 +545,16 @@ def load_knowledge_set_from_files(
             findings=tuple(findings),
         )
 
+    # ADR-011: parse ids.lock if present. Optional at load; validate requires it.
+    _raw_lock = files.get("ids.lock")
+    _ids_lock: frozenset[str] | None = None
+    if _raw_lock is not None:
+        _lock_text = _raw_lock.decode("utf-8")
+        _ids_lock = frozenset(ln.strip() for ln in _lock_text.splitlines() if ln.strip())
+
     return InMemoryKnowledgeSet.from_rows(
         manifest=manifest,
+        ids_lock=_ids_lock,
         pack_hash=actual,
         dictionary_version=dictionary.version,
         dictionary=dictionary,
