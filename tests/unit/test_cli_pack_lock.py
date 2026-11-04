@@ -31,6 +31,8 @@ def _make_pack(root: Path, *, with_hash: bool = False) -> None:
         spec = TABLES[name]
         assert spec.filename is not None
         (root / spec.filename).write_bytes(write_table(spec, []))
+    # ADR-011: empty ids.lock is valid for a 0-taxa pack.
+    (root / "ids.lock").write_text("", encoding="utf-8")
     if with_hash:
         digest = compute_pack_hash(root)
         (root / "pack.toml").write_text(toml + f'content_hash = "{digest}"\n', encoding="utf-8")
