@@ -287,6 +287,109 @@ def _fact_sort_key(fact: FactRow) -> tuple[int, int, int, str]:
     )
 
 
+def _unknown_from_counts(
+    counts: dict[str, int],
+    request_scope: dict[str, Any],
+    all_facts: tuple[FactRow, ...],
+    base_reason: str,
+) -> Unknown:
+    """Build an ``Unknown`` for a post-filter miss.
+
+    Refines ``no_match`` to ``below_min_status`` or ``scope_not_covered``
+    only when a single filter stage accounts for every excluded fact.
+    Combinations and superseded-only/phase-only cases stay ``no_match``
+    (see ADR-004 G8-2 and G8-3).
+
+    Each branch emits a literal ``Unknown(code="...")`` so the drift test
+    (``tests/contract/test_unknown_code_registry.py``) can detect every
+    active code by AST walk of the source.
+    """
+    total = counts["total"]
+    if total == 0:
+        return Unknown(
+            status="unknown",
+            reason=base_reason,
+            code="no_match",
+            filter_counts=counts,
+            warnings=[],
+        )
+    if counts["min_status"] == total:
+        return Unknown(
+            status="unknown",
+            reason=base_reason,
+            code="below_min_status",
+            filter_counts=counts,
+            warnings=[],
+        )
+    if counts["scope"] == total:
+        return Unknown(
+            status="unknown",
+            reason=base_reason,
+            code="scope_not_covered",
+            filter_counts=counts,
+            warnings=_scope_values_available_warnings(request_scope, all_facts),
+        )
+    return Unknown(
+        status="unknown",
+        reason=base_reason,
+        code="no_match",
+        filter_counts=counts,
+        warnings=[],
+    )
+
+
+def _scope_values_available_warnings(
+    request_scope: dict[str, Any],
+    all_facts: tuple[FactRow, ...],
+) -> list[Notice]:
+    """List alternative scope values when ``scope_not_covered`` fires.
+
+    Only scalar / enum values are considered (range scopes are skipped
+    because "available range values" is not intuitive to display). For
+    each shared scope key that mismatched, collect the distinct values
+    seen across non-superseded facts, cap the display at 5 values per
+    key, and emit a single ``Notice(code="scope_values_available")``.
+    """
+    rk = set(request_scope.keys())
+    if not rk:
+        return []
+
+    alternatives: dict[str, set[str]] = {}
+    for f in all_facts:
+        if f.superseded_by is not None:
+            continue
+        shared = set(f.scope.keys()) & rk
+        if not shared:
+            continue
+        for k in shared:
+            fv = f.scope[k]
+            rv = request_scope[k]
+            if isinstance(fv, list) and len(fv) == 2:
+                continue
+            if _value_matches(fv, rv):
+                continue
+            alternatives.setdefault(k, set()).add(str(fv))
+
+    if not alternatives:
+        return []
+
+    parts: list[str] = []
+    for k in sorted(alternatives.keys()):
+        vals = sorted(alternatives[k])
+        preview = ", ".join(vals[:5])
+        if len(vals) > 5:
+            preview += f", ... ({len(vals) - 5} more)"
+        req = request_scope[k]
+        parts.append(f"{k} in {{{preview}}} (request: {req!r})")
+
+    return [
+        Notice(
+            code="scope_values_available",
+            message="scope values available: " + "; ".join(parts),
+        )
+    ]
+
+
 def resolve_fact(
     pack: KnowledgeSet,
     taxon_id: str,
@@ -396,36 +499,52 @@ def resolve_fact(
     except KeyError:
         all_facts = ()
 
+    filter_counts: dict[str, int] = {
+        "total": len(all_facts),
+        "superseded": 0,
+        "min_status": 0,
+        "phase": 0,
+        "scope": 0,
+        "license": 0,
+    }
     candidates: list[FactRow] = []
     for f in all_facts:
         if f.superseded_by is not None:
+            filter_counts["superseded"] += 1
             continue
         if effective_min is not None and _status_rank(f.status) < _status_rank(effective_min):
+            filter_counts["min_status"] += 1
             continue
         if pdef.phase_set != "none" and f.phase != phase:
+            filter_counts["phase"] += 1
             continue
         if not _scope_matches(f.scope, request_scope):
+            filter_counts["scope"] += 1
             continue
         candidates.append(f)
 
     if not candidates:
-        return Unknown(
-            status="unknown",
-            reason=(
+        return _unknown_from_counts(
+            filter_counts,
+            request_scope,
+            all_facts,
+            base_reason=(
                 f"no fact for taxon {taxon_id!r}, parameter {parameter!r} "
                 f"matching the given constraints"
             ),
-            code="no_match",
         )
 
     # 9. license gate
     if require_commercial:
         licensed = [f for f in candidates if _all_sources_commercial(pack, f)]
         if not licensed:
+            filter_counts["license"] = len(candidates)
             return Unknown(
                 status="unknown",
                 reason="all matching facts are excluded by license gate",
                 code="license_excluded",
+                filter_counts=filter_counts,
+                warnings=[],
             )
         candidates = licensed
 

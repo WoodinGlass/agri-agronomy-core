@@ -138,17 +138,35 @@ def test_scope_fact_superset_of_request() -> None:
 
 
 def test_scope_partial_overlap_rejected() -> None:
+    # Fact has extra key (elevation_m) request does not supply; partial
+    # overlap rejected. Single fact fails scope -> exclusive scope stage ->
+    # scope_not_covered (was no_match before G8 refinement).
     ks = _ks(facts=[_fact("F00000000001", scope={"system": "field", "elevation_m": [0, 500]})])
     r = resolve_fact(ks, "T000000001", "soil_ph", scope={"system": "field", "country": "ID"})
     assert isinstance(r, Unknown)
-    assert r.code == "no_match"
+    assert r.code == "scope_not_covered"
+    assert r.filter_counts is not None
+    assert r.filter_counts["total"] == 1
+    assert r.filter_counts["scope"] == 1
+    # Shared key "system" matches; no alternative values -> no warning
+    assert r.warnings == []
 
 
 def test_scope_value_mismatch() -> None:
+    # Fact system=field, request system=container. Single fact fails scope
+    # -> exclusive scope stage -> scope_not_covered (was no_match before G8).
+    # "field" is a distinct alternative value for the shared key "system",
+    # so the scope_values_available warning fires (G8-4).
     ks = _ks(facts=[_fact("F00000000001", scope={"system": "field"})])
     r = resolve_fact(ks, "T000000001", "soil_ph", scope={"system": "container"})
     assert isinstance(r, Unknown)
-    assert r.code == "no_match"
+    assert r.code == "scope_not_covered"
+    assert r.filter_counts is not None
+    assert r.filter_counts["scope"] == 1
+    assert len(r.warnings) == 1
+    assert r.warnings[0].code == "scope_values_available"
+    assert "system" in r.warnings[0].message
+    assert "field" in r.warnings[0].message
 
 
 def test_scope_range_covers() -> None:
@@ -237,6 +255,107 @@ def test_min_status_applied_explicit_reviewed() -> None:
     assert isinstance(r, FactResolved)
     assert r.min_status_applied == "reviewed"
     assert r.fact.status == "reviewed"
+
+
+# ---- explainability (G8) -------------------------------------------------
+
+
+def test_below_min_status_exclusive() -> None:
+    """G8-2: all facts excluded by status -> ``below_min_status``."""
+    ks = _ks(
+        facts=[
+            _fact("F00000000001", value=6.5, status="draft"),
+            _fact("F00000000002", value=7.0, status="reviewed"),
+        ]
+    )
+    r = resolve_fact(ks, "T000000001", "soil_ph")
+    assert isinstance(r, Unknown)
+    assert r.code == "below_min_status"
+    assert r.filter_counts is not None
+    assert r.filter_counts["total"] == 2
+    assert r.filter_counts["min_status"] == 2
+    assert r.warnings == []
+
+
+def test_scope_not_covered_exclusive() -> None:
+    """G8-2: all facts excluded by scope -> ``scope_not_covered``."""
+    ks = _ks(
+        facts=[_fact("F00000000001", value=6.5, scope={"country": "ID"})],
+    )
+    r = resolve_fact(ks, "T000000001", "soil_ph", scope={"country": "TH"})
+    assert isinstance(r, Unknown)
+    assert r.code == "scope_not_covered"
+    assert r.filter_counts is not None
+    assert r.filter_counts["total"] == 1
+    assert r.filter_counts["scope"] == 1
+
+
+def test_scope_values_available_warning() -> None:
+    """G8-4: scope_not_covered with alternative values emits warning."""
+    ks = _ks(
+        facts=[
+            _fact("F00000000001", value=6.5, scope={"country": "ID"}),
+            _fact("F00000000002", value=6.8, scope={"country": "TH"}),
+        ]
+    )
+    r = resolve_fact(ks, "T000000001", "soil_ph", scope={"country": "XX"})
+    assert isinstance(r, Unknown)
+    assert r.code == "scope_not_covered"
+    assert r.filter_counts is not None
+    assert r.filter_counts["scope"] == 2
+    assert len(r.warnings) == 1
+    assert r.warnings[0].code == "scope_values_available"
+    msg = r.warnings[0].message
+    assert "country" in msg
+    assert "ID" in msg
+    assert "TH" in msg
+    assert "XX" in msg
+
+
+def test_combined_filters_yield_no_match() -> None:
+    """G8-2: mixed-stage exclusions stay ``no_match``."""
+    ks = _ks(
+        facts=[
+            _fact("F00000000001", value=6.5, status="draft"),
+            _fact("F00000000002", value=7.0, scope={"country": "ID"}),
+        ]
+    )
+    r = resolve_fact(ks, "T000000001", "soil_ph", scope={"country": "TH"})
+    assert isinstance(r, Unknown)
+    assert r.code == "no_match"
+    assert r.filter_counts is not None
+    assert r.filter_counts["total"] == 2
+    assert r.filter_counts["min_status"] == 1
+    assert r.filter_counts["scope"] == 1
+
+
+def test_superseded_only_returns_no_match_with_counts() -> None:
+    """G8-3: superseded-only stays ``no_match``; counts still populated."""
+    ks = _ks(
+        facts=[
+            _fact("F00000000001", value=6.5, superseded_by="F00000000002"),
+            _fact("F00000000002", value=7.0, scope={"country": "ID"}),
+        ]
+    )
+    r = resolve_fact(ks, "T000000001", "soil_ph", scope={"country": "TH"})
+    assert isinstance(r, Unknown)
+    assert r.code == "no_match"
+    assert r.filter_counts is not None
+    assert r.filter_counts["total"] == 2
+    assert r.filter_counts["superseded"] == 1
+    assert r.filter_counts["scope"] == 1
+
+
+def test_filter_counts_absent_on_taxon_unknown() -> None:
+    """G8-1: ``resolve_taxon`` Unknown has filter_counts=None, warnings=[]."""
+    from agri_core.registry import resolve_taxon
+
+    ks = _ks(facts=[_fact("F00000000001", value=6.5)])
+    r = resolve_taxon(ks, "__no_such_taxon__")
+    assert isinstance(r, Unknown)
+    assert r.code == "no_match"
+    assert r.filter_counts is None
+    assert r.warnings == []
 
 
 # ---- unknown value precedence (G6) ---------------------------------------

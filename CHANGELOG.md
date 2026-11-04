@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Unknown` gains `filter_counts` and `warnings` fields, plus refined
+  `code` values (`below_min_status`, `scope_not_covered`) for exclusive
+  filter stages. `scope_not_covered` carries a `scope_values_available`
+  warning listing alternative values for the shared keys.
+  `RESOLUTION_POLICY_VERSION` moves to `1.2.0` (MINOR — additive; no
+  behavior change for callers that ignore the new fields). ADR-004
+  gains §"explainability" (M8 review G8). Schema regenerated.
 - `FactResolved.min_status_applied: FactStatus` records the effective
   status floor after default and safety-floor adjustments — `"imported"`
   when no floor applies (`min_status=None`). `RESOLUTION_POLICY_VERSION`
