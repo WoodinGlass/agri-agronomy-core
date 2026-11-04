@@ -292,6 +292,46 @@ Fields:
     (filter 6) was raised.
   - No other warning codes are emitted by `resolve_fact`.
 
+## Semantic lock — superseded facts are never observable (added M8 review G2, 2026-11-04)
+
+The exclusion in filter 5 is not merely a pipeline optimization. It is a
+hard invariant of the resolution contract:
+
+> **G2-1.** A `FactRow` whose `superseded_by` is not `None` MUST NOT
+> appear in any output position of a `FactResolved`:
+>
+> - `FactResolved.fact` (the winner);
+> - `FactResolved.alternatives` (other matching facts);
+> - `FactResolved.provenance.fact_ids` (the winner only, by the existing
+>   `Provenance` contract);
+> - any `Notice.payload` carrying a `FactRow` (none exists today; this
+>   forbids its future introduction).
+
+> **G2-2.** If every `FactRow` matching `(taxon_id, parameter, ...)` is
+> superseded, `resolve_fact` MUST return
+> `Unknown(code="no_match")`. It MUST NOT return `FactResolved` referring
+> to a superseded fact, and MUST NOT raise.
+
+**Implementation note.** Filter 5 already enforces G2-1 structurally:
+`registry/resolution.py` (the loop building `candidates`) skips superseded
+rows *before* they enter the candidate list, so they cannot reach
+`alternatives` (built from `candidates`) or the winner (selected from
+`candidates`). G2-2 follows: if the candidate list is empty after all
+filters, the existing `Unknown(code="no_match")` branch fires.
+
+**Scope — what is *not* enforced here.** The resolver does not follow
+the `superseded_by` chain transitively. If `F1.superseded_by = F2` and
+`F2.superseded_by = F3`, `F1` is invisible (correct) and `F2` is invisible
+(correct) — both are correctly excluded because both have a non-`None`
+pointer. Chain depth is irrelevant; a single hop suffices. FK existence
+and cycle-freedom are load-time invariants (`PACK_FK_VIOLATION`,
+`PACK_SUPERSEDED_SELF`, `PACK_SUPERSEDED_CYCLE`) and are not re-checked
+at resolution time.
+
+**Test coverage.** `tests/contract/test_resolve_fact.py` contains
+`test_superseded_excluded` (winner), `test_superseded_never_in_alternatives`
+(G2-1), and `test_superseded_only_match_returns_no_match` (G2-2).
+
 ## Decision — `meta()` and show CLI (finalized M8-4)
 
 `meta(pack) -> MetaInfo` is a pure function over the loaded pack:
