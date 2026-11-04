@@ -408,6 +408,46 @@ the omission is intentional):
 - Advisory propagation to `alternatives` entries (current direction:
   per-query, no propagation).
 
+## Specificity policy — target partial order, current cardinality (added M8 review G4, 2026-11-04)
+
+**Target.** Two facts with scopes `A` and `B` are comparable when one is
+strictly narrower than the other: `A ⊃ B` or `B ⊃ A` in the
+subset-of-keys sense, with narrower (or equal) value ranges on shared
+keys. Under the target policy, the more specific fact wins.
+**Incomparable** facts (neither strictly narrower) MUST surface as a
+dedicated `FactConflict` outcome, not be resolved by an arbitrary
+tie-break.
+
+**Current implementation.** `_fact_sort_key` uses a total order:
+
+1. larger `len(fact.scope)` (cardinality, not subset-of-keys);
+2. higher status (`approved > reviewed > draft > imported`);
+3. more recent `reviewed_at`;
+4. smaller `fact_id`.
+
+**Known deviation.** Two facts with **same cardinality but disjoint
+scope keys** (for example `{country: ID}` vs `{system: field}`) are
+**incomparable** under the target policy, but are resolved today by the
+`fact_id` tie-break. This is deterministic but arbitrary — it does not
+reflect a specificity ordering.
+
+**Migration path.** M9+ will introduce:
+
+- a partial-order comparator over scope keys and value ranges;
+- a `FactConflict` outcome kind (new `$defs` member in
+  `schema/fact_outcome.schema.json`, new `oneOf` branch);
+- a MAJOR bump of `resolution_policy_version` (per the policy version
+  section below), because a previously-`ok` query on incomparable facts
+  becomes a `FactConflict` outcome.
+
+**Executable documentation.**
+`tests/contract/test_resolve_fact.py::test_incomparable_scope_arbitrary_tiebreak_documented`
+encodes this gap as an `xfail(strict=False)` test: it fails today (the
+resolver returns `FactResolved` for two incomparable facts) and will
+pass automatically when M9+ implements the target policy. When that
+happens, the xfail marker should be removed and the test becomes a
+positive assertion that `FactConflict` is returned.
+
 ## Decision — `meta()` and show CLI (finalized M8-4)
 
 `meta(pack) -> MetaInfo` is a pure function over the loaded pack:
