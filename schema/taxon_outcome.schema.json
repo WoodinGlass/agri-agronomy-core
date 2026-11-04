@@ -89,6 +89,30 @@
       "title": "AmbiguousCandidate",
       "type": "object"
     },
+    "Notice": {
+      "additionalProperties": false,
+      "description": "A structured warning or assumption attached to a result.\n\n``code`` is a stable snake_case identifier and part of the contract.\n``message`` is human-readable and may change between releases.",
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "Notice",
+      "type": "object"
+    },
     "Subject": {
       "additionalProperties": false,
       "description": "What a calculation was about (ADR-009).\n\n``taxon_id`` and ``scope`` are ``None``/empty for calculations with\nno taxon (VPD from weather, temperature from elevation).\n``calculation`` is the stable name of the calculation function.\n``calculation_version`` is semver; starts at ``\"0.1.0\"`` for M10.",
@@ -215,6 +239,21 @@
           "default": null,
           "title": "Code"
         },
+        "filter_counts": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filter Counts"
+        },
         "reason": {
           "minLength": 1,
           "title": "Reason",
@@ -248,6 +287,13 @@
             }
           ],
           "default": null
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/Notice"
+          },
+          "title": "Warnings",
+          "type": "array"
         }
       },
       "required": [

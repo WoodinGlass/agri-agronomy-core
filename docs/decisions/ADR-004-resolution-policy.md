@@ -565,6 +565,97 @@ Collapsing them loses information. If a future milestone wants to let
 callers opt into the coarser form, `value_unknown` is the reserved code
 for that.
 
+## Explainability — filter counts, refined refusal codes, more-specific warnings (added M8 review G8, 2026-11-04)
+
+`Unknown` returned from `resolve_fact` after fact filtering now carries
+explainability data. A caller can see *why* a query returned nothing —
+not just *that* it returned nothing.
+
+### G8-1 — `Unknown.filter_counts` surfaces per-stage exclusions
+
+When `resolve_fact` returns `Unknown` after fact filtering, it MUST
+populate `filter_counts: dict[str, int]` with one key per filter stage:
+
+| Key | Counts |
+|---|---|
+| `total` | facts present before any filter |
+| `superseded` | excluded by `fact.superseded_by` |
+| `min_status` | excluded by status below `effective_min` |
+| `phase` | excluded by phase mismatch (only if `phase_set != "none"`) |
+| `scope` | excluded by scope mismatch |
+| `license` | excluded by license gate (only if `require_commercial=True`) |
+
+Every fact contributes to exactly one key (first filter that excludes
+it wins, matching the loop order). `total == superseded + min_status +
+phase + scope` always; after license gate, `license` counts the
+survivors of the earlier stages that failed here.
+
+`filter_counts` is `None` for `Unknown` returned from `resolve_taxon`
+or from early-return paths (empty input, taxon not found, parameter
+not found) — the concept only applies after fact filtering starts.
+
+### G8-2 — Exclusive-stage filters refine `code`
+
+When **all** facts are excluded by a single stage, `Unknown.code` is
+the stage-specific code:
+
+- `below_min_status` — every fact failed the status filter;
+- `scope_not_covered` — every fact failed the scope filter;
+- `license_excluded` — every surviving fact failed the license gate
+  (existing behavior).
+
+Combinations, superseded-only, and phase-only filters yield `no_match`.
+This keeps the codes **deterministic** and **unambiguous**:
+`below_min_status` means *only* status was the problem, not "status
+plus something else".
+
+### G8-3 — Superseded-only and phase-only stay `no_match`
+
+Both are already semantically covered: a superseded fact is invisible
+by design (G2-1), so "the only matching fact is superseded" is
+indistinguishable from "no matching fact" for the caller. Phase-only is
+an input problem surfaced as `InsufficientInput(missing=["phase"])`
+at step 4, not a filter stage. No new codes are introduced for these.
+
+### G8-4 — `Unknown.warnings` carries `scope_values_available`
+
+When `code == "scope_not_covered"` **and** `request_scope` is
+non-empty, if at least one non-superseded fact shares a scope key with
+the request but has a **different scalar/enum value**, `Unknown.warnings`
+contains one `Notice(code="scope_values_available",
+message="scope values available: <key> in {<values>} (request: <value>)")`.
+
+The warning is **advisory**: it names the alternative values that exist
+for the shared key(s). It does not change the `Unknown` outcome, does
+not affect filtering, and is only emitted for `scope_not_covered`. Range
+values are excluded from the enumeration — "available range values" is
+not intuitive to display and the caller can query the parameter's
+physical range from the dictionary.
+
+This targets the typo case (`country="XX"` vs `country="ID"`) that
+motivated the review ask. It does **not** list facts with scope keys
+the request does not share — those did not cause the miss and naming
+them would be noise.
+
+`scope_values_available` is a new `Notice.code`; the pattern
+(`^[a-z][a-z0-9_]*$`) admits it without registry changes.
+
+### G8-5 — Not in scope: scope-key vocabulary validation
+
+Typo detection (`contry` vs `country`) requires validating request
+scope keys against `scope_keys.yaml` at resolution time. That is a
+**separate concern** from explainability and is deferred to a later
+milestone; G8-4 only considers scope keys the fact actually shares with
+the request.
+
+### G8-6 — Policy version MINOR bump
+
+Additive: `Unknown` gains two optional fields; exclusive-stage codes
+are a refinement of a previously-`no_match` outcome. No
+previously-`ok` query becomes `Unknown`, no previously-`no_match`
+query changes `status`. `RESOLUTION_POLICY_VERSION` moves from
+`1.1.0` to `1.2.0`.
+
 ## Decision — `meta()` and show CLI (finalized M8-4)
 
 `meta(pack) -> MetaInfo` is a pure function over the loaded pack:
@@ -611,7 +702,7 @@ matching, safety-min-status behavior, and every rule that decides
 between competing facts — is versioned. `RESOLUTION_POLICY_VERSION`
 is a SemVer string in `src/agri_core/__init__.py`, currently:
 
-    RESOLUTION_POLICY_VERSION = "1.1.0"
+    RESOLUTION_POLICY_VERSION = "1.2.0"
 
 It surfaces in two places:
 

@@ -7,6 +7,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from agri_core.models.envelope import Subject
+from agri_core.models.notices import Notice
 
 FlagCode = Annotated[str, Field(pattern=r"^[A-Z][A-Z0-9_]{1,63}$")]
 """Stable uppercase code for ``ReferToAuthority.flags``."""
@@ -58,6 +59,8 @@ class Unknown(BaseModel):
     code: Annotated[str, Field(min_length=1, pattern=r"^[a-z][a-z0-9_]*$")] | None = None
     subject: Subject | None = None
     request_id: str | None = Field(default=None, pattern=r"^req_[0-9a-f]{32}$")
+    filter_counts: dict[str, int] | None = None
+    warnings: list[Notice] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _envelope_consistency(self) -> Unknown:

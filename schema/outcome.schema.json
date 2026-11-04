@@ -335,7 +335,7 @@
           "title": "Pack Version"
         },
         "resolution_policy_version": {
-          "default": "1.1.0",
+          "default": "1.2.0",
           "title": "Resolution Policy Version",
           "type": "string"
         },
@@ -615,6 +615,21 @@
           "default": null,
           "title": "Code"
         },
+        "filter_counts": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filter Counts"
+        },
         "reason": {
           "minLength": 1,
           "title": "Reason",
@@ -648,6 +663,13 @@
             }
           ],
           "default": null
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/Notice"
+          },
+          "title": "Warnings",
+          "type": "array"
         }
       },
       "required": [
