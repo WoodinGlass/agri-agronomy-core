@@ -258,6 +258,10 @@ def generate_perf_pack(dest: Path, *, n_taxa: int = 10_000) -> Path:
                 )
 
     # Write pack.toml with placeholder, compute hash, rewrite with real hash.
+    # ADR-011: ids.lock must exist before hash computation.
+    with (dest / "ids.lock").open("w", encoding="utf-8") as f:
+        for i in range(1, n_taxa + 1):
+            f.write(f"T{i:09d}\n")
     (dest / "pack.toml").write_text(
         f'name = "perf-pack-{n_taxa}"\n'
         'version = "1.0.0"\n'

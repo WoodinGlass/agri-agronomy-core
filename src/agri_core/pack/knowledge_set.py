@@ -78,6 +78,12 @@ class KnowledgeSet(Protocol):
     def facts(self) -> Iterator[FactRow]:
         """Iterate all facts sorted by ``fact_id``."""
 
+    def ids_lock(self) -> frozenset[str] | None:
+        """Append-only taxon ID ledger (ADR-011).
+
+        Returns ``None`` when the ledger is unavailable (built pack).
+        """
+
     def names_for(self, taxon_id: str) -> tuple[NameRow, ...]:
         """Names attached to *taxon_id*; ``KeyError`` if taxon unknown."""
 
@@ -129,6 +135,7 @@ class InMemoryKnowledgeSet:
     _facts_by_taxon: Mapping[str, tuple[FactRow, ...]]
     _facts_by_taxon_param: Mapping[tuple[str, str], tuple[FactRow, ...]]
     _facts_all: tuple[FactRow, ...]
+    _ids_lock: frozenset[str] | None
     _names_by_taxon: Mapping[str, tuple[NameRow, ...]]
     _names_all: tuple[NameRow, ...]
     _name_index: Mapping[str, tuple[NameIndexEntry, ...]]
@@ -149,6 +156,7 @@ class InMemoryKnowledgeSet:
         taxa: Iterable[TaxonRow] = (),
         names: Iterable[NameRow] = (),
         facts: Iterable[FactRow] = (),
+        ids_lock: frozenset[str] | None = None,
         hazards: Iterable[HazardRow] = (),
         sources: Iterable[SourceRow] = (),
         datasets: Iterable[DatasetRow] = (),
@@ -257,6 +265,7 @@ class InMemoryKnowledgeSet:
         object.__setattr__(ks, "_facts_by_taxon", MappingProxyType(facts_by_taxon))
         object.__setattr__(ks, "_facts_by_taxon_param", MappingProxyType(facts_by_param))
         object.__setattr__(ks, "_facts_all", facts_all)
+        object.__setattr__(ks, "_ids_lock", ids_lock)
         object.__setattr__(ks, "_names_by_taxon", MappingProxyType(names_by_taxon))
         object.__setattr__(ks, "_names_all", names_all)
         object.__setattr__(
@@ -305,6 +314,9 @@ class InMemoryKnowledgeSet:
 
     def facts(self) -> Iterator[FactRow]:
         return iter(self._facts_all)
+
+    def ids_lock(self) -> frozenset[str] | None:
+        return self._ids_lock
 
     def names_for(self, taxon_id: str) -> tuple[NameRow, ...]:
         if taxon_id not in self._taxa_by_id:
@@ -636,6 +648,10 @@ class SQLiteKnowledgeSet:
             TABLES["facts"],
             FactRow,
         )
+
+    def ids_lock(self) -> frozenset[str] | None:
+        # Built packs do not preserve ids.lock; content_hash covers the source.
+        return None
 
     def names(self) -> Iterator[NameRow]:
         return self._iter_models(

@@ -178,7 +178,7 @@ def test_sample_pack_shape_coverage() -> None:
 # to the sample pack data or format is intentional, update the literal
 # here. This is a known-answer test: it does not re-derive the value,
 # it pins it.
-SAMPLE_PACK_CONTENT_HASH = "sha256:0a8f1589d788e26ae9ab7c7497cc5e28611391eff0342b6b42195f264b772cbf"
+SAMPLE_PACK_CONTENT_HASH = "sha256:fc435d26c4e4f5550bd2b05e99ea1da2d1ab33eff63be69e6ba3bf0c9470d2cb"
 
 
 def test_sample_pack_content_hash_kat() -> None:

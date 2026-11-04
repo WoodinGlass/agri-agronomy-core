@@ -131,6 +131,15 @@ def _default_source_id(files: Mapping[str, bytes]) -> str:
     return sid
 
 
+def _read_ids_lock(files: Mapping[str, bytes]) -> frozenset[str]:
+    """Return IDs from ids.lock, or empty frozenset if absent (bootstrap)."""
+    raw = files.get("ids.lock")
+    if raw is None:
+        return frozenset()
+    text = raw.decode("utf-8")
+    return frozenset(ln.strip() for ln in text.splitlines() if ln.strip())
+
+
 def scaffold_taxon(
     source: Path,
     *,
@@ -166,6 +175,25 @@ def scaffold_taxon(
 
     # Validate-first (raises PackError subclasses on broken packs).
     files = read_pack_bytes(source)
+    # ADR-011: reconcile ids.lock in-memory before validate, so a
+    # manual taxa.csv edit (added row not yet in lock) does not block
+    # scaffold. Two cases: absent -> bootstrap from taxa.csv; present
+    # -> union (taxa | lock) if drift is detected.
+    _taxa_tbl_pre = read_table(TABLES["taxa"], files["taxa.csv"], source_name="taxa.csv")
+    _taxa_ids_pre = frozenset(str(r["taxon_id"]) for r in _taxa_tbl_pre.rows if r.get("taxon_id"))
+    _raw_lock_pre = files.get("ids.lock")
+    if _raw_lock_pre is None:
+        _reconciled = _taxa_ids_pre
+        _lock_bytes = ("\n".join(sorted(_reconciled)) + "\n").encode("utf-8")
+        files = {**files, "ids.lock": _lock_bytes}
+    else:
+        _lock_ids_pre = frozenset(
+            ln.strip() for ln in _raw_lock_pre.decode("utf-8").splitlines() if ln.strip()
+        )
+        if not _taxa_ids_pre.issubset(_lock_ids_pre):
+            _reconciled = _taxa_ids_pre | _lock_ids_pre
+            _lock_bytes = ("\n".join(sorted(_reconciled)) + "\n").encode("utf-8")
+            files = {**files, "ids.lock": _lock_bytes}
     validate_pack(files, allow_synthetic=True)
     manifest = parse_manifest_bytes(files["pack.toml"])
 
@@ -174,10 +202,12 @@ def scaffold_taxon(
     existing_ids = frozenset(
         str(row["taxon_id"]) for row in existing_table.rows if row.get("taxon_id")
     )
+    existing_lock_ids = _read_ids_lock(files)
+    all_existing_ids = existing_ids | existing_lock_ids
 
     source_ids = _resolve_source_ids(srcs, files)
 
-    taxon_id = _generate_taxon_id(existing_ids)
+    taxon_id = _generate_taxon_id(all_existing_ids)
     new_row: dict[str, Any] = {
         "taxon_id": taxon_id,
         "rank": rank,
@@ -205,13 +235,19 @@ def scaffold_taxon(
     facts_dir.mkdir(exist_ok=True)
     facts_tmp = facts_dir / f"{taxon_id}.csv.tmp"
     taxa_tmp = source / "taxa.csv.tmp"
+    lock_target = source / "ids.lock"
+    lock_tmp = source / "ids.lock.tmp"
+    new_lock_ids = all_existing_ids | {taxon_id}
+    new_lock_bytes = ("\n".join(sorted(new_lock_ids)) + "\n").encode("utf-8")
     try:
         facts_tmp.write_bytes(new_facts_bytes)
         taxa_tmp.write_bytes(new_taxa_bytes)
+        lock_tmp.write_bytes(new_lock_bytes)
         os.replace(facts_tmp, facts_target)
         os.replace(taxa_tmp, taxa_path)
+        os.replace(lock_tmp, lock_target)
     except OSError:
-        for t in (facts_tmp, taxa_tmp):
+        for t in (facts_tmp, taxa_tmp, lock_tmp):
             with contextlib.suppress(OSError):
                 t.unlink(missing_ok=True)
         raise

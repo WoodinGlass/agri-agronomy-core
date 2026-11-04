@@ -432,6 +432,8 @@ all is accepted.
 | `PACK_HAZARD_CODE_OUT_OF_SCOPE` | `hazard_code` carries a chemical-control token (ADR-007) |
 | `PACK_FIELD_TOO_LARGE` | a CSV cell exceeds 16 KB after UTF-8 encoding |
 | `PACK_ROW_TOO_LARGE` | a CSV row exceeds 64 KB after UTF-8 encoding |
+| `PACK_ID_LEDGER_ABSENT` | pack has no `ids.lock` (ADR-011) |
+| `PACK_ID_LEDGER_DRIFT` | taxon ID in `taxa.csv` but not in `ids.lock` (ADR-011) |
 
 ## Size limit
 

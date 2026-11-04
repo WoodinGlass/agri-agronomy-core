@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Append-only taxon ID ledger (`ids.lock`, ADR-011): one taxon ID
+  per line, sorted, required from this release onward. `agri-core
+  pack scaffold` appends; `agri-core validate` rejects a pack whose
+  `taxa.csv` IDs are not all in `ids.lock` (`PACK_ID_LEDGER_DRIFT`)
+  or whose `ids.lock` is absent (`PACK_ID_LEDGER_ABSENT`). Diff
+  gains `id_removed_from_ledger`. The sample pack and its KAT
+  update in the same PR.
 - Perf gates for the four main CLI operations on a 10k-taxa pack:
   `agri-core pack build`, `validate --strict`, `coverage --json`,
   `diff --json` (self-diff). Budgets and calibration method in
