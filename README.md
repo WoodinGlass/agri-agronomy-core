@@ -158,7 +158,8 @@ Every calculation returns an `Outcome`, a discriminated union whose `status` fie
 
 | `status` | Type | When |
 |---|---|---|
-| `ok` | `Result` | The calculation succeeded. |
+| `ok` | `Result` | The calculation succeeded with a numeric answer. |
+| `ok_category` | `CategoricalResult` | The calculation succeeded with a non-numeric answer (an enum, category, or rule). Per [ADR-006](docs/decisions/ADR-006-categorical-outcome.md); carries the envelope fields plus `value_category` instead of `value`/`unit`. |
 | `insufficient_input` | `InsufficientInput` | A required input is missing, or a conversion needs an explicit factor (EC to ppm: 0.5, 0.64 or 0.7). Lists what is missing. |
 | `unknown` | `Unknown` | The answer needs a value the pack marks as unknown, or no fact covers the requested scope. Gives a `reason` and an optional stable `code` (registered in `schema/unknown_code_registry.json`; six active as of 0.1.2 + M8 review follow-up: `empty_input`, `no_match`, `input_too_long`, `below_min_status`, `scope_not_covered`, `license_excluded`). `FactOutcome`'s `Unknown` also carries `filter_counts` and `warnings` (see [Resolution outcomes](#resolution-outcomes-m8)). |
 | `not_applicable` | `NotApplicable` | The question does not apply (for example no standard Kc, or a propagation method the taxon does not use). Gives a reason. |
@@ -493,7 +494,7 @@ M12) and will be written as its own ADR when that work starts.
 |---|---|---|---|
 | **M0** Foundation | Done | Repository, `pyproject.toml`, CI, pre-commit, `Outcome` and `Result` models, JSON Schemas, `sources.csv` linter, wheel smoke test. | CI is green on the empty but valid package, and a clean-venv install of the wheel passes `agri-core validate --pack sample`. |
 | **M1** Data split | Done | Remove `profiles/` and `LICENSE-DATA`; the engine keeps schemas, dictionary and sample pack. | `pip install git+...` loads from a clean env without the `profiles/` folder; README reflects the split. |
-| **M2** Contract models | Done | `Outcome` (7 statuses), `Result`, row models (`taxon`, `name`, `fact`, `hazard`, `dataset`, `source`), identifier primitives (Crockford base32), `ParameterDef` v1.0.0, `PhaseSet`, `ScopeKey`. | Drift tests, frozen / extra-forbid invariants, and identifier pattern tests pass. |
+| **M2** Contract models | Done | `Outcome` (8 members: 7 statuses + `ok_category` from ADR-006), `Result`, row models (`taxon`, `name`, `fact`, `hazard`, `dataset`, `source`), identifier primitives (Crockford base32), `ParameterDef` v1.0.0, `PhaseSet`, `ScopeKey`. | Drift tests, frozen / extra-forbid invariants, and identifier pattern tests pass. |
 | **M3** Row JSON schemas | Done | JSON schemas for the 6 row models and the 8-shape `FactValue` union, generated from the Pydantic models. | Drift tests green; `EnumSetValue` in `FactValue` tested; `$defs` checked. |
 | **M4** Core dictionary 1.0.0 | Done | 31 parameters at `dictionary_version: 1.0.0`, `dictionary.lock` (append-only), `history/1.0.0.json`, `classify_change` for SemVer, safety-class taxonomy. | Lock hash verified against the running dictionary; `introduced_in` matches first snapshot; `test_semver_compat` infrastructure ready. |
 | **M5** Loader and sample pack | Done | `compute_pack_hash` / `verify_pack_hash`; `load_knowledge_set(path)`; immutable `KnowledgeSet`; sample pack with 8 synthetic taxa, one per initial archetype (`annual`, `aquatic`, `biennial`, `epiphyte`, `fungal`, `geophyte`, `herbaceous_perennial`, `woody_perennial`), without real agronomic data. | Hash determinism and mismatch tests pass; sample pack loads cleanly; foreign keys on `taxon_id`, `parameter`, `src` verified. |
