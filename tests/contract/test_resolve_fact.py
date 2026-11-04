@@ -262,6 +262,32 @@ def test_alternatives_populated() -> None:
     assert r.alternatives[0].fact_id == "F00000000002"
 
 
+# ---- specificity (G4) ----------------------------------------------------
+
+
+@pytest.mark.xfail(
+    strict=False,
+    reason="M9+ partial order not implemented; current = cardinality + fact_id tie-break",
+)
+def test_incomparable_scope_arbitrary_tiebreak_documented() -> None:
+    """G4 doc: two incomparable scopes (same cardinality, disjoint keys)
+    currently produce an arbitrary winner via ``fact_id`` tie-break. The
+    target policy (per ADR-004 Specificity section) is ``FactConflict``.
+    This test fails today, and will pass when M9+ implements partial order.
+    """
+    ks = _ks(
+        facts=[
+            _fact("F00000000002", value=7.0, scope={"country": "ID"}),
+            _fact("F00000000001", value=6.5, scope={"system": "field"}),
+        ]
+    )
+    r = resolve_fact(ks, "T000000001", "soil_ph")
+    assert not isinstance(r, FactResolved), (
+        "target policy (ADR-004 Specificity): incomparable scopes must "
+        "return FactConflict, not FactResolved"
+    )
+
+
 # ---- fact conflict / corroboration ----------------------------------------
 
 
