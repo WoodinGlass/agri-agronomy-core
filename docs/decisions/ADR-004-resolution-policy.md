@@ -106,6 +106,61 @@ present in `names.csv` (e.g. `"id"`, `"en"`, `"ja"`). The
 parameter verbatim; there is no second post-hoc name lookup in the
 CLI.
 
+## Input length guard (added M8 review G9, 2026-11-04)
+
+`resolve_taxon` rejects raw input longer than `_MAX_INPUT_LENGTH = 200`
+characters with `Unknown(code="input_too_long")`. The check runs **before**
+name normalization; the raw caller-supplied string is measured, not the
+normalized form.
+
+### Why 200
+
+`NameRow.name`, `TaxonRow.scientific_name`, and `TaxonRow.accepted_name`
+all cap at `max_length=200`. A taxon name in a pack cannot exceed 200
+characters, so an input string longer than 200 cannot resolve to any
+taxon by construction. Rejecting early avoids the cost of `normalize_name`
++ `names_index` on inputs that cannot succeed, and short-circuits a
+caller that constructs very long strings (an LLM agent composing a
+prompt, a truncated prompt fragment, an adversarial payload).
+
+### Why check before normalize
+
+`normalize_name` applies NFKC, which can *expand* certain characters
+(U+FB00 LATIN SMALL LIGATURE FF becomes "ff", doubling length; U+3316
+SQUARE KIROGURAMMU becomes "kirogurammu" — 12 characters from 1). A
+200-character input of ligatures normalizes to ~400 characters. If the
+check ran *after* normalization, a caller who submitted 200 characters
+would be rejected for a length problem the caller did not cause.
+
+The check is on the raw input. NFKC-expanded strings are passed to
+`names_index` unchanged — they simply do not match any taxon (which is
+correct: no pack name can contain a 200-character ligature run).
+
+### Why not reuse `empty_input`
+
+`empty_input` means the query normalized to an empty string (whitespace
+only). `input_too_long` means the query exceeded the length bound. A
+caller that sees `empty_input` will retry with a real query; a caller
+that sees `input_too_long` will shorten. Distinct problems, distinct
+codes.
+
+### Order: length before empty
+
+Length is checked first. Input `" " * 201` yields `input_too_long`, not
+`empty_input`. The length problem dominates — the caller should shorten
+before worrying about emptiness. Within the length bound, whitespace-only
+input still yields `empty_input` (existing behavior, unchanged).
+
+### Policy version MINOR bump
+
+`RESOLUTION_POLICY_VERSION` moves from `1.2.0` to `1.3.0`: a new active
+`Unknown.code` is introduced and a class of previously-`no_match` or
+`empty_input` queries (raw input > 200 chars) becomes `input_too_long`.
+No previously-`ok` query is affected; no previously-`ambiguous` query is
+affected. Callers that only branch on `isinstance(r, Unknown)` are
+unaffected.
+
+
 ## Decision — Name index design (finalized M8-1b)
 
 - **Built eagerly at load**, never persisted. Unicode normalization
@@ -702,7 +757,7 @@ matching, safety-min-status behavior, and every rule that decides
 between competing facts — is versioned. `RESOLUTION_POLICY_VERSION`
 is a SemVer string in `src/agri_core/__init__.py`, currently:
 
-    RESOLUTION_POLICY_VERSION = "1.2.0"
+    RESOLUTION_POLICY_VERSION = "1.3.0"
 
 It surfaces in two places:
 

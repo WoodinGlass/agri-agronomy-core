@@ -12,6 +12,11 @@
       "description": "No taxon matched the query"
     },
     {
+      "code": "input_too_long",
+      "status": "active",
+      "description": "Query name exceeds maximum length (200)"
+    },
+    {
       "code": "below_min_status",
       "status": "active",
       "description": "Fact exists but its status is below the requested minimum"
