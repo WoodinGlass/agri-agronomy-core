@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from agri_core.models.dictionary import Dictionary
-from agri_core.models.fact import FactRow, ScalarValue
+from agri_core.models.fact import FactRow, ScalarValue, UnknownValue
 from agri_core.models.refusals import InsufficientInput, NotApplicable, Unknown
 from agri_core.models.taxon import TaxonRow
 from agri_core.pack.knowledge_set import InMemoryKnowledgeSet
@@ -237,6 +237,73 @@ def test_min_status_applied_explicit_reviewed() -> None:
     assert isinstance(r, FactResolved)
     assert r.min_status_applied == "reviewed"
     assert r.fact.status == "reviewed"
+
+
+# ---- unknown value precedence (G6) ---------------------------------------
+
+
+def test_unknown_at_specific_scope_beats_general_value() -> None:
+    """G6-1: ``UnknownValue`` at a specific scope wins over a concrete
+    value at a general scope. Specificity precedes value concreteness.
+    """
+    ks = _ks(
+        facts=[
+            _fact("F00000000001", value=6.5, scope={}, status="approved"),
+            FactRow(
+                fact_id="F00000000002",
+                taxon_id="T000000001",
+                parameter="soil_ph",
+                phase=None,
+                value=UnknownValue(shape="unknown", reason="site-specific, not measured"),
+                scope={"country": "ID"},
+                provenance_kind="curated",
+                src=["S001"],
+                locator="L",
+                evidence="A",
+                status="approved",
+                reviewed_by=["r"],
+                reviewed_at=_TODAY,
+                superseded_by=None,
+            ),
+        ]
+    )
+    r = resolve_fact(ks, "T000000001", "soil_ph", scope={"country": "ID"})
+    assert isinstance(r, FactResolved)
+    assert r.fact.fact_id == "F00000000002"
+    assert isinstance(r.value, UnknownValue)
+    assert r.value.reason == "site-specific, not measured"
+    assert "unknown" in r.value_pretty.lower()
+
+
+def test_unknown_at_general_scope_loses_to_specific_value() -> None:
+    """G6-1 (converse): a concrete value at a specific scope beats an
+    ``UnknownValue`` at a general scope. Same rule, other direction.
+    """
+    ks = _ks(
+        facts=[
+            _fact("F00000000001", value=6.5, scope={"country": "ID"}),
+            FactRow(
+                fact_id="F00000000002",
+                taxon_id="T000000001",
+                parameter="soil_ph",
+                phase=None,
+                value=UnknownValue(shape="unknown", reason="worldwide unknown"),
+                scope={},
+                provenance_kind="curated",
+                src=["S001"],
+                locator="L",
+                evidence="A",
+                status="approved",
+                reviewed_by=["r"],
+                reviewed_at=_TODAY,
+                superseded_by=None,
+            ),
+        ]
+    )
+    r = resolve_fact(ks, "T000000001", "soil_ph", scope={"country": "ID"})
+    assert isinstance(r, FactResolved)
+    assert r.fact.fact_id == "F00000000001"
+    assert not isinstance(r.value, UnknownValue)
 
 
 # ---- superseded -----------------------------------------------------------
