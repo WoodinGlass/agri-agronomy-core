@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `resolve_taxon` rejects raw input > 200 characters with
+  `Unknown(code="input_too_long")`, checked before name normalization
+  (matching `NameRow.name max_length`). `RESOLUTION_POLICY_VERSION`
+  moves to `1.3.0` (MINOR — new active code; no `ok` or `ambiguous`
+  query is affected). ADR-004 gains §"input length guard" (M8 review
+  G9). Schema regenerated.
 - `Unknown` gains `filter_counts` and `warnings` fields, plus refined
   `code` values (`below_min_status`, `scope_not_covered`) for exclusive
   filter stages. `scope_not_covered` carries a `scope_values_available`

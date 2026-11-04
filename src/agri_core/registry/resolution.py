@@ -59,6 +59,12 @@ _MAX_CANDIDATES = 20
 more distinct taxa than this, ``Ambiguous.truncated`` is set to ``True``
 and only the first ``_MAX_CANDIDATES`` (sorted by ``taxon_id``) are kept."""
 
+_MAX_INPUT_LENGTH = 200
+"""Maximum raw input length for ``resolve_taxon``, matching
+``NameRow.name`` / ``TaxonRow.scientific_name`` ``max_length=200``. The
+check runs on the raw caller string **before** normalization — NFKC
+expansion can double length, and the caller did not cause that."""
+
 
 class TaxonOk(BaseModel):
     """A name resolved to exactly one taxon.
@@ -124,6 +130,12 @@ def resolve_taxon(pack: KnowledgeSet, name: str, *, language: str | None = None)
     This function is pure: it does not touch the filesystem or clock. All
     I/O happened when *pack* was loaded.
     """
+    if len(name) > _MAX_INPUT_LENGTH:
+        return Unknown(
+            status="unknown",
+            reason=f"input name exceeds {_MAX_INPUT_LENGTH} characters",
+            code="input_too_long",
+        )
     normalized = normalize_name(name)
     if not normalized:
         return Unknown(

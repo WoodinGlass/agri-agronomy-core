@@ -322,6 +322,57 @@ def test_taxon_outcome_adapter_roundtrip() -> None:
     assert restored.taxon_id == "T000000001"
 
 
+# ---- input length guard (G9) --------------------------------------------
+
+
+def test_input_at_limit_accepted() -> None:
+    """G9: exactly 200 chars is processed (not length-rejected)."""
+    ks = _make_ks()
+    r = resolve_taxon(ks, "a" * 200)
+    assert isinstance(r, Unknown)
+    assert r.code == "no_match"  # processed, not length-rejected
+
+
+def test_input_exceeding_limit_rejected() -> None:
+    """G9: 201 chars -> input_too_long."""
+    ks = _make_ks()
+    r = resolve_taxon(ks, "a" * 201)
+    assert isinstance(r, Unknown)
+    assert r.code == "input_too_long"
+
+
+def test_input_far_exceeding_limit_rejected() -> None:
+    """G9: 10000 chars -> input_too_long (not DoS)."""
+    ks = _make_ks()
+    r = resolve_taxon(ks, "a" * 10000)
+    assert isinstance(r, Unknown)
+    assert r.code == "input_too_long"
+
+
+def test_input_length_check_before_normalize() -> None:
+    """G9: raw 200 chars (NFKC would expand) still processed."""
+    ks = _make_ks()
+    r = resolve_taxon(ks, "\ufb00" * 200)  # 200 raw, NFKC -> 400
+    assert isinstance(r, Unknown)
+    assert r.code == "no_match"  # not input_too_long
+
+
+def test_input_whitespace_within_limit_empty_input() -> None:
+    """G9: whitespace within limit still empty_input (existing)."""
+    ks = _make_ks()
+    r = resolve_taxon(ks, " " * 100)
+    assert isinstance(r, Unknown)
+    assert r.code == "empty_input"
+
+
+def test_input_whitespace_exceeding_limit_too_long() -> None:
+    """G9: whitespace exceeding limit -> input_too_long (length first)."""
+    ks = _make_ks()
+    r = resolve_taxon(ks, " " * 201)
+    assert isinstance(r, Unknown)
+    assert r.code == "input_too_long"
+
+
 # ---- language preference ---------------------------------------------------
 
 
