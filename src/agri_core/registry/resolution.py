@@ -620,6 +620,7 @@ class MetaInfo(BaseModel):
     artifact_sha256: str | None
     synthetic: bool
     verified: bool
+    engine_min: str
 
 
 FactOutcome = Annotated[
@@ -653,4 +654,5 @@ def meta(pack: KnowledgeSet) -> MetaInfo:
         artifact_sha256=pack.manifest.artifact_sha256,
         synthetic=pack.manifest.synthetic,
         verified=pack.verified,
+        engine_min=pack.manifest.engine_min,
     )

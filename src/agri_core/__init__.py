@@ -9,7 +9,7 @@ try:
 except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.1.1+unknown"
 
-RESOLUTION_POLICY_VERSION = "1.3.0"
+RESOLUTION_POLICY_VERSION = "1.4.0"
 """SemVer of the fact/taxon resolution policy (ADR-004).
 
 Distinct from ``__version__``: the engine can release without changing

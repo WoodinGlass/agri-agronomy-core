@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `MetaInfo.engine_min` exposes the pack's declared minimum engine
+  version (`pack.manifest.engine_min`). `RESOLUTION_POLICY_VERSION`
+  moves to `1.4.0` (MINOR — additive; no behavior change). ADR-004
+  §"meta()" also gains two missing bullets (`engine_min`,
+  `resolution_policy_version` — the latter was documented since G5 but
+  not listed in §meta()). Schema regenerated.
 - `resolve_taxon` rejects raw input > 200 characters with
   `Unknown(code="input_too_long")`, checked before name normalization
   (matching `NameRow.name max_length`). `RESOLUTION_POLICY_VERSION`
