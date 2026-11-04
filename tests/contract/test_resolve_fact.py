@@ -197,6 +197,48 @@ def test_safety_floor_raised() -> None:
     assert any(w.code == "safety_min_status_raised" for w in r.warnings)
 
 
+# ---- min_status_applied (G5) ---------------------------------------------
+
+
+def test_min_status_applied_default_approved() -> None:
+    """G5-3: default ``min_status='approved'`` -> ``min_status_applied='approved'``."""
+    ks = _ks(facts=[_fact("F00000000001", value=6.5, status="approved")])
+    r = resolve_fact(ks, "T000000001", "soil_ph")
+    assert isinstance(r, FactResolved)
+    assert r.min_status_applied == "approved"
+    assert r.fact.status == "approved"
+
+
+def test_min_status_applied_none_maps_to_imported() -> None:
+    """G5-3: ``min_status=None`` -> ``min_status_applied='imported'`` (lowest rank)."""
+    ks = _ks(facts=[_fact("F00000000001", value=6.5, status="imported")])
+    r = resolve_fact(ks, "T000000001", "soil_ph", min_status=None)
+    assert isinstance(r, FactResolved)
+    assert r.min_status_applied == "imported"
+    assert r.fact.status == "imported"
+
+
+def test_min_status_applied_safety_floor_raises() -> None:
+    """G5-3: safety-critical + ``min_status=None`` -> floor raised to ``reviewed``."""
+    ks = _ks(
+        facts=[_fact("F00000000001", parameter="n_max_per_application", status="reviewed")],
+    )
+    r = resolve_fact(ks, "T000000001", "n_max_per_application", min_status=None)
+    assert isinstance(r, FactResolved)
+    assert r.min_status_applied == "reviewed"
+    assert r.fact.status == "reviewed"
+    assert any(w.code == "safety_min_status_raised" for w in r.warnings)
+
+
+def test_min_status_applied_explicit_reviewed() -> None:
+    """G5-3: explicit ``min_status='reviewed'`` -> ``min_status_applied='reviewed'``."""
+    ks = _ks(facts=[_fact("F00000000001", value=6.5, status="reviewed")])
+    r = resolve_fact(ks, "T000000001", "soil_ph", min_status="reviewed")
+    assert isinstance(r, FactResolved)
+    assert r.min_status_applied == "reviewed"
+    assert r.fact.status == "reviewed"
+
+
 # ---- superseded -----------------------------------------------------------
 
 
