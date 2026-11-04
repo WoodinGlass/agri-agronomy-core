@@ -513,6 +513,58 @@ raise was already in place); the change is the addition of a field that
 exposes existing behavior. `RESOLUTION_POLICY_VERSION` moves from
 `1.0.0` to `1.1.0`.
 
+## Semantic lock — unknown at more specific scope beats value at general (added M8 review G6, 2026-11-04)
+
+A fact whose `value` is an `UnknownValue` (`shape="unknown"`) carries the
+same weight in winner selection as any other value shape. The specificity
+of the scope, not the concreteness of the value, decides the winner.
+
+### G6-1 — Scope specificity precedes value concreteness
+
+When two approved facts match a query, the one with the **larger
+`len(scope)`** wins — even if its value is `UnknownValue` and the other
+carries a concrete value at a broader scope. Concretely:
+
+- Fact A: `value=UnknownValue(reason="…")`, `scope={country: ID}`;
+- Fact B: `value=ScalarValue(6.5)`, `scope={}`;
+- query: `scope={country: ID}`.
+
+A wins. The caller receives `FactResolved(fact=A,
+value=UnknownValue(reason="…"))`, **not** a fallback to Fact B. The
+answer to "what is the value for Indonesia?" is "unknown for Indonesia",
+which is more informative than "the world-wide default is 6.5".
+
+### G6-2 — `FactResolved.value_pretty` renders the unknown
+
+`value_pretty` for an `UnknownValue` is `format_value(value)` — the
+deterministic display string `unknown (<reason>)`. A caller that expects
+a numeric string must handle the unknown case explicitly; the resolver
+does not substitute a fallback value.
+
+### G6-3 — `Unknown(code="value_unknown")` is not emitted
+
+The resolver does **not** short-circuit to an `Unknown` outcome when the
+winner is an `UnknownValue`. `FactResolved` carries the `UnknownValue`
+directly, so a caller can inspect `value.reason` and treat it differently
+from a numeric result. `Unknown(code="value_unknown")` remains
+`planned` in `schema/unknown_code_registry.json` for a **future**
+opt-in behavior (for example, a flag that says "reject unknown-valued
+winners"); today's policy is to surface, not suppress.
+
+### G6-4 — Why this is not a `value_unknown` outcome yet
+
+`FactResolved` with `value: UnknownValue` is the canonical "we have a
+fact, and it says the value is unknown" result. Rewriting it to
+`Unknown` would conflate two cases the caller must distinguish:
+
+- "no fact exists for this query" → `Unknown(code="no_match")`;
+- "a fact exists, its value is unknown for this scope" →
+  `FactResolved(value=UnknownValue)`.
+
+Collapsing them loses information. If a future milestone wants to let
+callers opt into the coarser form, `value_unknown` is the reserved code
+for that.
+
 ## Decision — `meta()` and show CLI (finalized M8-4)
 
 `meta(pack) -> MetaInfo` is a pure function over the loaded pack:
