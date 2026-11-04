@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from agri_core import RESOLUTION_POLICY_VERSION
+
 
 class Provenance(BaseModel):
     """Where a calculation's numbers came from.
@@ -17,6 +19,9 @@ class Provenance(BaseModel):
     ``pack_version``.
     ``source_ids`` lists the ``src`` IDs from ``sources.csv`` behind the
     values used.
+    ``resolution_policy_version`` is the ``RESOLUTION_POLICY_VERSION``
+    at the time this provenance was produced. Defaults to the current
+    version; explicit for results stored across engine upgrades.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -25,3 +30,4 @@ class Provenance(BaseModel):
     pack_version: str | None = None
     pack_hash: str | None = None
     source_ids: list[str] = Field(default_factory=list)
+    resolution_policy_version: str = RESOLUTION_POLICY_VERSION

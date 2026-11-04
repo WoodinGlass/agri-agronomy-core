@@ -331,6 +331,47 @@ kept in sync by `tests/contract/test_resolution_schemas.py`:
 `taxon_outcome.schema.json`, `fact_outcome.schema.json`,
 `meta_info.schema.json`.
 
+## Decision — resolution policy version (added 2026-11-04)
+
+The resolution policy — name normalization, match precedence, scope
+matching, safety-min-status behavior, and every rule that decides
+between competing facts — is versioned. `RESOLUTION_POLICY_VERSION`
+is a SemVer string in `src/agri_core/__init__.py`, currently:
+
+    RESOLUTION_POLICY_VERSION = "1.0.0"
+
+It surfaces in two places:
+
+- **`MetaInfo.resolution_policy_version`** — pack-level metadata
+  returned by `meta(pack)`. Tells a consumer which policy resolved
+  anything in this pack.
+- **`Provenance.resolution_policy_version`** — per-result. A consumer
+  that stores a result and re-reads it later can tell exactly which
+  policy produced it, even after the engine has shipped a newer
+  version.
+
+**SemVer rules.**
+
+- **MAJOR** — semantic change to an existing decision. Examples:
+  changing the default status minimum, changing scope-matching
+  direction, changing what counts as "more specific", adding or
+  removing a refusal code from a path that previously succeeded.
+- **MINOR** — new rule that does not change existing behavior.
+  Examples: a new refusal code that fires only on inputs that
+  previously returned `unknown` with a less specific reason; a new
+  warning code that is additive.
+- **PATCH** — documentation or clarity. No behavior change.
+
+The version is a property of the policy, not of the engine. An engine
+release may bump `__version__` without bumping
+`RESOLUTION_POLICY_VERSION`, and vice versa. A consumer that wants
+"stable resolution behavior" pins `RESOLUTION_POLICY_VERSION`, not
+`__version__`.
+
+**Drift.** The version appears in the code and in this ADR; a contract
+test (`tests/contract/test_resolution_policy_version.py`) fails if the
+two disagree. Changing the version without updating both is drift.
+
 ## Consequences
 
 - `resolve_taxon` is **pure**: no filesystem or clock access; all I/O

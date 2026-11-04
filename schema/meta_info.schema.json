@@ -29,6 +29,10 @@
       "title": "Pack Version",
       "type": "string"
     },
+    "resolution_policy_version": {
+      "title": "Resolution Policy Version",
+      "type": "string"
+    },
     "schema_version": {
       "title": "Schema Version",
       "type": "integer"
@@ -44,6 +48,7 @@
   },
   "required": [
     "engine_version",
+    "resolution_policy_version",
     "pack_version",
     "schema_version",
     "dictionary_version",

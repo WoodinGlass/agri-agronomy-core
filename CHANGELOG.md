@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Resolution policy version (`RESOLUTION_POLICY_VERSION = "1.0.0"`,
+  ADR-004 section "resolution policy version"). Surfaces in
+  `MetaInfo.resolution_policy_version` (pack-level, required) and
+  `Provenance.resolution_policy_version` (per-result, defaults to
+  current). Drift test enforces code-ADR sync. SemVer rules in ADR:
+  MAJOR = semantic change to an existing decision, MINOR = additive
+  rule, PATCH = clarity.
 - Append-only taxon ID ledger (`ids.lock`, ADR-011): one taxon ID
   per line, sorted, required from this release onward. `agri-core
   pack scaffold` appends; `agri-core validate` rejects a pack whose
