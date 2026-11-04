@@ -179,6 +179,35 @@ def test_taxon_unknown_no_match() -> None:
     assert r.code == "no_match"
 
 
+# ---- no fuzzy match (G13) -----------------------------------------------
+
+
+def test_no_fuzzy_prefix_or_suffix_match() -> None:
+    """G13-1: append or prepend characters to a real name -> no_match."""
+    ks = _make_ks(taxa=[_taxon("T000000001", scientific_name="Testus annualis")])
+    for probe in (
+        "Testus annualisX",
+        "XTestus annualis",
+        "Testus annualis extra",
+    ):
+        r = resolve_taxon(ks, probe)
+        assert isinstance(r, Unknown), f"expected Unknown for {probe!r}"
+        assert r.code == "no_match", f"expected no_match for {probe!r}"
+
+
+def test_no_fuzzy_levenshtein_match() -> None:
+    """G13-1: one-character substitution or deletion -> no_match (no fuzzy)."""
+    ks = _make_ks(taxa=[_taxon("T000000001", scientific_name="Testus annualis")])
+    for probe in (
+        "Xestus annualis",
+        "Testus annuali",
+        "Testusannualis",
+    ):
+        r = resolve_taxon(ks, probe)
+        assert isinstance(r, Unknown), f"expected Unknown for {probe!r}"
+        assert r.code == "no_match", f"expected no_match for {probe!r}"
+
+
 def test_taxon_ambiguous_two_taxa() -> None:
     ks = _make_ks(
         taxa=[

@@ -161,6 +161,79 @@ affected. Callers that only branch on `isinstance(r, Unknown)` are
 unaffected.
 
 
+## Resolution policy — no fuzzy match, closed outcome union (added M8 review G13, 2026-11-04)
+
+Two `resolve_taxon` policies were previously implicit. They are documented
+here as contract: nothing in this section changes what the resolver does;
+it only commits to it in writing.
+
+### G13-1 — No fuzzy match
+
+`resolve_taxon` matches **exact normalized names only**. The normalization
+pipeline (`normalize_name`: NFKC, casefold, hybrid-lift, whitespace
+collapse) produces a comparison key; the key must match a `names_index`
+entry exactly. No prefix, suffix, substring, or edit-distance
+(Levenshtein) matching is performed.
+
+Practical consequences:
+
+- Appending or prepending characters to a real name yields
+  `Unknown(code="no_match")`.
+- Removing characters (prefix truncation) yields `no_match`.
+- A one-character substitution yields `no_match` even when the original
+  string is in the pack.
+- Whitespace between tokens is collapsed, but token boundaries are not
+  invented or dropped.
+
+This is intentional. A caller that wants to resolve a name with typos must
+fix the typos or use an external matching layer; `resolve_taxon` is not
+that layer. `tests/contract/test_resolve_taxon.py` locks this with
+`test_no_fuzzy_prefix_or_suffix_match` and `test_no_fuzzy_levenshtein_match`.
+
+The "typo" case in G8-5 (scope key vocabulary validation, `contry` vs
+`country`) is a **different** concern: it applies to `resolve_fact`
+request scope keys, not to `resolve_taxon` names. G13-1 is about name
+matching only.
+
+### G13-2 — Closed outcome union, no unexpected exception
+
+`TaxonOutcome = TaxonOk | Ambiguous | Unknown`. Every input that passes
+the G9 length guard returns **exactly one** of these three. No
+`AttributeError`, `KeyError`, `pydantic.ValidationError`, or other
+exception is raised from `resolve_taxon` for any input — including
+malformed Unicode, surrogate pairs, control characters, RTL text, bidi
+overrides, combining marks, and null bytes.
+
+Two existing tests enforce this:
+
+- `tests/property/test_resolve_taxon_fuzz.py::test_arbitrary_text_never_crashes`
+  (G11) — Hypothesis fuzz over arbitrary `str`; asserts the result type is
+  always one of the three, and the `Unknown.code`, when present, is one of
+  `{empty_input, input_too_long, no_match}`.
+- `tests/property/test_resolve_taxon_fuzz.py::test_long_text_always_input_too_long`
+  (G11) — any input over `_MAX_INPUT_LENGTH` returns
+  `Unknown(code="input_too_long")`, independent of content.
+
+### G13-3 — Length guard is part of the contract
+
+Input longer than `_MAX_INPUT_LENGTH = 200` returns
+`Unknown(code="input_too_long")` (G9). This is a closed refusal, not a
+truncation: the resolver does not silently truncate and then attempt a
+match. The G13-2 property test re-verifies this under arbitrary content.
+
+The five outcomes partition the input space:
+
+| Input class | Outcome |
+|---|---|
+| length > 200 | `Unknown(code="input_too_long")` |
+| empty after normalization | `Unknown(code="empty_input")` |
+| any other, matches 0 taxa | `Unknown(code="no_match")` |
+| any other, matches 1 taxon | `TaxonOk` |
+| any other, matches N>1 taxa | `Ambiguous` (candidates truncated to 20) |
+
+No input class is unaccounted for.
+
+
 ## Decision — Name index design (finalized M8-1b)
 
 - **Built eagerly at load**, never persisted. Unicode normalization
