@@ -21,6 +21,10 @@
       "title": "Dictionary Version",
       "type": "string"
     },
+    "engine_min": {
+      "title": "Engine Min",
+      "type": "string"
+    },
     "engine_version": {
       "title": "Engine Version",
       "type": "string"
@@ -55,7 +59,8 @@
     "content_hash",
     "artifact_sha256",
     "synthetic",
-    "verified"
+    "verified",
+    "engine_min"
   ],
   "title": "MetaInfo",
   "type": "object"

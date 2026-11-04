@@ -716,6 +716,8 @@ query changes `status`. `RESOLUTION_POLICY_VERSION` moves from
 `meta(pack) -> MetaInfo` is a pure function over the loaded pack:
 
 - `engine_version` — running `agri-core.__version__`.
+- `resolution_policy_version` — `RESOLUTION_POLICY_VERSION` at build (added M8 review G5).
+- `engine_min` — `pack.manifest.engine_min`, minimum engine version required by the pack (added M8 review G12).
 - `pack_version` — `pack.manifest.version`.
 - `schema_version` — `pack.manifest.schema_version`.
 - `dictionary_version` — `pack.dictionary_version`.
@@ -757,7 +759,7 @@ matching, safety-min-status behavior, and every rule that decides
 between competing facts — is versioned. `RESOLUTION_POLICY_VERSION`
 is a SemVer string in `src/agri_core/__init__.py`, currently:
 
-    RESOLUTION_POLICY_VERSION = "1.3.0"
+    RESOLUTION_POLICY_VERSION = "1.4.0"
 
 It surfaces in two places:
 
