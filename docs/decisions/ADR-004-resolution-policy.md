@@ -332,6 +332,82 @@ at resolution time.
 `test_superseded_excluded` (winner), `test_superseded_never_in_alternatives`
 (G2-1), and `test_superseded_only_match_returns_no_match` (G2-2).
 
+## Semantic lock — advisories are warnings, not blockers (added M8 review G3, 2026-11-04)
+
+`advisories.csv` is reserved for **safety-critical corrections keyed by
+`fact_id`**. Two correction mechanisms exist in the pack format, and they
+are **not** interchangeable:
+
+- **Supersession** (`fact.superseded_by` set) retires a fact: the old
+  fact is invisible at resolution (G2-1, G2-2), and a new `fact_id`
+  replaces it (ADR-003). Use it when the *value* is wrong.
+- **Advisory** (a row in `advisories.csv` keyed by `fact_id`) annotates a
+  fact that remains valid. The fact still participates in tie-breaking
+  and can win. The advisory surfaces as a `Notice` warning on the
+  result. Use it when the value is *correct* but a safety condition,
+  restriction, or caveat applies.
+
+### G3-1 — Warning, never a blocker
+
+When advisory loading ships, an advisory attached to a fact MUST:
+
+- **not** remove the fact from `candidates`;
+- **not** affect tie-breaking, `fact` selection, or `alternatives`;
+- **surface** as `Notice(code=<advisory.code>, message=<advisory.message>)`
+  in `FactResolved.warnings`;
+- have `code` satisfy the `Notice.code` regex (`^[a-z][a-z0-9_]*$`) and
+  not collide with the reserved codes `safety_min_status_raised` and
+  `fact_conflict`.
+
+Multiple advisories per fact are additive: all surface, in pack order.
+An advisory whose `fact_id` refers to a fact with `superseded_by` set
+is contradictory and MUST be rejected at load time
+(`PACK_ADVISORY_ON_SUPERSEDED`); its `fact_id` MUST also satisfy the
+existing FK rule (`PACK_FK_VIOLATION`).
+
+### G3-2 — License gate: advisory sources are gated stricter than fact sources
+
+Every advisory row MUST carry `src` (list of `source_id`). The license
+gate applies to advisory sources **more strictly** than to fact sources:
+
+- A fact whose `src` is non-commercial may still exist in a pack and be
+  surfaced when `require_commercial=False` (existing behavior, ADR-005).
+- An advisory whose `src` is non-commercial is **invalid at load time**:
+  the pack MUST be rejected with `PACK_ADVISORY_NC_SOURCE`. Non-commercial
+  advisory text never enters a loadable pack, regardless of
+  `require_commercial`.
+
+This asymmetry is deliberate. Advisory text is a **safety warning
+attached to a fact**; shipping a warning whose own provenance is
+non-commercial is a license violation that no runtime flag can undo. The
+fact-side gate, by contrast, can be enforced at resolution time because
+the fact is a value claim whose data license may be stricter than the
+engine's use of it. No exception is made for advisory sources.
+
+### G3-3 — Current state: fail-closed until implementation ships
+
+`pack/loader.py` and `pack/sqlite_schema.py` reject any non-whitespace
+`advisories.csv` with `PACK_FEATURE_UNSUPPORTED`. This is a **gate until
+implementation ships**, not a semantic decision that advisories would
+block resolution. Today: an advisory cannot be carried in a loadable
+pack; `resolve_fact` can never see one; G3-1 and G3-2 are **forward
+commitments** that fire when load support ships.
+
+### Deferred to the advisory-loading milestone
+
+Deliberately omitted from this decision (listed so future readers know
+the omission is intentional):
+
+- `advisories.csv` schema — columns, PK, `issued_at` semantics.
+- `advisory_code_registry.json` — whether codes are enumerated
+  (current direction: no, mirror `Notice.code`).
+- `advisory_id` membership in `ids.lock` (ADR-011).
+- `KnowledgeSet.advisories_for(fact_id)` API surface.
+- `show` text mode surfacing (current direction: `--json` only, via the
+  existing `warnings` field).
+- Advisory propagation to `alternatives` entries (current direction:
+  per-query, no propagation).
+
 ## Decision — `meta()` and show CLI (finalized M8-4)
 
 `meta(pack) -> MetaInfo` is a pure function over the loaded pack:
