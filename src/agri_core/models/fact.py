@@ -220,9 +220,8 @@ class FactRow(BaseModel):
         elif self.provenance_kind == "derived":
             if self.dataset_id is None:
                 raise ValueError("provenance_kind=derived requires dataset_id")
-        elif self.provenance_kind == "curated":
-            if self.locator is None:
-                raise ValueError("provenance_kind=curated requires locator")
+        elif self.provenance_kind == "curated" and self.locator is None:
+            raise ValueError("provenance_kind=curated requires locator")
 
         if self.status in ("reviewed", "approved"):
             if self.reviewed_by is None:
