@@ -523,6 +523,7 @@ Architectural decisions are recorded as ADRs under
 - [ADR-009](docs/decisions/ADR-009-result-envelope.md) — Envelope on every `Outcome`: `subject` and deterministic `request_id`.
 - [ADR-010](docs/decisions/ADR-010-perf-budgets.md) — CLI performance budgets for `pack build`, `validate`, `coverage`, `diff`.
 - [ADR-011](docs/decisions/ADR-011-id-ledger.md) — Append-only taxon ID ledger (`ids.lock`).
+- [ADR-012](docs/decisions/ADR-012-climate-catalog.md) — Climate parameter catalog and contract (`lint-catalog`, generated document, shipped excluded list, extension-parameter guard).
 
 ADR-008 is intentionally reserved (plant-protection data model, after M15) and
 will be written as its own ADR when that work starts.

@@ -66,7 +66,7 @@ Without a catalog and a gate, a future contributor could add a UV-C dosing param
 | 8. Shipped excluded list in sync | `_excluded_generated.py` drift test | M10 |
 | 9. `pack_value` param_id matches dictionary key | `lint-catalog` | M10 |
 | 10. `param_id` never reused | `lint-catalog` (uniqueness) | M10 |
-| 11. Extension parameter matching excluded row rejected | `validate` rule + test | M10 |
+| 11. Extension parameter matching excluded row rejected | `validate` rule + test; **dormant until extension parameters enter the pack format** (see ADR-007 section Enforcement precedent) | M10 |
 | 12. `checked_on` > 365 days | `lint-catalog` warning | M10 |
 
 ## Revisit when
@@ -75,6 +75,7 @@ Without a catalog and a gate, a future contributor could add a UV-C dosing param
 - A new category of safety risk emerges that does not fit `low`/`high` (today the two-tier model is sufficient).
 - The excluded list grows large enough that a CSV is preferable to a Python module.
 - The catalog starts to be read by `agri-knowledge` (to validate a pack_value row before it is written), which would make it a shared contract rather than an engine-local one.
+- Extension parameters enter the pack format (a new `TABLES` entry and row model), which would activate `check_catalog_excluded_extension` in the default pipeline.
 
 ## References
 

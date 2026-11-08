@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterable, Mapping
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
+from agri_core.catalog.excluded import matches_excluded
 from agri_core.models.canonical import canonical_json
 from agri_core.models.dictionary import Dictionary
 from agri_core.models.fact import TrapezoidValue
@@ -476,6 +477,38 @@ def check_id_ledger_drift(
     return findings
 
 
+def check_catalog_excluded_extension(
+    ks: KnowledgeSet,
+    files: Mapping[str, bytes],
+    dictionary: Dictionary,
+) -> list[Finding]:
+    """ADR-012: extension parameters matching an excluded catalog row.
+
+    Dormant until extension parameters enter the pack format (see ADR-007
+    section Enforcement precedent). Today the pipeline only sees core
+    dictionary parameters; a caller passing ``dictionary=`` with extension
+    parameters exercises the rule.
+    """
+    findings: list[Finding] = []
+    for key in sorted(dictionary.parameters):
+        p = dictionary.parameters[key]
+        if p.kind != "extension":
+            continue
+        if not matches_excluded(key, prefix_match=True):
+            continue
+        findings.append(
+            Finding(
+                code="PACK_CATALOG_EXCLUDED_PARAMETER",
+                severity=FindingSeverity.ERROR,
+                message=(
+                    f"extension parameter {key!r} matches an excluded climate catalog row (ADR-012)"
+                ),
+                location=FindingLocation(parameter=key),
+            )
+        )
+    return findings
+
+
 RULES: tuple[RuleFn, ...] = (
     check_trapezoid_not_degenerate,
     check_superseded_self,
@@ -492,6 +525,7 @@ RULES: tuple[RuleFn, ...] = (
     check_hazard_code_out_of_scope,
     check_id_ledger_absent,
     check_id_ledger_drift,
+    check_catalog_excluded_extension,
 )
 """Registered rules. Explicit tuple, not auto-import.
 
