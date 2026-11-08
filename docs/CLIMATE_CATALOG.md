@@ -4,7 +4,7 @@
 
 See `climate_catalog_v1_rationale.md` for the rationale and `decisions/ADR-012-climate-catalog.md` for the decision record.
 
-Total rows: **41**.
+Total rows: **45**.
 
 ## Computed (21)
 
@@ -32,19 +32,23 @@ Total rows: **41**.
 | `compute_wind_run` | atmosphere | `kilometer/day` | planned | M11 | WMO 2018 | low |
 | `compute_wind_speed_from_uv` | atmosphere | `meter/second` | planned | M11 | WMO 2018 | low |
 
-## Input (10)
+## Input (14)
 
 | param_id | group | unit | status | milestone | method_ref | safety_tier |
 |---|---|---|---|---|---|---|
 | `input_air_temp_c` | atmosphere | `degree_Celsius` | planned | M11 | - | low |
+| `input_air_temp_max_c` | atmosphere | `degree_Celsius` | planned | M11 | - | low |
+| `input_air_temp_min_c` | atmosphere | `degree_Celsius` | planned | M11 | - | low |
 | `input_day_of_year` | atmosphere | `day` | planned | M11 | - | low |
 | `input_elevation_m` | atmosphere | `meter` | planned | M11 | - | low |
 | `input_latitude_deg` | atmosphere | `degree` | planned | M11 | - | low |
 | `input_leaf_wetness_hours` | atmosphere | `hour` | planned | M11 | - | low |
+| `input_par_w_m2` | radiation | `watt/meter**2` | planned | M11 | - | low |
 | `input_rh_pct` | atmosphere | `percent` | planned | M11 | - | low |
 | `input_solar_radiation_mj` | radiation | `megajoule/meter**2/day` | planned | M11 | - | low |
 | `input_u_component_ms` | atmosphere | `meter/second` | planned | M11 | - | low |
 | `input_v_component_ms` | atmosphere | `meter/second` | planned | M11 | - | low |
+| `input_wind_measurement_height_m` | atmosphere | `meter` | planned | M11 | - | low |
 | `input_wind_speed_ms` | atmosphere | `meter/second` | planned | M11 | - | low |
 
 ## Pack value (2)
