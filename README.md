@@ -66,7 +66,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 | 1 | Data contract | JSON Schemas for `outcome`, `source`, `taxon`, `name`, `fact`, `hazard`, `parameter`, `dataset`, `manifest`. Core dictionary (`parameters.core.yaml`) with physical ranges, `applies_to`, tier requirements, phases per archetype, safety-class taxonomy and an append-only lock. | M2–M4 | Done |
 | 2 | Pack lifecycle | `load` (hash-verified, eager `KnowledgeSet`) in M5; `scaffold`, `build` (CSV → SQLite + manifest, reproducible) in M6; full `validate`, `diff`, `coverage` in M7. | M5–M7 | Done |
 | 3 | Registry | `resolve_taxon(name, language?)` returns `ok`, `ambiguous` or `unknown`. `resolve_fact` applies the deterministic resolution policy. `meta()` reports engine version, pack version, `schema_version`, `resolution_policy_version` and pack hash. | M8 | Done |
-| 4 | Climate catalog and contract | One catalog of every climate parameter (`docs/design/climate_catalog_v1.csv`): kind (`computed`, `input`, `pack_value`), unit, method reference, owning repository, `commercial_use`, safety tier, status and milestone. A `lint-catalog` gate rejects rows whose source is not commercially usable, rows with a high safety tier that are not excluded, and computed rows without a method reference or a test. `docs/CLIMATE_CATALOG.md` is generated from the CSV. | M10 | Not started |
+| 4 | Climate catalog and contract | One catalog of every climate parameter (`docs/design/climate_catalog_v1.csv`): kind (`computed`, `input`, `pack_value`), unit, method reference, owning repository, `commercial_use`, safety tier, status and milestone. A `lint-catalog` gate rejects rows whose source is not commercially usable, rows with a high safety tier that are not excluded, and computed rows without a method reference or a test. A list of excluded parameters, generated from the catalog and shipped with the package, lets `validate` reject matching extension parameters in a pack. `docs/CLIMATE_CATALOG.md` is generated from the CSV. | M10 | Not started |
 | 5 | Atmosphere, radiation and ET0 | Vapor pressure deficit (VPD), dew point and wet-bulb temperature, daylength and photoperiod, solar and net radiation with the clearness index, photosynthetic photon flux density (PPFD) and daily light integral (DLI) with explicit conversion factors, wind speed and direction from U/V components, wind run, wind-speed height adjustment, and pressure and temperature estimates from elevation. Reference evapotranspiration (ET0): Penman–Monteith reference-crop method, with a Hargreaves–Samani fallback. Every estimated input is reported as an assumption. | M11 | Not started |
 | 6 | Thermal time and climate indices | Growing degree days (GDD) with documented methods, chilling (chill hours, Utah units, Dynamic-model portions) and photothermal units. One generic index engine (threshold, window, aggregation) driven by a documented registry: day counts, dry, wet, frost and heat spells, rolling sums and temperature extremes. Bioclimatic variables from monthly values, and 10-day or monthly aggregation. A gap in a series gives `insufficient_input`; nothing is filled silently. | M12 | Not started |
 | 7 | Thresholds and stages | Four-point trapezoid checks that return `optimal`, `suboptimal` or `critical`. Stage resolver from planting age and thermal time (GDD or photothermal units); perennials driven by dated events supplied by the caller. Observed dates (sowing, germination, flowering, maturity) enter as caller-supplied events. Threshold and stage values come only from the pack. | M13 | Not started |
@@ -104,6 +104,19 @@ Install in any Colab cell:
 
 No API key or GPU is needed. Pure Python, CPU only.
 
+### Data packs
+
+Data packs are released separately by [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge) under Semantic Versioning. A release carries `agri-knowledge-<version>.tar.gz` (a built pack that extracts to `agri-knowledge-<version>/`) and a `SHA256SUMS` file. Check the hash, extract the archive and pass the directory to `load_knowledge_set`. The first data release, `v0.1.0`, is planned after `agri-knowledge` milestone K5; until then the synthetic sample pack bundled with the package (used by `--pack sample`) is the only pack available.
+
+```bash
+VERSION=0.1.0   # planned; not released yet
+BASE=https://github.com/WoodinGlass/agri-knowledge/releases/download/v$VERSION
+curl -fLO $BASE/agri-knowledge-$VERSION.tar.gz
+curl -fLO $BASE/SHA256SUMS
+sha256sum --check --ignore-missing SHA256SUMS
+tar -xzf agri-knowledge-$VERSION.tar.gz
+```
+
 ### Python
 
 The snippet uses the signatures the contract tests exercise today. Calculation functions (`vpd`, `gdd`, `et0`, irrigation, fertilizer) ship in M11–M14.
@@ -115,7 +128,8 @@ from agri_core import registry
 from agri_core.pack import load_knowledge_set
 
 # Load a pack explicitly. No current-directory lookup, no environment variables.
-pack = load_knowledge_set(Path("/data/agri-knowledge/packs/2026.10.0"))
+# The directory is an extracted agri-knowledge release (planned: v0.1.0).
+pack = load_knowledge_set(Path("/data/agri-knowledge-0.1.0"))
 
 # Resolve a taxon by name. Returns TaxonOk, Ambiguous or Unknown.
 outcome = registry.resolve_taxon(pack, "tomato")
@@ -231,9 +245,9 @@ A pack is a directory with a manifest and CSV tables. `agri-core pack build` com
 
 ```toml
 name = "agri-knowledge"
-version = "2026.10.0"
+version = "0.1.0"
 schema_version = 1
-engine_min = "0.1.0"
+engine_min = "0.1.2"
 dictionary_min = "1.0.0"
 synthetic = false
 # Regenerate with `agri-core pack lock --pack PATH`. sha256 of the pack's
@@ -326,7 +340,9 @@ Adding a **core** parameter is a minor engine release. Adding an **extension** p
 
 ## Coverage
 
-Planned first release line in `agri-knowledge` (six profiles across five archetypes):
+**Data release plan.** The first data release, `agri-knowledge` `v0.1.0` (planned after its milestone K5), carries tomato and rice at tier T2 for Indonesia and one more country, a T0 taxonomic backbone with multilingual names for the priority list, and legal flags. After that, `agri-knowledge` adds one group per iteration (fruit, fodder, ornamentals, then rare plants), each starting with a source audit.
+
+**Design targets for the engine.** Six reference profiles across five archetypes are chosen to exercise every irrigation mode, the propagation planner and the suitability refusal path. They arrive in `agri-knowledge` as their groups come up; until then the tests use the synthetic sample pack.
 
 | Profile | Archetype | Notes |
 |---|---|---|
@@ -368,7 +384,7 @@ Every export carries the license and the attribution text of the sources behind 
 
 ## Data and provenance
 
-The engine enforces provenance; the data lives in [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge).
+The engine enforces provenance; the data lives in [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge), released under CC BY 4.0.
 
 - Every fact is an individual value (a number, a range or a rule) written in our own words and structure, with a citation.
 - Passages, tables and figures are not copied from sources, and third-party datasets are not bulk-imported. A dataset is imported only when its license is on the accepted list in the [Licensing policy](#licensing-policy) and the license gate passes.
@@ -384,7 +400,7 @@ The engine enforces provenance; the data lives in [`agri-knowledge`](https://git
 Everything this project ships can be used commercially.
 
 - **Rule.** A source is accepted only if its license lets anyone use, modify and redistribute the values commercially, with attribution at most.
-- **Accepted.** CC0 1.0 and other public-domain dedications; works that are in the public domain under the law that applies to them (the basis is recorded in `sources.csv`); CC BY 3.0 and 4.0; MIT, BSD and Apache-2.0 for values taken from software.
+- **Accepted.** CC0 1.0 and other public-domain dedications; works that are in the public domain under the law that applies to them (recorded in `sources.csv` with a citation that starts with `basis:`); CC BY 3.0 and 4.0; MIT, BSD and Apache-2.0 for values taken from software.
 - **Rejected.** Any NonCommercial, ShareAlike or NoDerivatives variant of a Creative Commons license; ODbL and GPL-family licenses; "free for research or non-commercial use" terms; "all rights reserved" material without a written permission on file; sources with no stated license.
 - **Terms of use count.** Website, database and API terms bind users even when individual facts are not protected by copyright. A source whose terms restrict commercial use is rejected, even if the same value could be found elsewhere. At the time of writing this includes the IUCN Red List and the Species+/CITES Checklist database, whose terms require written permission for commercial use, the WorldClim climate grids (non-commercial use; redistribution and commercial use need permission) and the HadEX2 climate-extremes dataset (conditions on commercial use). Terms change, so a source's license is re-read and its check date recorded.
 - **`commercial_use`** records a maintainer's reading of a source's license: `yes`, `no` or `unclear`. A pack can be released only when every source is `yes`. `agri-core validate --strict` rejects `no` and `unclear`, and `unclear` counts as `no` until a maintainer resolves it. It is a record of a review, not legal advice or a guarantee.
@@ -398,8 +414,8 @@ The catalog (`docs/design/climate_catalog_v1.csv`, with its rationale in `docs/d
 - **Kinds.** `computed`: the engine implements the method. `input`: the caller supplies the value and the engine checks unit and range. `pack_value`: a crop- or region-specific number (a base temperature, a threshold, a stage length) that lives in an `agri-knowledge` pack and never in code.
 - **Statuses.** `planned`, `implemented`, `backlog` (considered, not scheduled) and `excluded` (will not be added; the reason is recorded).
 - **Columns.** `param_id`, `group`, `kind`, `unit`, `method_ref`, `owner_repo`, `commercial_use`, `safety_tier` (`low` or `high`), `status`, `milestone`, `test_id`, `checked_on` and `reason`.
-- **Gate.** `agri-core lint-catalog` fails when a `planned` or `implemented` row has a `commercial_use` other than `yes`, when a row with a `high` safety tier is not `excluded`, or when a `computed` row has no `method_ref` or no `test_id`. `checked_on` records when a license was last read, because terms change.
-- **Link to `agri-knowledge`.** A `pack_value` row names the dictionary key that carries its value. Adding that key is a dictionary change here; supplying values is a data change there. Without a pack value the answer is `unknown` or `insufficient_input`; the engine never falls back to a built-in number.
+- **Gate.** `agri-core lint-catalog` fails when a `planned` or `implemented` row has a `commercial_use` other than `yes`, when a row with a `high` safety tier is not `excluded`, or when a `computed` row has no `method_ref` or no `test_id`. `checked_on` records when a license was last read, because terms change. `agri-core validate` also rejects an extension parameter in a pack that matches an `excluded` row, in the way the plant-protection guard of [ADR-007](docs/decisions/ADR-007-plant-protection-scope.md) rejects chemical-control tokens.
+- **Link to `agri-knowledge`.** A `pack_value` row names the dictionary key that carries its value. Adding that key is a dictionary change here; supplying values is a data change there. A new pack-supplied parameter starts with `tier_required: false`, so existing tiers do not drop; making it required later changes derived tiers and needs a coordinated release of both repositories. Without a pack value the answer is `unknown` or `insufficient_input`; the engine never falls back to a built-in number.
 - **Plant-protection boundary.** Leaf wetness and similar microclimate variables are inputs only. The engine does not turn them into disease or pest risk (see [ADR-007](docs/decisions/ADR-007-plant-protection-scope.md)).
 - **Excluded by design.** Ultraviolet dosing and UV-C use, lamp and light-spectrum recipes, laboratory plant-response measurements, and anything with a high safety or legal risk.
 
@@ -480,7 +496,7 @@ does not match.
 - Every pack carries a `schema_version` and an `engine_min`. The engine supports two consecutive `schema_version` values and ships `agri-core pack migrate` to move a pack forward. A pack that declares a `schema_version` the engine does not support is rejected; a pack that requires a newer engine than the one running is rejected.
 - Every fact has a stable `fact_id`. A superseded fact is marked with `superseded_by`; a critical correction will be published as an advisory in the pack (planned; the loader currently rejects non-empty `advisories.csv`). See ADR-004 G3 for the advisory contract that fires when loading ships.
 - Every release pins the `agri-knowledge` version it was tested against. A canary CI job against `agri-knowledge` `main`, to surface incompatibilities early, is **planned for v0.2.0** (not yet implemented).
-- **Order of changes across the two repositories.** A change that needs a new core parameter or a new method lands in this order: the catalog row and the dictionary change here (an engine minor release), then the data in `agri-knowledge`, validated against that engine release, then a new pack that declares the `engine_min` and `dictionary_min` it needs.
+- **Order of changes across the two repositories.** A change that needs a new core parameter or a new method lands in this order: the catalog row and the dictionary change here (an engine minor release), then the data in `agri-knowledge`, validated against that engine release, then a new pack release (Semantic Versioning; MAJOR only when `schema_version` or the pack format changes) that declares the `engine_min` and `dictionary_min` it needs. The `agri-knowledge` CI runs the same `agri-core validate --strict` that this repository ships.
 - `dictionary/dictionary.lock` records `<version> <contract_hash>` per dictionary release; the SemVer rule is that adding a key is `MINOR`, removing / renaming / changing shape, unit, phase_set, enum values or narrowing a dimension is `MAJOR`, and description / rationale changes are `PATCH`. `classify_change` enforces this and is exercised by the test suite.
 - Releases are git tags and GitHub Releases (wheel, sdist, sample pack, `SHA256SUMS`, CycloneDX SBOM, and — when the pinned `agri-knowledge` version has shipped — the built packs of `agri-knowledge`). v0.1.x is not on PyPI; v0.2.0 and later are published to PyPI via `.github/workflows/publish.yml` (Trusted Publishing).
 
@@ -523,7 +539,7 @@ will be written as its own ADR when that work starts.
 | **M7** Validate, diff, coverage, license gate | Done | Trapezoid order, scope validity, unit resolution, duplicate detection, tier derivation (T0–T3), `diff` report, `coverage`, license gate. | Sample pack passes validate with 0 errors; `diff` matches fixtures; coverage assigns tiers; license gate rejects NC + `commercial_use=yes`. |
 | **M8** `resolve_taxon` and `resolve_fact` | Done | Deterministic resolution per the fixed policy (ADR-004); `meta()`; `show` CLI with three modes (`--name`, `--taxon`, `--fact`). **M8 review follow-up (G1–G14)**: semantic locks in ADR-004 (superseded, advisories, specificity, status policy, unknown precedence, no-fuzzy, filter counts, input length guard), `RESOLUTION_POLICY_VERSION` 1.0.0 → 1.4.0, `Unknown.filter_counts` + `Unknown.warnings` + refined refusal codes, `FactResolved.min_status_applied`, `MetaInfo.engine_min`, `resolve_taxon` length guard (200 chars), Hypothesis fuzz, cross-process determinism, multi-scale perf test (1k/10k/100k). | `resolve_taxon` p95 ≤ 5 ms on a 10k-taxa pack (measured ≈ 12 µs); **1483 tests collected** across markers (619 unit, 842 contract, 5 property, 2 scenario, 15 perf); resolution contract tests pass; `show` CLI usable. |
 | **M9** Offline, performance, docs, tag `v0.1.0` | Done | Socket-blocking pytest plugin (`pytest-socket`, `--disable-socket`, `offline-wheel` CI job under `unshare -n`); performance budget tests for pack load and peak memory (batch suitability deferred to M15); the `docs/` skeleton (`DICTIONARY` generated, `RESOLUTION_POLICY`, `SAFETY`, `ADDING_A_TAXON` executed by test); Windows smoke job; release workflow; tag `v0.1.0`. | Every test passes with network blocked; performance budget met; Windows `windows-smoke` green; `release.yml` dry-run green; tag `v0.1.0`. |
-| **M10** Climate catalog and contract | Not started | The climate parameter catalog in `docs/design/climate_catalog_v1.csv` with its rationale; `docs/CLIMATE_CATALOG.md` generated from it; `agri-core lint-catalog` (license, safety, method-reference and test-reference checks); a stable `param_id` per parameter, mapped to a dictionary key for every pack-supplied value. | `lint-catalog` passes on the catalog; the generated document is current (a drift test fails when it is stale); contract tests pass; every `backlog` and `excluded` row records its reason. |
+| **M10** Climate catalog and contract | Not started | The climate parameter catalog in `docs/design/climate_catalog_v1.csv` with its rationale; `docs/CLIMATE_CATALOG.md` generated from it; `agri-core lint-catalog` (license, safety, method-reference and test-reference checks); a stable `param_id` per parameter, mapped to a dictionary key for every pack-supplied value; a generated list of excluded parameters shipped with the package and used by `validate` to reject matching extension parameters. | `lint-catalog` passes on the catalog; the generated document and the shipped excluded list are current (a drift test fails when either is stale); `validate` rejects an extension parameter that matches an excluded row; contract tests pass; every `backlog` and `excluded` row records its reason. |
 | **M11** Atmosphere, radiation and ET0 | Not started | VPD, dew point, wet-bulb temperature, daylength and photoperiod, solar and net radiation, PAR, PPFD and DLI, wind conversions and height adjustment, temperature and pressure from elevation, ET0 (Penman–Monteith with a Hargreaves–Samani fallback). Methods documented with primary-literature references. | Golden tests (independently derived vectors) pass; every estimated input is reported as an assumption; each `implemented` catalog row has a method reference and a test. |
 | **M12** Thermal time and climate indices | Not started | GDD with documented methods, chilling, photothermal units, the generic index engine with its documented registry, bioclimatic variables from monthly values, 10-day and monthly aggregation. | Golden tests pass; a gap in a series gives `insufficient_input`; every registry entry has a reference and a test. |
 | **M13** Thresholds and stages | Not started | Four-point trapezoid threshold checks and the stage resolver (planting age, GDD or photothermal units). Perennials are driven by caller-supplied events. | Phases resolve per archetype; perennials use caller-supplied events; threshold and stage values are read from the pack only. |
@@ -648,7 +664,7 @@ agri-agronomy-core/
 │                            #   gen_climate_catalog_doc.py (M10)
 ├─ src/agri_core/
 │  ├─ _samples/              # synthetic Apache-2.0 sample pack
-│  ├─ catalog/               # climate catalog loader and lint-catalog gate (M10)
+│  ├─ catalog/               # climate catalog loader, lint-catalog gate, excluded-parameter list (M10)
 │  ├─ climate/               # atmosphere, radiation, ET0 (M11); thermal time and indices (M12);
 │  │                         #   drought and season (M18)
 │  ├─ export/                # bundle, tool schemas, edge thresholds, review sheet (M16)
@@ -697,10 +713,10 @@ agri-agronomy-core/
 |---|---|---|
 | Code, tests, schemas, dictionary and documentation | Apache License 2.0 | `LICENSE`, `NOTICE` |
 | Sample pack in `src/agri_core/_samples/sample_pack/` (synthetic data, no third-party facts) | Apache License 2.0 | `src/agri_core/_samples/sample_pack/` |
-| Real data packs and the facts in them | Declared by the `agri-knowledge` repository; every source must meet the [Licensing policy](#licensing-policy) | `agri-knowledge` and `<pack>/sources.csv` |
+| Real data packs and the facts in them | CC BY 4.0, as declared by the `agri-knowledge` repository; every source must meet the [Licensing policy](#licensing-policy) | `agri-knowledge` `LICENSE-DATA`, `ATTRIBUTION.md` and `<pack>/sources.csv` |
 
 - **No third-party data in this repository.** The sample pack is synthetic. Real facts, including their licenses, live in `agri-knowledge` and each pack carries its own `sources.csv`.
-- **Redistribution.** Redistributing the code, the documentation or the sample pack follows section 4 of the Apache License 2.0: keep the license and the notices, and mark the files you changed. Real packs are governed by the license stated in `agri-knowledge` and by the licenses of their sources, which this project does not change.
+- **Redistribution.** Redistributing the code, the documentation or the sample pack follows section 4 of the Apache License 2.0: keep the license and the notices, and mark the files you changed. Real packs are released by `agri-knowledge` under CC BY 4.0, with source credits in `ATTRIBUTION.md`, and remain subject to the licenses of their sources, which this project does not change.
 - **Notices.** `NOTICE` lists attributions for third-party material used in tests or documentation, if any.
 - **No warranty.** The software and data are provided "as is", without warranties of any kind. To the maximum extent permitted by law, the authors and contributors are not liable for any loss or damage, including crop loss, arising from their use. The license text contains the binding terms.
 - **No affiliation or endorsement.** Names of organizations, publications and datasets are used only to identify sources. This project is not affiliated with, endorsed by or sponsored by them. The license does not grant rights to any trademark.
