@@ -266,3 +266,30 @@ def test_compute_exit_code_warnings_and_errors_errors_win() -> None:
 
     assert _compute_exit_code(1, 5, strict=False) == EXIT_ERROR
     assert _compute_exit_code(1, 5, strict=True) == EXIT_ERROR
+
+
+def test_lint_catalog_shipped_exits_zero() -> None:
+    """The shipped catalog passes lint-catalog (warnings allowed)."""
+    runner = CliRunner()
+    catalog = Path(__file__).resolve().parents[2] / "docs" / "design" / "climate_catalog_v1.csv"
+    result = runner.invoke(app, ["lint-catalog", "--catalog", str(catalog)])
+    assert result.exit_code == 0, result.stdout + (result.stderr or "")
+    assert "OK" in result.stdout
+
+
+def test_lint_catalog_error_exits_nonzero(tmp_path: Path) -> None:
+    """A non-excluded row with commercial_use=no is an error."""
+    runner = CliRunner()
+    catalog = tmp_path / "catalog.csv"
+    header = (
+        "param_id,group,kind,unit,method_ref,owner_repo,commercial_use,"
+        "safety_tier,status,milestone,test_id,checked_on,reason"
+    )
+    bad_row = (
+        "bad_row,atmosphere,computed,kilopascal,Tetens 1930,core,no,"
+        "low,planned,M11,TBD,2026-11-09,test"
+    )
+    catalog.write_text(f"{header}\n{bad_row}\n", encoding="utf-8")
+    result = runner.invoke(app, ["lint-catalog", "--catalog", str(catalog)])
+    assert result.exit_code == 1
+    assert "CATALOG_COMMERCIAL_USE" in result.stdout

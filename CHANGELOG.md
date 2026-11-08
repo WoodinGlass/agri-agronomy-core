@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Climate parameter catalog (M10).** `docs/design/climate_catalog_v1.csv`
+  lists every climate parameter the engine computes (`computed`), expects
+  as input (`input`), or reads from a pack (`pack_value`), plus a set of
+  `excluded` rows for parameters that are out of scope for safety or
+  legal reasons. `docs/CLIMATE_CATALOG.md` is generated from it.
+  `agri-core lint-catalog` enforces the safety, license, status, and unit
+  rules; the shipped excluded list (`_excluded_generated.py`) is used by
+  `validate` to reject extension parameters that match an excluded row
+  (`PACK_CATALOG_EXCLUDED_PARAMETER`, dormant until extension parameters
+  enter the pack format). A three-way drift test keeps the CSV, the
+  generated document, and the shipped list in sync. See ADR-012.
 - `MetaInfo.engine_min` exposes the pack's declared minimum engine
   version (`pack.manifest.engine_min`). `RESOLUTION_POLICY_VERSION`
   moves to `1.4.0` (MINOR — additive; no behavior change). ADR-004

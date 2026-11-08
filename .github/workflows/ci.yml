@@ -53,6 +53,8 @@ jobs:
           echo "$out" | grep -E '^pack: sample [0-9]+\.[0-9]+\.[0-9]+ \(sample\)$'
       - name: agri-core lint-sources
         run: agri-core lint-sources --pack sample
+      - name: agri-core lint-catalog
+        run: agri-core lint-catalog --catalog docs/design/climate_catalog_v1.csv
       - name: Pack lock sample is up to date
         run: |
           agri-core pack lock --pack src/agri_core/_samples/sample_pack

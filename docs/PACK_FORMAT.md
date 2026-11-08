@@ -434,6 +434,7 @@ all is accepted.
 | `PACK_ROW_TOO_LARGE` | a CSV row exceeds 64 KB after UTF-8 encoding |
 | `PACK_ID_LEDGER_ABSENT` | pack has no `ids.lock` (ADR-011) |
 | `PACK_ID_LEDGER_DRIFT` | taxon ID in `taxa.csv` but not in `ids.lock` (ADR-011) |
+| `PACK_CATALOG_EXCLUDED_PARAMETER` | extension parameter matches an excluded climate catalog row (ADR-012) |
 
 ## Size limit
 

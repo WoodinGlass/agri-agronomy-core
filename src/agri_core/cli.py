@@ -181,6 +181,53 @@ def lint_sources(
         raise typer.Exit(EXIT_ERROR)
 
 
+@app.command(name="lint-catalog")
+def lint_catalog_cmd(
+    catalog: Annotated[
+        Path,
+        typer.Option(
+            "--catalog",
+            help="Path to climate_catalog_v1.csv.",
+            exists=True,
+            dir_okay=False,
+        ),
+    ] = Path("docs/design/climate_catalog_v1.csv"),
+) -> None:
+    """Lint the climate parameter catalog (M10).
+
+    Runs the safety, license, implementation and unit checks. Prints
+    findings and exits non-zero on any error. Warnings do not fail.
+    """
+    from agri_core.catalog import CatalogLoadError, lint_catalog, load_catalog
+    from agri_core.models.finding import FindingSeverity
+    from agri_core.pack.loader import _default_dictionary
+
+    try:
+        rows = load_catalog(catalog)
+    except CatalogLoadError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=EXIT_ERROR) from exc
+
+    dictionary_keys = set(_default_dictionary().parameters.keys())
+    findings = lint_catalog(rows, dictionary_keys=dictionary_keys)
+    errors = [f for f in findings if f.severity == FindingSeverity.ERROR]
+    warnings = [f for f in findings if f.severity == FindingSeverity.WARNING]
+
+    for f in findings:
+        prefix = "ERROR" if f.severity == FindingSeverity.ERROR else "WARN"
+        typer.echo(f"{prefix}: {f.code} — {f.message}")
+
+    if errors:
+        typer.echo(
+            f"\n{len(rows)} rows, {len(errors)} error(s), {len(warnings)} warning(s)",
+            err=True,
+        )
+        raise typer.Exit(code=EXIT_ERROR)
+
+    typer.echo(f"OK: {len(rows)} rows, {len(warnings)} warning(s)")
+    raise typer.Exit(code=EXIT_OK)
+
+
 @app.command(name="validate")
 def validate(
     pack: Annotated[

@@ -8,3 +8,5 @@ dictionary/  @WoodinGlass
 schema/  @WoodinGlass
 safety/  @WoodinGlass
 release.yml  @WoodinGlass
+docs/design/  @WoodinGlass
+src/agri_core/catalog/  @WoodinGlass
