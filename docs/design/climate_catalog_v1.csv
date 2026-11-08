@@ -23,11 +23,20 @@ compute_wet_bulb,atmosphere,computed,degree_Celsius,Stull 2011,core,yes,low,plan
 compute_daylength,radiation,computed,hour,Cooper 1969; Spencer 1971,core,yes,low,planned,M11,TBD,2026-11-09,Photoperiod from latitude and day of year.
 compute_solar_radiation,radiation,computed,megajoule/meter**2/day,Hargreaves & Samani 1985,core,yes,low,planned,M11,TBD,2026-11-09,Estimated solar radiation when not measured; reported as assumption.
 compute_net_radiation,radiation,computed,megajoule/meter**2/day,Allen 1996,core,yes,low,planned,M11,TBD,2026-11-09,"Net radiation from solar, albedo and longwave balance."
-compute_ppfd,radiation,computed,micromole/meter**2/second,Sager & McAvoy 2012,core,yes,low,planned,M11,TBD,2026-11-09,Photosynthetic photon flux density from PAR with explicit conversion factor.
-compute_dli,radiation,computed,mole/meter**2/day,Faust 2002,core,yes,low,planned,M11,TBD,2026-11-09,Daily light integral from PPFD over the photoperiod.
-compute_wind_run,atmosphere,computed,kilometer/day,,core,yes,low,planned,M11,TBD,2026-11-09,Wind run over a day; simple integration of wind speed.
+compute_ppfd,radiation,computed,micromole/meter**2/second,Thimijan & Heins 1983,core,yes,low,planned,M11,TBD,2026-11-09,Photosynthetic photon flux density from PAR with explicit conversion factor.
+compute_dli,radiation,computed,mole/meter**2/day,Faust & Logan 2002,core,yes,low,planned,M11,TBD,2026-11-09,Daily light integral from PPFD over the photoperiod.
+compute_wind_run,atmosphere,computed,kilometer/day,WMO 2018,core,yes,low,planned,M11,TBD,2026-11-09,Wind run over a day; simple integration of wind speed.
 compute_et0_penman_monteith,evaporation,computed,millimeter/day,Monteith 1965; Allen 1996,core,yes,low,planned,M11,TBD,2026-11-09,Reference evapotranspiration ET0; primary method.
 compute_et0_hargreaves_samani,evaporation,computed,millimeter/day,Hargreaves & Samani 1985,core,yes,low,planned,M11,TBD,2026-11-09,ET0 fallback when only temperature is available; reported as fallback.
 compute_gdd,thermal,computed,degree_day,McMaster & Wilhelm 1997,core,yes,low,planned,M12,TBD,2026-11-09,Growing degree days above base; method documented in register.
 compute_chill_hours,thermal,computed,hour,Weinberger 1950,core,yes,low,planned,M12,TBD,2026-11-09,Chilling hours below a crop-specific threshold.
 compute_chill_portions,thermal,computed,dimensionless,Fishman 1987,core,yes,low,planned,M12,TBD,2026-11-09,Dynamic-model chilling portions.
+input_u_component_ms,atmosphere,input,meter/second,,caller,yes,low,planned,M11,TBD,2026-11-09,Eastward wind component (u); caller supplies.
+input_v_component_ms,atmosphere,input,meter/second,,caller,yes,low,planned,M11,TBD,2026-11-09,Northward wind component (v); caller supplies.
+compute_wind_speed_from_uv,atmosphere,computed,meter/second,WMO 2018,core,yes,low,planned,M11,TBD,2026-11-09,"Wind speed from u,v: sqrt(u^2 + v^2)."
+compute_wind_direction_from_uv,atmosphere,computed,degree,WMO 2018,core,yes,low,planned,M11,TBD,2026-11-09,"Meteorological wind direction (FROM) from u,v: 270 - atan2(v,u) mod 360."
+compute_wind_height_adjust,atmosphere,computed,meter/second,Allen 1996,core,yes,low,planned,M11,TBD,2026-11-09,Log-profile wind adjustment to 2 m: u2 = uz * 4.87 / ln(67.8 z - 5.42).
+compute_clearness_index,radiation,computed,dimensionless,Allen 1996,core,yes,low,planned,M11,TBD,2026-11-09,"Clearness index kt = Rs / Ra, ratio of measured to extraterrestrial shortwave."
+compute_extraterrestrial_radiation,radiation,computed,megajoule/meter**2/day,Allen 1996,core,yes,low,planned,M11,TBD,2026-11-09,Extraterrestrial radiation Ra from latitude and day of year.
+compute_pressure_from_elevation,atmosphere,computed,kilopascal,Allen 1996,core,yes,low,planned,M11,TBD,2026-11-09,Atmospheric pressure from elevation: P = 101.3 * ((293 - 0.0065 z) / 293)^5.26.
+compute_temp_from_elevation,atmosphere,computed,degree_Celsius,Allen 1996,core,yes,low,planned,M11,TBD,2026-11-09,Temperature lapse-rate adjustment from elevation: -6.5 C per km.
