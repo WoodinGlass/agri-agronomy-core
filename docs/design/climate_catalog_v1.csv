@@ -1,0 +1,33 @@
+param_id,group,kind,unit,method_ref,owner_repo,commercial_use,safety_tier,status,milestone,test_id,checked_on,reason
+exclude_uv_c_dosing,radiation,excluded,,,core,yes,high,excluded,M10,,2026-11-09,UV-C germicidal use is out of scope for safety reasons (README 'Not a UV or lamp-design tool').
+exclude_uv_ab_dosing,radiation,excluded,,,core,yes,high,excluded,M10,,2026-11-09,UV-A/B dosing for plant or pathogen control is out of scope.
+exclude_lamp_spectrum_recipe,radiation,excluded,,,core,yes,high,excluded,M10,,2026-11-09,Lamp and light-spectrum recipes are out of scope (README 'Not a UV or lamp-design tool').
+exclude_pesticide_dose,plant_protection,excluded,,,core,yes,high,excluded,M10,,2026-11-09,ADR-007: pesticide doses return refer_to_label or refer_to_authority; never computed.
+exclude_herbicide_dose,plant_protection,excluded,,,core,yes,high,excluded,M10,,2026-11-09,ADR-007: herbicide doses return refer_to_label or refer_to_authority.
+exclude_fungicide_dose,plant_protection,excluded,,,core,yes,high,excluded,M10,,2026-11-09,ADR-007: fungicide doses return refer_to_label or refer_to_authority.
+exclude_insecticide_dose,plant_protection,excluded,,,core,yes,high,excluded,M10,,2026-11-09,ADR-007: insecticide doses return refer_to_label or refer_to_authority.
+exclude_postharvest_chemical,plant_protection,excluded,,,core,yes,high,excluded,M10,,2026-11-09,Post-harvest chemical treatment is out of scope (ADR-007).
+gdd_base,thermal,pack_value,degree_Celsius,,knowledge,yes,low,planned,M12,TBD,2026-11-09,Base temperature for GDD. Dictionary key; value supplied by agri-knowledge pack.
+gdd_upper,thermal,pack_value,degree_Celsius,,knowledge,yes,low,planned,M12,TBD,2026-11-09,Upper temperature cutoff for GDD. Dictionary key; pack supplies value.
+input_air_temp_c,atmosphere,input,degree_Celsius,,caller,yes,low,planned,M11,TBD,2026-11-09,"Dry-bulb air temperature; caller supplies, engine checks type and range."
+input_rh_pct,atmosphere,input,percent,,caller,yes,low,planned,M11,TBD,2026-11-09,Relative humidity 0-100; caller supplies.
+input_wind_speed_ms,atmosphere,input,meter/second,,caller,yes,low,planned,M11,TBD,2026-11-09,Wind speed at 2 m above canopy; caller supplies.
+input_solar_radiation_mj,radiation,input,megajoule/meter**2/day,,caller,yes,low,planned,M11,TBD,2026-11-09,Measured or estimated solar radiation; caller supplies.
+input_latitude_deg,atmosphere,input,degree,,caller,yes,low,planned,M11,TBD,2026-11-09,Site latitude; caller supplies.
+input_elevation_m,atmosphere,input,meter,,caller,yes,low,planned,M11,TBD,2026-11-09,Site elevation above sea level; caller supplies.
+input_day_of_year,atmosphere,input,day,,caller,yes,low,planned,M11,TBD,2026-11-09,Day of year (1-366); caller supplies.
+input_leaf_wetness_hours,atmosphere,input,hour,,caller,yes,low,planned,M11,TBD,2026-11-09,Leaf wetness duration; informational only (ADR-007: not a disease-risk model).
+compute_vpd,atmosphere,computed,kilopascal,Tetens 1930; Allen 1996,core,yes,low,planned,M11,TBD,2026-11-09,Vapour pressure deficit from air temperature and RH.
+compute_dew_point,atmosphere,computed,degree_Celsius,Tetens 1930,core,yes,low,planned,M11,TBD,2026-11-09,Dew-point temperature from air temperature and RH.
+compute_wet_bulb,atmosphere,computed,degree_Celsius,Stull 2011,core,yes,low,planned,M11,TBD,2026-11-09,Wet-bulb temperature from air temperature and RH.
+compute_daylength,radiation,computed,hour,Cooper 1969; Spencer 1971,core,yes,low,planned,M11,TBD,2026-11-09,Photoperiod from latitude and day of year.
+compute_solar_radiation,radiation,computed,megajoule/meter**2/day,Hargreaves & Samani 1985,core,yes,low,planned,M11,TBD,2026-11-09,Estimated solar radiation when not measured; reported as assumption.
+compute_net_radiation,radiation,computed,megajoule/meter**2/day,Allen 1996,core,yes,low,planned,M11,TBD,2026-11-09,"Net radiation from solar, albedo and longwave balance."
+compute_ppfd,radiation,computed,micromole/meter**2/second,Sager & McAvoy 2012,core,yes,low,planned,M11,TBD,2026-11-09,Photosynthetic photon flux density from PAR with explicit conversion factor.
+compute_dli,radiation,computed,mole/meter**2/day,Faust 2002,core,yes,low,planned,M11,TBD,2026-11-09,Daily light integral from PPFD over the photoperiod.
+compute_wind_run,atmosphere,computed,kilometer/day,,core,yes,low,planned,M11,TBD,2026-11-09,Wind run over a day; simple integration of wind speed.
+compute_et0_penman_monteith,evaporation,computed,millimeter/day,Monteith 1965; Allen 1996,core,yes,low,planned,M11,TBD,2026-11-09,Reference evapotranspiration ET0; primary method.
+compute_et0_hargreaves_samani,evaporation,computed,millimeter/day,Hargreaves & Samani 1985,core,yes,low,planned,M11,TBD,2026-11-09,ET0 fallback when only temperature is available; reported as fallback.
+compute_gdd,thermal,computed,degree_day,McMaster & Wilhelm 1997,core,yes,low,planned,M12,TBD,2026-11-09,Growing degree days above base; method documented in register.
+compute_chill_hours,thermal,computed,hour,Weinberger 1950,core,yes,low,planned,M12,TBD,2026-11-09,Chilling hours below a crop-specific threshold.
+compute_chill_portions,thermal,computed,dimensionless,Fishman 1987,core,yes,low,planned,M12,TBD,2026-11-09,Dynamic-model chilling portions.
