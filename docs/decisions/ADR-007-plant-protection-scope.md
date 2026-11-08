@@ -94,7 +94,7 @@ of pests.
 |---|---|---|
 | 1. In-scope entities (threat identity, host, conditions) | Positive review + closed vocab | ADR-008 |
 | 2. Deferred items | Reviewer gate | ADR-008 |
-| 3. Out-of-scope refusal (`refer_to_label` / `refer_to_authority`) | Calculation outcome (ADR-006); `safety/` module dispatches (M11) | M11+ |
+| 3. Out-of-scope refusal (`refer_to_label` / `refer_to_authority`) | Calculation outcome (ADR-006); `safety/` module dispatches (M14) | M14+ |
 | 4. Absence != safety (returns `unknown`) | Resolution policy (ADR-004) | Done |
 | 5a. Protection parameters never `tier_required` | `check_protection_out_of_scope` | Done (this ADR) |
 | 5b. Evidence grade A/B, status `reviewed`/`approved`, no `imported`/`draft` facts | Pack validator fact-level check | ADR-008, before first protection parameter |

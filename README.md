@@ -193,6 +193,8 @@ A successful `Result` has `status` plus these payload fields:
 | Field | Meaning |
 |---|---|
 | `status` | Always `ok`. |
+| `subject` | Envelope metadata (ADR-009): what the calculation is about. Optional in the model today; required for calculators from M11 onward. |
+| `request_id` | Deterministic request identifier (ADR-009): same subject and inputs give the same `request_id`. Optional in the model today; required for calculators from M11 onward. |
 | `value` | The computed value. Always finite: NaN and infinity are rejected because they are not valid JSON. |
 | `unit` | Explicit unit. The library never guesses units. |
 | `method` | How it was computed (for example which ET0 method). |

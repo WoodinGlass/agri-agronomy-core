@@ -527,7 +527,8 @@ def load_knowledge_set_from_files(
     adv_bytes = files.get("advisories.csv")
     if adv_bytes is not None and adv_bytes.strip():
         raise PackFeatureUnsupportedError(
-            "advisories.csv has non-whitespace content; unsupported until M8",
+            "advisories.csv has non-whitespace content; unsupported until "
+            "advisory loading ships (ADR-004 §G3)",
             file="advisories.csv",
         )
 
