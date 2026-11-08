@@ -31,7 +31,7 @@ _STALE_DAYS: int = 365
 
 
 @functools.lru_cache(maxsize=1)
-def _registry() -> pint.UnitRegistry[Any]:
+def _registry() -> Any:
     return pint.UnitRegistry()
 
 
