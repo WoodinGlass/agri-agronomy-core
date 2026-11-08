@@ -13,14 +13,14 @@ Every crop-specific value comes from a verified knowledge pack, never from a lan
   <img src="https://img.shields.io/github/last-commit/WoodinGlass/agri-agronomy-core" alt="Last commit">
 </p>
 
-> **0.1.2 (foundation release) + M8 review follow-up on `main` (unreleased).** The tag `v0.1.2` covers the data contract, the pack lifecycle, and deterministic fact resolution; `v0.1.1` fixed `agri-core pack lock` on a stale `content_hash`; `v0.1.2` makes the data license gate default-deny with an explicit allowlist and adds `NOTICE`, `ADR-005`, and related CI checks (see [CHANGELOG](CHANGELOG.md)). **Since `v0.1.2`, the M8 review follow-up series (G1–G14) tightened the resolution contract**: `RESOLUTION_POLICY_VERSION` 1.0.0 → 1.4.0, `Unknown.filter_counts` + `Unknown.warnings` + refined refusal codes (`below_min_status`, `scope_not_covered`, `input_too_long`), `MetaInfo.engine_min`, `resolve_taxon` input length guard (200 chars), Hypothesis fuzz, cross-process determinism, and a multi-scale perf test (1k/10k/100k). All recorded in the `[Unreleased]` section of [CHANGELOG](CHANGELOG.md). The calculation engine (VPD, GDD, ET0, irrigation, fertilizer, media, suitability, propagation) ships in v0.2+. Interfaces, the pack format and the JSON Schemas may still change in the 0.x line; see [Versioning and releases](#versioning-and-releases). This project provides a calculation engine and a data contract; it is not professional agronomic advice. Read [Safety and limitations](#safety-and-limitations) before relying on any output.
+> **0.1.2 (foundation release) + M8 review follow-up on `main` (unreleased).** The tag `v0.1.2` covers the data contract, the pack lifecycle, and deterministic fact resolution; `v0.1.1` fixed `agri-core pack lock` on a stale `content_hash`; `v0.1.2` makes the data license gate default-deny with an explicit allowlist and adds `NOTICE`, `ADR-005`, and related CI checks (see [CHANGELOG](CHANGELOG.md)). **Since `v0.1.2`, the M8 review follow-up series (G1–G14) tightened the resolution contract**: `RESOLUTION_POLICY_VERSION` 1.0.0 → 1.4.0, `Unknown.filter_counts` + `Unknown.warnings` + refined refusal codes (`below_min_status`, `scope_not_covered`, `input_too_long`), `MetaInfo.engine_min`, `resolve_taxon` input length guard (200 chars), Hypothesis fuzz, cross-process determinism, and a multi-scale perf test (1k/10k/100k). All recorded in the `[Unreleased]` section of [CHANGELOG](CHANGELOG.md). The calculation engine (atmosphere and radiation, ET0, thermal time and climate indices, thresholds and stages, irrigation, fertilizer, media, suitability, propagation) ships in v0.2+, followed by soil-water, drought and vegetation-index modules. Interfaces, the pack format and the JSON Schemas may still change in the 0.x line; see [Versioning and releases](#versioning-and-releases). This project provides a calculation engine and a data contract; it is not professional agronomic advice. Read [Safety and limitations](#safety-and-limitations) before relying on any output.
 
 ## What this is
 
 `agri-agronomy-core` is two things:
 
-1. **A data contract.** JSON Schemas, a parameter dictionary, a pack format (CSV tables, hashed at lock time and verified at load) and a deterministic fact-resolution policy. The contract lives here. The data lives in [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge).
-2. **A calculation engine.** Pure-Python functions that read a knowledge pack and compute climate indices, threshold checks, irrigation, fertilizer amounts, growing-media recipes, site suitability and propagation plans.
+1. **A data contract.** JSON Schemas, a parameter dictionary, a climate parameter catalog, a pack format (CSV tables, hashed at lock time and verified at load) and a deterministic fact-resolution policy. The contract lives here. The data lives in [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge).
+2. **A calculation engine.** Pure-Python functions that read a knowledge pack and compute climate quantities and indices, threshold checks, growth stages, irrigation, soil-water balance, fertilizer amounts, growing-media recipes, site suitability and propagation plans.
 
 The engine covers vegetables, fruit, staple carbohydrates, fodder (grown for feed, not rations), ornamental plants and cultivated fungi. Rare species are carried with a legal-status attribute taken from legal instruments, not from restricted databases (see [Protected species](#protected-species)). "Agronomy" is used loosely to mean cultivation.
 
@@ -34,10 +34,11 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 - **Not a substitute for an agronomist, extension service, product label or local law.** It supports decisions; it does not make them.
 - **Not a pesticide tool.** It never calculates pesticide, herbicide or fungicide doses. Such requests return `refer_to_label` or `refer_to_authority`. The scope of plant-protection data is defined in [ADR-007](docs/decisions/ADR-007-plant-protection-scope.md); a two-tier guard rejects chemical-control tokens in every parameter (`PACK_PROTECTION_OUT_OF_SCOPE`).
 - **Not a controller.** It does not operate pumps, valves, dosing units or any other actuator. It returns values and plans for systems that have their own safeguards.
+- **Not a UV or lamp-design tool.** Ultraviolet dosing (UV-A, UV-B, UV-C), germicidal use and lamp or light-spectrum recipes are out of scope for safety reasons. Photosynthetically active radiation (PAR, PPFD) and the daily light integral (DLI) are supported as plant-light quantities.
 - **Not a server, database or user interface.** There is no HTTP API or web editor, only a Python package and a command-line tool.
-- **Not a sensor pipeline.** It does not read, clean or store sensor streams. Callers pass values in, with explicit units.
+- **Not a sensor pipeline or a data provider.** It does not read, clean or store sensor streams, and it does not download or redistribute weather, climate-grid or satellite data. Callers pass values in, with explicit units.
 - **Not machine learning.** It contains no models and performs no training or inference.
-- **Not a crop recommender, diagnostic tool or yield forecaster.** It evaluates the crop you name. It does not rank crops, identify pests or diseases, or predict yield.
+- **Not a crop recommender, diagnostic tool, growth simulator or yield forecaster.** It evaluates the crop you name. It does not rank crops, identify pests or diseases, simulate biomass or growth rates, or predict yield.
 - **Not a compliance tool.** It does not encode national or regional rules on fertilizers, water use or plant protection.
 - **Not an encyclopedia.** Coverage is exactly what the pack contains, and `unknown` is a valid answer.
 
@@ -56,6 +57,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
    - *Dictionary* (core parameters used by calculators): an engine **minor** release. Extension parameters that are informational only are declared inside the pack and validated by the engine, with no engine release.
    - *Code* (a new calculation mode or archetype registered in the code): an engine release.
 10. **Commercially usable throughout.** The code is Apache-2.0, and every source behind a shipped pack must allow commercial use. See [Licensing policy](#licensing-policy).
+11. **Catalog first.** A climate parameter is added to the [climate parameter catalog](#climate-parameter-catalog), with its method reference, license status and safety tier, before any code is written for it. The gate runs on the catalog, so a parameter that fails the license or safety rules never reaches the engine.
 
 ## Features
 
@@ -64,13 +66,17 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 | 1 | Data contract | JSON Schemas for `outcome`, `source`, `taxon`, `name`, `fact`, `hazard`, `parameter`, `dataset`, `manifest`. Core dictionary (`parameters.core.yaml`) with physical ranges, `applies_to`, tier requirements, phases per archetype, safety-class taxonomy and an append-only lock. | M2–M4 | Done |
 | 2 | Pack lifecycle | `load` (hash-verified, eager `KnowledgeSet`) in M5; `scaffold`, `build` (CSV → SQLite + manifest, reproducible) in M6; full `validate`, `diff`, `coverage` in M7. | M5–M7 | Done |
 | 3 | Registry | `resolve_taxon(name, language?)` returns `ok`, `ambiguous` or `unknown`. `resolve_fact` applies the deterministic resolution policy. `meta()` reports engine version, pack version, `schema_version`, `resolution_policy_version` and pack hash. | M8 | Done |
-| 4 | Atmosphere, radiation and ET0 | Vapor pressure deficit (VPD) and dew point, daylength and photoperiod, solar and net radiation, photosynthetic photon flux density (PPFD) and daily light integral (DLI) with explicit conversion factors, wind-speed height adjustment, and pressure and temperature estimates from elevation. Reference evapotranspiration (ET0): Penman–Monteith reference-crop method, with a Hargreaves–Samani fallback. Every estimated input is reported as an assumption. | M10 | Not started |
-| 5 | Thermal time and climate indices | Growing degree days (GDD) with documented methods, chilling (chill hours, Utah units, Dynamic-model portions) and photothermal units. Time-series indices (day counts, spells, rolling sums) from a documented registry, bioclimatic variables from monthly values, and 10-day or monthly aggregation. A gap in a series gives `insufficient_input`; nothing is filled silently. | M10 | Not started |
-| 6 | Thresholds and stages | Four-point trapezoid checks that return `optimal`, `suboptimal` or `critical`. Stage resolver from planting age and thermal time (GDD or photothermal units); perennials driven by dated events supplied by the caller. | M10 | Not started |
-| 7 | Irrigation, fertilizer, media and water | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. Every mode declares the parameters it requires; missing → `unknown` or `insufficient_input`. | M11 | Not started |
-| 8 | Suitability and propagation | Single and batch site suitability with `suitable`/`marginal`/`unsuitable` and per-factor reasons; dated propagation plans. | M12 | Not started |
-| 9 | Exports | `tool_schemas.json` (function-calling schemas with `taxon_id`, `country`, `system`), `edge_thresholds.json` per site, `review_sheet.csv` per tier. | M13 | Not started |
-| 10 | Command line | `lint-sources` and a basic `validate` ship in M0; `pack lock` in M5; `pack scaffold` and `pack build` in M6; full `validate --json --strict`, `diff` and `coverage` in M7; `show` in M8; `calc` in M11; `export` in M13. | M0, M5–M13 | In progress |
+| 4 | Climate catalog and contract | One catalog of every climate parameter (`docs/design/climate_catalog_v1.csv`): kind (`computed`, `input`, `pack_value`), unit, method reference, owning repository, `commercial_use`, safety tier, status and milestone. A `lint-catalog` gate rejects rows whose source is not commercially usable, rows with a high safety tier that are not excluded, and computed rows without a method reference or a test. `docs/CLIMATE_CATALOG.md` is generated from the CSV. | M10 | Not started |
+| 5 | Atmosphere, radiation and ET0 | Vapor pressure deficit (VPD), dew point and wet-bulb temperature, daylength and photoperiod, solar and net radiation with the clearness index, photosynthetic photon flux density (PPFD) and daily light integral (DLI) with explicit conversion factors, wind speed and direction from U/V components, wind run, wind-speed height adjustment, and pressure and temperature estimates from elevation. Reference evapotranspiration (ET0): Penman–Monteith reference-crop method, with a Hargreaves–Samani fallback. Every estimated input is reported as an assumption. | M11 | Not started |
+| 6 | Thermal time and climate indices | Growing degree days (GDD) with documented methods, chilling (chill hours, Utah units, Dynamic-model portions) and photothermal units. One generic index engine (threshold, window, aggregation) driven by a documented registry: day counts, dry, wet, frost and heat spells, rolling sums and temperature extremes. Bioclimatic variables from monthly values, and 10-day or monthly aggregation. A gap in a series gives `insufficient_input`; nothing is filled silently. | M12 | Not started |
+| 7 | Thresholds and stages | Four-point trapezoid checks that return `optimal`, `suboptimal` or `critical`. Stage resolver from planting age and thermal time (GDD or photothermal units); perennials driven by dated events supplied by the caller. Observed dates (sowing, germination, flowering, maturity) enter as caller-supplied events. Threshold and stage values come only from the pack. | M13 | Not started |
+| 8 | Irrigation, fertilizer, media and water | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), crop evapotranspiration (ETc) from a stage-wise Kc curve, nutrient-to-product conversion with safety caps, growing-media recipes, and water-quality limits and indices (SAR, RSC). Every mode declares the parameters it requires; missing → `unknown` or `insufficient_input`. Kc values come only from the pack. | M14 | Not started |
+| 9 | Suitability and propagation | Single and batch site suitability with `suitable`/`marginal`/`unsuitable` and per-factor reasons; dated propagation plans. | M15 | Not started |
+| 10 | Exports | `tool_schemas.json` (function-calling schemas with `taxon_id`, `country`, `system`), `edge_thresholds.json` per site, `review_sheet.csv` per tier. | M16 | Not started |
+| 11 | Soil water balance | Pedotransfer estimates of field capacity, wilting point and available water from texture and organic matter; a daily soil-water balance with depletion and a water-stress coefficient (Ks) that feeds the `field_etc` irrigation mode. Depletion fractions and other crop values come only from the pack. | M17 | Not started |
+| 12 | Drought and season indices | Standardized Precipitation Index (SPI) with a minimum-record check, an aridity index (precipitation over ET0), and rainy-season onset and cessation from a registry of documented, configurable definitions. | M18 | Not started |
+| 13 | Vegetation-index band math | Band-ratio indices computed from caller-supplied reflectance values: NDVI, EVI, SAVI, GNDVI, NDRE, NGRDI and PSRI, plus two water indices kept apart by name (`ndwi_mcfeeters` from green and NIR, `ndmi` from NIR and SWIR). No raster I/O and no imagery in this repository. LAI, FAPAR and canopy cover are inputs, not computed. | M19 | Not started |
+| 14 | Command line | `lint-sources` and a basic `validate` ship in M0; `pack lock` in M5; `pack scaffold` and `pack build` in M6; full `validate --json --strict`, `diff` and `coverage` in M7; `show` in M8; `lint-catalog` in M10; `calc` in M14; `export` in M16. | M0, M5–M16 | In progress |
 
 ## Quick start
 
@@ -100,7 +106,7 @@ No API key or GPU is needed. Pure Python, CPU only.
 
 ### Python
 
-The snippet uses the signatures the contract tests exercise today. Calculation functions (`vpd`, `gdd`, `et0`, irrigation, fertilizer) ship in M10–M13.
+The snippet uses the signatures the contract tests exercise today. Calculation functions (`vpd`, `gdd`, `et0`, irrigation, fertilizer) ship in M11–M14.
 
 ```python
 from pathlib import Path
@@ -339,7 +345,7 @@ Planned next: maize, chili pepper, broccoli, potato, lettuce, grape, apple, wate
 
 **International by design.** Profiles are not tied to a country. Each value declares its scope (elevation, variety, growing system) and its source, so the same crop can carry different values for different conditions. Crop names carry aliases in several languages, and new aliases are welcome. Region-specific material, such as soil-test interpretation tables, is tagged with the region and method it applies to.
 
-## Exports (M13)
+## Exports (M16)
 
 - `bundle.json`: all profiles, the sources table (including license, `commercial_use` and attribution text) and metadata in one versioned file.
 - `tool_schemas.json`: function-calling schemas for LLM agents, generated from the same Pydantic models as the library so tools and code cannot drift apart.
@@ -355,7 +361,7 @@ Every export carries the license and the attribution text of the sources behind 
 - **Pesticides are out of scope.** Follow the product label and local regulations.
 - **Caps are a backstop.** Per-application fertilizer caps are conservative upper bounds. They do not replace regional nutrient-management rules. Check the `capped` field.
 - **Status matters.** Use `approved` facts for decisions affecting real crops. Use `reviewed` facts only in development and pilots with human oversight. Never use `draft` or `imported` facts for decisions.
-- **Inputs decide quality.** The library checks types and units, but it cannot detect a faulty sensor or a wrong measurement.
+- **Inputs decide quality.** The library checks types and units, but it cannot detect a faulty sensor, a wrong measurement or a biased weather series. Estimated inputs are reported as assumptions, and gaps in a series are refused rather than filled.
 - **No automatic actuation.** Do not connect outputs directly to pumps, valves or dosing units without independent interlocks (limits, timeouts, manual override) and human approval.
 - **`unknown`, `not_applicable`, `ambiguous` and `unsuitable` are real answers.** Do not work around them.
 - **No warranty.** See [License](#license).
@@ -368,7 +374,8 @@ The engine enforces provenance; the data lives in [`agri-knowledge`](https://git
 - Passages, tables and figures are not copied from sources, and third-party datasets are not bulk-imported. A dataset is imported only when its license is on the accepted list in the [Licensing policy](#licensing-policy) and the license gate passes.
 - `sources.csv` has one row per source: ID, URL, license, `commercial_use`, access date and citation details.
 - Golden tests use vectors we derive ourselves: a hand derivation from the published equations, or the output of an independent, permissively licensed implementation whose name and version are recorded next to the vectors. Worked examples, tables and figures are not copied from standards or handbooks.
-- Equations are implemented from the primary literature and referenced in the documentation. A method name such as "Penman–Monteith" or "Hargreaves–Samani" identifies a published method; it does not mean that text, tables or figures of a handbook are included.
+- Equations are implemented from the primary literature and referenced in the documentation. A method name such as "Penman–Monteith" or "Hargreaves–Samani" identifies a published method; it does not mean that text, tables or figures of a handbook are included. Code is not copied from copyleft-licensed or unlicensed implementations.
+- Weather series, climate grids and satellite data are supplied by the caller. The engine implements published formulas and ships no such datasets; the license of a dataset is checked where the dataset enters (for a pack, in `sources.csv`).
 - Reviewers are identified by ID; names appear only with consent. Packs and exports contain no personal data.
 - Organizations and publications are named only to identify sources. There is no affiliation or endorsement.
 
@@ -379,10 +386,22 @@ Everything this project ships can be used commercially.
 - **Rule.** A source is accepted only if its license lets anyone use, modify and redistribute the values commercially, with attribution at most.
 - **Accepted.** CC0 1.0 and other public-domain dedications; works that are in the public domain under the law that applies to them (the basis is recorded in `sources.csv`); CC BY 3.0 and 4.0; MIT, BSD and Apache-2.0 for values taken from software.
 - **Rejected.** Any NonCommercial, ShareAlike or NoDerivatives variant of a Creative Commons license; ODbL and GPL-family licenses; "free for research or non-commercial use" terms; "all rights reserved" material without a written permission on file; sources with no stated license.
-- **Terms of use count.** Website, database and API terms bind users even when individual facts are not protected by copyright. A source whose terms restrict commercial use is rejected, even if the same value could be found elsewhere. At the time of writing this includes the IUCN Red List and the Species+/CITES Checklist database, whose terms require written permission for commercial use.
+- **Terms of use count.** Website, database and API terms bind users even when individual facts are not protected by copyright. A source whose terms restrict commercial use is rejected, even if the same value could be found elsewhere. At the time of writing this includes the IUCN Red List and the Species+/CITES Checklist database, whose terms require written permission for commercial use, the WorldClim climate grids (non-commercial use; redistribution and commercial use need permission) and the HadEX2 climate-extremes dataset (conditions on commercial use). Terms change, so a source's license is re-read and its check date recorded.
 - **`commercial_use`** records a maintainer's reading of a source's license: `yes`, `no` or `unclear`. A pack can be released only when every source is `yes`. `agri-core validate --strict` rejects `no` and `unclear`, and `unclear` counts as `no` until a maintainer resolves it. It is a record of a review, not legal advice or a guarantee.
 - **License gate.** `agri-core validate --strict` also rejects any license outside the accepted list, and `agri-core lint-sources` fails when `commercial_use` and `license` contradict each other.
 - **Attribution.** Packs and exports carry each source's license and the attribution text it requires.
+
+### Climate parameter catalog
+
+The catalog (`docs/design/climate_catalog_v1.csv`, with its rationale in `docs/design/climate_catalog_v1_rationale.md`) is the single list of climate parameters that the engine computes, expects as input, or reads from a pack. `docs/CLIMATE_CATALOG.md` is generated from it and is never edited by hand. A parameter enters the catalog before any code is written for it.
+
+- **Kinds.** `computed`: the engine implements the method. `input`: the caller supplies the value and the engine checks unit and range. `pack_value`: a crop- or region-specific number (a base temperature, a threshold, a stage length) that lives in an `agri-knowledge` pack and never in code.
+- **Statuses.** `planned`, `implemented`, `backlog` (considered, not scheduled) and `excluded` (will not be added; the reason is recorded).
+- **Columns.** `param_id`, `group`, `kind`, `unit`, `method_ref`, `owner_repo`, `commercial_use`, `safety_tier` (`low` or `high`), `status`, `milestone`, `test_id`, `checked_on` and `reason`.
+- **Gate.** `agri-core lint-catalog` fails when a `planned` or `implemented` row has a `commercial_use` other than `yes`, when a row with a `high` safety tier is not `excluded`, or when a `computed` row has no `method_ref` or no `test_id`. `checked_on` records when a license was last read, because terms change.
+- **Link to `agri-knowledge`.** A `pack_value` row names the dictionary key that carries its value. Adding that key is a dictionary change here; supplying values is a data change there. Without a pack value the answer is `unknown` or `insufficient_input`; the engine never falls back to a built-in number.
+- **Plant-protection boundary.** Leaf wetness and similar microclimate variables are inputs only. The engine does not turn them into disease or pest risk (see [ADR-007](docs/decisions/ADR-007-plant-protection-scope.md)).
+- **Excluded by design.** Ultraviolet dosing and UV-C use, lamp and light-spectrum recipes, laboratory plant-response measurements, and anything with a high safety or legal risk.
 
 ### Protected species
 
@@ -395,7 +414,7 @@ Everything this project ships can be used commercially.
 
 ## Contributing
 
-Contributions are welcome. Data contributions go to [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge); code contributions go here. Every data contribution must meet the [Licensing policy](#licensing-policy).
+Contributions are welcome. Data contributions go to [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge); code contributions go here. Every data contribution must meet the [Licensing policy](#licensing-policy). Proposals for new climate parameters start as a row in the [climate parameter catalog](#climate-parameter-catalog); the license and safety gate decides whether a row can be accepted.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full rules, contribution scope, evidence requirements, licensing terms, protected-species policy, and the code owners list.
 
@@ -461,6 +480,7 @@ does not match.
 - Every pack carries a `schema_version` and an `engine_min`. The engine supports two consecutive `schema_version` values and ships `agri-core pack migrate` to move a pack forward. A pack that declares a `schema_version` the engine does not support is rejected; a pack that requires a newer engine than the one running is rejected.
 - Every fact has a stable `fact_id`. A superseded fact is marked with `superseded_by`; a critical correction will be published as an advisory in the pack (planned; the loader currently rejects non-empty `advisories.csv`). See ADR-004 G3 for the advisory contract that fires when loading ships.
 - Every release pins the `agri-knowledge` version it was tested against. A canary CI job against `agri-knowledge` `main`, to surface incompatibilities early, is **planned for v0.2.0** (not yet implemented).
+- **Order of changes across the two repositories.** A change that needs a new core parameter or a new method lands in this order: the catalog row and the dictionary change here (an engine minor release), then the data in `agri-knowledge`, validated against that engine release, then a new pack that declares the `engine_min` and `dictionary_min` it needs.
 - `dictionary/dictionary.lock` records `<version> <contract_hash>` per dictionary release; the SemVer rule is that adding a key is `MINOR`, removing / renaming / changing shape, unit, phase_set, enum values or narrowing a dimension is `MAJOR`, and description / rationale changes are `PATCH`. `classify_change` enforces this and is exercised by the test suite.
 - Releases are git tags and GitHub Releases (wheel, sdist, sample pack, `SHA256SUMS`, CycloneDX SBOM, and — when the pinned `agri-knowledge` version has shipped — the built packs of `agri-knowledge`). v0.1.x is not on PyPI; v0.2.0 and later are published to PyPI via `.github/workflows/publish.yml` (Trusted Publishing).
 
@@ -486,8 +506,8 @@ Architectural decisions are recorded as ADRs under
 - [ADR-010](docs/decisions/ADR-010-perf-budgets.md) — CLI performance budgets for `pack build`, `validate`, `coverage`, `diff`.
 - [ADR-011](docs/decisions/ADR-011-id-ledger.md) — Append-only taxon ID ledger (`ids.lock`).
 
-ADR-008 is intentionally reserved (plant-protection data model, after
-M12) and will be written as its own ADR when that work starts.
+ADR-008 is intentionally reserved (plant-protection data model, after M15) and
+will be written as its own ADR when that work starts.
 
 ## Milestones
 
@@ -502,11 +522,19 @@ M12) and will be written as its own ADR when that work starts.
 | **M6** Build | Done | `scaffold` (opaque taxon IDs, never reused) plus `build` (CSV → SQLite + manifest, reproducible). | Wheel and pack build reproducibly (identical SHA-256 twice). |
 | **M7** Validate, diff, coverage, license gate | Done | Trapezoid order, scope validity, unit resolution, duplicate detection, tier derivation (T0–T3), `diff` report, `coverage`, license gate. | Sample pack passes validate with 0 errors; `diff` matches fixtures; coverage assigns tiers; license gate rejects NC + `commercial_use=yes`. |
 | **M8** `resolve_taxon` and `resolve_fact` | Done | Deterministic resolution per the fixed policy (ADR-004); `meta()`; `show` CLI with three modes (`--name`, `--taxon`, `--fact`). **M8 review follow-up (G1–G14)**: semantic locks in ADR-004 (superseded, advisories, specificity, status policy, unknown precedence, no-fuzzy, filter counts, input length guard), `RESOLUTION_POLICY_VERSION` 1.0.0 → 1.4.0, `Unknown.filter_counts` + `Unknown.warnings` + refined refusal codes, `FactResolved.min_status_applied`, `MetaInfo.engine_min`, `resolve_taxon` length guard (200 chars), Hypothesis fuzz, cross-process determinism, multi-scale perf test (1k/10k/100k). | `resolve_taxon` p95 ≤ 5 ms on a 10k-taxa pack (measured ≈ 12 µs); **1483 tests collected** across markers (619 unit, 842 contract, 5 property, 2 scenario, 15 perf); resolution contract tests pass; `show` CLI usable. |
-| **M9** Offline, performance, docs, tag `v0.1.0` | Done | Socket-blocking pytest plugin (`pytest-socket`, `--disable-socket`, `offline-wheel` CI job under `unshare -n`); performance budget tests for pack load and peak memory (batch suitability deferred to M12); the `docs/` skeleton (`DICTIONARY` generated, `RESOLUTION_POLICY`, `SAFETY`, `ADDING_A_TAXON` executed by test); Windows smoke job; release workflow; tag `v0.1.0`. | Every test passes with network blocked; performance budget met; Windows `windows-smoke` green; `release.yml` dry-run green; tag `v0.1.0`. |
-| **M10** Climate, thresholds and stages | Not started | VPD, GDD, DLI, ET0 with fallback, temperature from elevation, threshold checks, stage resolver. Methods documented with primary-literature references. | Golden tests (independently derived vectors) pass; phases resolve per archetype; perennials use caller-supplied events. |
-| **M11** Irrigation, fertilizer, media and water | Not started | Registry of irrigation modes (`container_band`, `field_etc`, `paddy_awd`), nutrient-to-product conversion with safety caps, growing-media recipes and water-quality limits. | The M11 release passes against the sample pack and against the pinned `agri-knowledge` version; irrigation results match scenario fixtures. |
-| **M12** Suitability and propagation | Not started | Single and batch site suitability, per-factor reasons, hazard flags, dated propagation plans. | Batch mode within the performance budget; scenario tests including an `unsuitable` case. |
-| **M13** Exports and documentation | Not started | `tool_schemas.json`, `edge_thresholds.json` per site, `review_sheet.csv` per tier, quickstart notebook, `docs/`. | A release tag includes exports, generated from the same Pydantic models as the library, with a stable contract test. |
+| **M9** Offline, performance, docs, tag `v0.1.0` | Done | Socket-blocking pytest plugin (`pytest-socket`, `--disable-socket`, `offline-wheel` CI job under `unshare -n`); performance budget tests for pack load and peak memory (batch suitability deferred to M15); the `docs/` skeleton (`DICTIONARY` generated, `RESOLUTION_POLICY`, `SAFETY`, `ADDING_A_TAXON` executed by test); Windows smoke job; release workflow; tag `v0.1.0`. | Every test passes with network blocked; performance budget met; Windows `windows-smoke` green; `release.yml` dry-run green; tag `v0.1.0`. |
+| **M10** Climate catalog and contract | Not started | The climate parameter catalog in `docs/design/climate_catalog_v1.csv` with its rationale; `docs/CLIMATE_CATALOG.md` generated from it; `agri-core lint-catalog` (license, safety, method-reference and test-reference checks); a stable `param_id` per parameter, mapped to a dictionary key for every pack-supplied value. | `lint-catalog` passes on the catalog; the generated document is current (a drift test fails when it is stale); contract tests pass; every `backlog` and `excluded` row records its reason. |
+| **M11** Atmosphere, radiation and ET0 | Not started | VPD, dew point, wet-bulb temperature, daylength and photoperiod, solar and net radiation, PAR, PPFD and DLI, wind conversions and height adjustment, temperature and pressure from elevation, ET0 (Penman–Monteith with a Hargreaves–Samani fallback). Methods documented with primary-literature references. | Golden tests (independently derived vectors) pass; every estimated input is reported as an assumption; each `implemented` catalog row has a method reference and a test. |
+| **M12** Thermal time and climate indices | Not started | GDD with documented methods, chilling, photothermal units, the generic index engine with its documented registry, bioclimatic variables from monthly values, 10-day and monthly aggregation. | Golden tests pass; a gap in a series gives `insufficient_input`; every registry entry has a reference and a test. |
+| **M13** Thresholds and stages | Not started | Four-point trapezoid threshold checks and the stage resolver (planting age, GDD or photothermal units). Perennials are driven by caller-supplied events. | Phases resolve per archetype; perennials use caller-supplied events; threshold and stage values are read from the pack only. |
+| **M14** Irrigation, fertilizer, media and water | Not started | Registry of irrigation modes (`container_band`, `field_etc`, `paddy_awd`), ETc from a stage-wise Kc curve (Kc values from the pack only), nutrient-to-product conversion with safety caps, growing-media recipes, water-quality limits and indices (SAR, RSC). | The M14 release passes against the sample pack and against the pinned `agri-knowledge` version; irrigation results match scenario fixtures. |
+| **M15** Suitability and propagation | Not started | Single and batch site suitability, per-factor reasons, hazard flags, dated propagation plans. | Batch mode within the performance budget; scenario tests including an `unsuitable` case. |
+| **M16** Exports and documentation | Not started | `tool_schemas.json`, `edge_thresholds.json` per site, `review_sheet.csv` per tier, quickstart notebook, `docs/`. | A release tag includes exports, generated from the same Pydantic models as the library, with a stable contract test. |
+| **M17** Soil water balance | Not started | Pedotransfer estimates of field capacity, wilting point and available water; a daily soil-water balance with depletion and a water-stress coefficient (Ks) feeding the `field_etc` mode. | Golden tests pass; depletion fractions and other crop values are read from the pack only; a missing value gives `unknown` or `insufficient_input`. |
+| **M18** Drought and season indices | Not started | SPI with a minimum-record check, an aridity index (precipitation over ET0), rainy-season onset and cessation from a registry of documented, configurable definitions. | Golden tests pass; a record shorter than the documented minimum gives `insufficient_input`; every definition in the registry carries a reference. |
+| **M19** Vegetation-index band math | Not started | NDVI, EVI, SAVI, GNDVI, NDRE, NGRDI and PSRI from caller-supplied reflectance, with `ndwi_mcfeeters` and `ndmi` kept apart by name. No raster I/O and no imagery in this repository. | Golden tests pass; each index documents its bands and coefficients; LAI, FAPAR and canopy cover remain inputs. |
+
+Milestones are plain integers. M17–M19 are additive modules that follow the exports milestone. Considered and deliberately not scheduled: hydrogeology (water table, baseflow, recharge), soil-erosion models, air-quality indices, non-PAR light spectra, satellite phenology and crop-growth rates. Each will be recorded with its reason in the climate catalog (M10).
 
 ## Development
 
@@ -528,7 +556,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 **Test kinds**
 
 - `contract`: `Outcome`, dictionary, exported tool schemas and JSON Schemas stay stable. Includes the M8 resolution contract tests (`tests/contract/test_resolve_taxon.py`, `test_resolve_fact.py`, `test_resolution_schemas.py`, `test_unknown_code_registry.py`) and the M8 review follow-up tests (`test_resolve_determinism.py`, `test_meta.py`, `test_resolution_policy_version.py`).
-- `golden`: **reserved** for independently derived vectors (a hand derivation from the published equations, or the output of a permissively licensed implementation with its name and version recorded). No test files use this marker yet — the first golden tests ship with M10 (climate). Independent vectors that exist today live in `tests/contract/test_pack_hash.py` (KAT) and `test_toml_writer.py`, not under a `golden` marker.
+- `golden`: **reserved** for independently derived vectors (a hand derivation from the published equations, or the output of a permissively licensed implementation with its name and version recorded). No test files use this marker yet — the first golden tests ship with M11 (atmosphere, radiation and ET0). Independent vectors that exist today live in `tests/contract/test_pack_hash.py` (KAT) and `test_toml_writer.py`, not under a `golden` marker.
 - `offline`: **not a per-test marker**. Network is blocked globally by `pytest-socket` via `--disable-socket` in `pyproject.toml` `addopts`; the entire suite runs with network disabled, and a `offline-wheel` CI job runs `agri-core validate --pack sample` under `unshare -n`.
 - `perf`: 10 files / 15 tests. `resolve_taxon` (M8), built-pack load + peak memory (v0.1.0), CLI budgets for `build`/`validate`/`coverage`/`diff` (ADR-010), `coverage` scaling (ADR-003), `resolve_fact` + coverage guard (G7), multi-scale 1k/10k/100k (G14). Run with `--no-cov` (perf tests skip themselves when coverage is active — see `tests/perf/conftest.py`); exclude with `-m 'not perf'` on slow runners.
 - `property`: Hypothesis checks such as unit round-trips, no negative amounts, monotonic behavior with area, and (from G11) fuzz for `resolve_taxon` input.
@@ -549,6 +577,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 - CI is green on Python 3.11, 3.12, 3.13 and 3.14; `pip-audit` runs in CI.
 - Runtime dependencies use permissive licenses (checked in CI).
 - `agri-core validate --strict` passes on the sample pack, including the license gate.
+- `agri-core lint-catalog` passes on the climate catalog (from M10).
 - `dictionary.lock` matches the running dictionary (`contract_hash` verified).
 - The pack and the wheel are reproducible: identical SHA-256 when built twice from the same inputs.
 - `CHANGELOG.md` is updated.
@@ -575,7 +604,7 @@ tightened once real CI medians are available.
 
 | Operation | Budget |
 |---|---|
-| Batch suitability, 5,000 taxa | ≤ 200 ms p95 (deferred to M12; suitability module not yet present) |
+| Batch suitability, 5,000 taxa | ≤ 200 ms p95 (deferred to M15; suitability module not yet present) |
 | Load a pack with 10,000 taxa (built SQLite) | ≤ 1 s |
 | Peak memory during pack load | ≤ 200 MB |
 | `resolve_taxon` p95 | ≤ 5 ms (measured ≈ 12 µs on a 10k-taxa pack in M8) |
@@ -605,41 +634,47 @@ agri-agronomy-core/
 │                            #   yield_targets, scope_keys, modules, safety_classes
 ├─ docs/                     # PACK_FORMAT.md, REVIEW_GUIDE.md;
 │                            #   ADDING_A_TAXON, DICTIONARY, RESOLUTION_POLICY, SAFETY (M9);
-│                            #   METHODS (M10)
-│  ├─ decisions/             # ADR-001 ... ADR-011 (ADR-008 reserved for M12)
+│                            #   CLIMATE_CATALOG (generated, M10); METHODS (from M11)
+│  ├─ decisions/             # ADR-001 ... ADR-011 (ADR-008 reserved, after M15)
 │  └─ design/                # plant_wishlist_v4.csv, plant_wishlist_v4_rationale.md,
-│                            #   plant_wishlist_v4_migration.md
+│                            #   plant_wishlist_v4_migration.md,
+│                            #   climate_catalog_v1.csv, climate_catalog_v1_rationale.md (M10)
 ├─ notebooks/                # Colab quickstart (from v0.2.0), executed in CI
 ├─ schema/                   # JSON Schemas: outcome, source, taxon, name, fact, hazard,
 │                            #   parameter, dataset, manifest, finding, validation_report,
 │                            #   taxon_outcome, fact_outcome, meta_info;
 │                            #   plus unknown_code_registry.json (code registry, not a schema)
-├─ scripts/                  # gen_schemas.py, gen_diff_golden.py, gen_dictionary_doc.py
+├─ scripts/                  # gen_schemas.py, gen_diff_golden.py, gen_dictionary_doc.py,
+│                            #   gen_climate_catalog_doc.py (M10)
 ├─ src/agri_core/
 │  ├─ _samples/              # synthetic Apache-2.0 sample pack
-│  ├─ climate/               # VPD, GDD, DLI, ET0 (M10)
-│  ├─ export/                # bundle, tool schemas, edge thresholds, review sheet (M13)
-│  ├─ fertilizer/            # nutrient to product, unit conversion (M11)
-│  ├─ irrigation/            # registry of modes: container_band, field_etc, paddy_awd (M11)
-│  ├─ media/                 # media mixes and water quality (M11)
+│  ├─ catalog/               # climate catalog loader and lint-catalog gate (M10)
+│  ├─ climate/               # atmosphere, radiation, ET0 (M11); thermal time and indices (M12);
+│  │                         #   drought and season (M18)
+│  ├─ export/                # bundle, tool schemas, edge thresholds, review sheet (M16)
+│  ├─ fertilizer/            # nutrient to product, unit conversion (M14)
+│  ├─ irrigation/            # registry of modes: container_band, field_etc, paddy_awd (M14)
+│  ├─ media/                 # media mixes and water quality (M14)
 │  ├─ models/                # Outcome, Result, Dictionary, ParameterDef, PhaseSet, ScopeKey,
 │  │                         #   row models, canonical JSON, ids, units, refusals, notices, provenance
 │  ├─ pack/                  # build, diff, license gate, load, migrate, scaffold, validate, verify,
 │  │                         #   knowledge_set, loader, manifest, tables, sqlite_schema,
 │  │                         #   name_index, normalize, errors, tiers, files
-│  ├─ propagation/           # dated planner (M12)
+│  ├─ propagation/           # dated planner (M15)
 │  ├─ registry/              # resolution.py (resolve_taxon, resolve_fact, meta, MetaInfo),
 │  │                         #   sources.py, errors.py
-│  ├─ safety/                # dose caps, label referral (M11)
-│  ├─ stages/                # stage resolver (M10)
-│  ├─ suitability/           # scoring with reasons (M12)
-│  ├─ thresholds/            # four-point trapezoid checks (M10)
+│  ├─ safety/                # dose caps, label referral (M14)
+│  ├─ soilwater/             # pedotransfer, daily soil-water balance (M17)
+│  ├─ stages/                # stage resolver (M13)
+│  ├─ suitability/           # scoring with reasons (M15)
+│  ├─ thresholds/            # four-point trapezoid checks (M13)
+│  ├─ vegetation/            # band-math indices (M19)
 │  ├─ cli.py
 │  └─ py.typed
 ├─ tests/
-│  ├─ contract/              # Outcome, dictionary, exported schemas, resolution stay stable
+│  ├─ contract/              # Outcome, dictionary, exported schemas, resolution (and, from M10, catalog) stay stable
 │  ├─ fixtures/              # synthetic data for behavior tests only
-│  ├─ golden/                # independently derived vectors (reserved; first vectors ship with M10)
+│  ├─ golden/                # independently derived vectors (reserved; first vectors ship with M11)
 │  ├─ offline/               # socket blocker (from v0.1.0)
 │  ├─ perf/                  # performance budget (10 files / 15 tests)
 │  ├─ property/              # Hypothesis checks
