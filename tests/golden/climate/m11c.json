@@ -1,0 +1,61 @@
+{
+  "solar_radiation": [
+    {
+      "inputs": {
+        "temp_max_c": 30.0,
+        "temp_min_c": 18.0,
+        "extraterrestrial_radiation_mj": 41.88
+      },
+      "expected": 23.21,
+      "tol_rel": 0.01,
+      "derivation": "Rs = kRs * sqrt(Tmax-Tmin) * Ra = 0.16 * sqrt(12) * 41.88 = 0.16 * 3.4641 * 41.88 = 23.21 MJ m-2 day-1"
+    },
+    {
+      "inputs": {
+        "temp_max_c": 30.0,
+        "temp_min_c": 18.0,
+        "extraterrestrial_radiation_mj": 41.88,
+        "krs": 0.19
+      },
+      "expected": 27.56,
+      "tol_rel": 0.01,
+      "derivation": "Rs = 0.19 * sqrt(12) * 41.88 = 27.56 MJ m-2 day-1"
+    }
+  ],
+  "net_radiation": [
+    {
+      "inputs": {
+        "solar_radiation_mj": 23.21,
+        "extraterrestrial_radiation_mj": 41.88,
+        "temp_max_c": 30.0,
+        "temp_min_c": 18.0,
+        "temp_mean_c": 24.0,
+        "rh_pct": 60.0
+      },
+      "expected": 14.07,
+      "tol_rel": 0.05,
+      "derivation": "es(24) = 0.6108*exp(17.27*24/261.3) = 2.977 kPa; ea = 1.786 kPa; Rns = (1-0.23)*23.21 = 17.87; Rso = 0.75*41.88 = 31.41; T4mean = (303.15^4 + 291.15^4)/2 = 7.816e9; Rnl = 4.903e-9*7.816e9*(0.34-0.14*sqrt(1.786))*(1.35*23.21/31.41-0.35) = 38.32*0.1527*0.6477 = 3.79; Rn = 17.87 - 3.79 = 14.08 MJ m-2 day-1"
+    }
+  ],
+  "ppfd": [
+    {
+      "inputs": {
+        "par_w_m2": 500.0
+      },
+      "expected": 2285.0,
+      "tol_rel": 0.001,
+      "derivation": "PPFD = 4.57 * 500 = 2285 umol m-2 s-1"
+    }
+  ],
+  "dli": [
+    {
+      "inputs": {
+        "ppfd_umol": 2285.0,
+        "photoperiod_hours": 12.0
+      },
+      "expected": 98.712,
+      "tol_rel": 0.001,
+      "derivation": "DLI = 2285 * 12 * 3600 / 1e6 = 98.712 mol m-2 day-1"
+    }
+  ]
+}

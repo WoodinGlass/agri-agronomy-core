@@ -1,0 +1,86 @@
+{
+  "vpd": [
+    {
+      "inputs": {
+        "temp_c": 25.0,
+        "rh_pct": 60.0
+      },
+      "expected": 1.26707,
+      "tol_rel": 0.01,
+      "derivation": "es(25) = 0.6108 * exp(17.27*25/(25+237.3)) = 3.1678 kPa; VPD = 3.1678 * (1 - 0.60) = 1.2671 kPa"
+    },
+    {
+      "inputs": {
+        "temp_c": 0.0,
+        "rh_pct": 50.0
+      },
+      "expected": 0.3054,
+      "tol_rel": 0.01,
+      "derivation": "es(0) = 0.6108 kPa; VPD = 0.6108 * 0.5 = 0.3054 kPa"
+    }
+  ],
+  "dew_point": [
+    {
+      "inputs": {
+        "temp_c": 25.0,
+        "rh_pct": 50.0
+      },
+      "expected": 13.86,
+      "tol_rel": 0.01,
+      "derivation": "ea = es(25)*0.50 = 1.5839 kPa; gamma = ln(1.5839/0.6108) = 0.9529; Td = 237.3*gamma/(17.27-gamma) = 13.86 C"
+    }
+  ],
+  "wet_bulb": [
+    {
+      "inputs": {
+        "temp_c": 25.0,
+        "rh_pct": 60.0
+      },
+      "expected": 19.49,
+      "tol_rel": 0.01,
+      "derivation": "Stull 2011 arithmetic; hand-computed ~19.49 C"
+    }
+  ],
+  "daylength": [
+    {
+      "inputs": {
+        "latitude_deg": 0.0,
+        "day_of_year": 172
+      },
+      "expected": 12.0,
+      "tol_abs": 1e-06,
+      "derivation": "tan(0) = 0 => omega_s = acos(0) = pi/2; L = 24/pi * pi/2 = 12 h"
+    },
+    {
+      "inputs": {
+        "latitude_deg": 40.0,
+        "day_of_year": 172
+      },
+      "expected": 14.843,
+      "tol_rel": 0.01,
+      "derivation": "decl = 0.409; arg = -tan(40)*tan(0.409) = -0.3637; omega_s = acos(0.3637) = 1.943 rad; L = 24/pi * 1.943 = 14.84 h"
+    }
+  ],
+  "extraterrestrial_radiation": [
+    {
+      "inputs": {
+        "latitude_deg": 40.0,
+        "day_of_year": 172
+      },
+      "expected": 41.88,
+      "tol_rel": 0.01,
+      "derivation": "Allen 1996 eq 21; hand-computed ~41.88 MJ m-2 day-1"
+    }
+  ],
+  "clearness_index": [
+    {
+      "inputs": {
+        "solar_radiation_mj": 25.0,
+        "extraterrestrial_radiation_mj": 41.88
+      },
+      "expected": 0.5969,
+      "tol_rel": 0.01,
+      "derivation": "Kt = Rs / Ra = 25 / 41.88 = 0.5969"
+    }
+  ]
+}

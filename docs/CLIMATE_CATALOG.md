@@ -4,39 +4,52 @@
 
 See `climate_catalog_v1_rationale.md` for the rationale and `decisions/ADR-012-climate-catalog.md` for the decision record.
 
-Total rows: **32**.
+Total rows: **45**.
 
-## Computed (14)
+## Computed (21)
 
 | param_id | group | unit | status | milestone | method_ref | safety_tier |
 |---|---|---|---|---|---|---|
 | `compute_chill_hours` | thermal | `hour` | planned | M12 | Weinberger 1950 | low |
 | `compute_chill_portions` | thermal | `dimensionless` | planned | M12 | Fishman 1987 | low |
-| `compute_daylength` | radiation | `hour` | planned | M11 | Cooper 1969; Spencer 1971 | low |
-| `compute_dew_point` | atmosphere | `degree_Celsius` | planned | M11 | Tetens 1930 | low |
-| `compute_dli` | radiation | `mole/meter**2/day` | planned | M11 | Faust 2002 | low |
-| `compute_et0_hargreaves_samani` | evaporation | `millimeter/day` | planned | M11 | Hargreaves & Samani 1985 | low |
-| `compute_et0_penman_monteith` | evaporation | `millimeter/day` | planned | M11 | Monteith 1965; Allen 1996 | low |
+| `compute_clearness_index` | radiation | `dimensionless` | implemented | M11 | Allen 1996 | low |
+| `compute_daylength` | radiation | `hour` | implemented | M11 | Cooper 1969; Spencer 1971 | low |
+| `compute_dew_point` | atmosphere | `degree_Celsius` | implemented | M11 | Tetens 1930 | low |
+| `compute_dli` | radiation | `mole/meter**2/day` | implemented | M11 | Faust & Logan 2002 | low |
+| `compute_et0_hargreaves_samani` | evaporation | `millimeter/day` | implemented | M11 | Hargreaves & Samani 1985 | low |
+| `compute_et0_penman_monteith` | evaporation | `millimeter/day` | implemented | M11 | Monteith 1965; Allen 1996 | low |
+| `compute_extraterrestrial_radiation` | radiation | `megajoule/meter**2/day` | implemented | M11 | Allen 1996 | low |
 | `compute_gdd` | thermal | `degree_day` | planned | M12 | McMaster & Wilhelm 1997 | low |
-| `compute_net_radiation` | radiation | `megajoule/meter**2/day` | planned | M11 | Allen 1996 | low |
-| `compute_ppfd` | radiation | `micromole/meter**2/second` | planned | M11 | Sager & McAvoy 2012 | low |
-| `compute_solar_radiation` | radiation | `megajoule/meter**2/day` | planned | M11 | Hargreaves & Samani 1985 | low |
-| `compute_vpd` | atmosphere | `kilopascal` | planned | M11 | Tetens 1930; Allen 1996 | low |
-| `compute_wet_bulb` | atmosphere | `degree_Celsius` | planned | M11 | Stull 2011 | low |
-| `compute_wind_run` | atmosphere | `kilometer/day` | planned | M11 | - | low |
+| `compute_net_radiation` | radiation | `megajoule/meter**2/day` | implemented | M11 | Allen 1996 | low |
+| `compute_ppfd` | radiation | `micromole/meter**2/second` | implemented | M11 | Thimijan & Heins 1983 | low |
+| `compute_pressure_from_elevation` | atmosphere | `kilopascal` | implemented | M11 | Allen 1996 | low |
+| `compute_solar_radiation` | radiation | `megajoule/meter**2/day` | implemented | M11 | Hargreaves & Samani 1985 | low |
+| `compute_temp_from_elevation` | atmosphere | `degree_Celsius` | implemented | M11 | Allen 1996 | low |
+| `compute_vpd` | atmosphere | `kilopascal` | implemented | M11 | Tetens 1930; Allen 1996 | low |
+| `compute_wet_bulb` | atmosphere | `degree_Celsius` | implemented | M11 | Stull 2011 | low |
+| `compute_wind_direction_from_uv` | atmosphere | `degree` | implemented | M11 | WMO 2018 | low |
+| `compute_wind_height_adjust` | atmosphere | `meter/second` | implemented | M11 | Allen 1996 | low |
+| `compute_wind_run` | atmosphere | `kilometer/day` | implemented | M11 | WMO 2018 | low |
+| `compute_wind_speed_from_uv` | atmosphere | `meter/second` | implemented | M11 | WMO 2018 | low |
 
-## Input (8)
+## Input (14)
 
 | param_id | group | unit | status | milestone | method_ref | safety_tier |
 |---|---|---|---|---|---|---|
-| `input_air_temp_c` | atmosphere | `degree_Celsius` | planned | M11 | - | low |
-| `input_day_of_year` | atmosphere | `day` | planned | M11 | - | low |
-| `input_elevation_m` | atmosphere | `meter` | planned | M11 | - | low |
-| `input_latitude_deg` | atmosphere | `degree` | planned | M11 | - | low |
+| `input_air_temp_c` | atmosphere | `degree_Celsius` | implemented | M11 | - | low |
+| `input_air_temp_max_c` | atmosphere | `degree_Celsius` | implemented | M11 | - | low |
+| `input_air_temp_min_c` | atmosphere | `degree_Celsius` | implemented | M11 | - | low |
+| `input_day_of_year` | atmosphere | `day` | implemented | M11 | - | low |
+| `input_elevation_m` | atmosphere | `meter` | implemented | M11 | - | low |
+| `input_latitude_deg` | atmosphere | `degree` | implemented | M11 | - | low |
 | `input_leaf_wetness_hours` | atmosphere | `hour` | planned | M11 | - | low |
-| `input_rh_pct` | atmosphere | `percent` | planned | M11 | - | low |
-| `input_solar_radiation_mj` | radiation | `megajoule/meter**2/day` | planned | M11 | - | low |
-| `input_wind_speed_ms` | atmosphere | `meter/second` | planned | M11 | - | low |
+| `input_par_w_m2` | radiation | `watt/meter**2` | implemented | M11 | - | low |
+| `input_rh_pct` | atmosphere | `percent` | implemented | M11 | - | low |
+| `input_solar_radiation_mj` | radiation | `megajoule/meter**2/day` | implemented | M11 | - | low |
+| `input_u_component_ms` | atmosphere | `meter/second` | implemented | M11 | - | low |
+| `input_v_component_ms` | atmosphere | `meter/second` | implemented | M11 | - | low |
+| `input_wind_measurement_height_m` | atmosphere | `meter` | implemented | M11 | - | low |
+| `input_wind_speed_ms` | atmosphere | `meter/second` | implemented | M11 | - | low |
 
 ## Pack value (2)
 
