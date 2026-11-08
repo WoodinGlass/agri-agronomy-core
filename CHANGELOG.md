@@ -20,6 +20,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`PACK_CATALOG_EXCLUDED_PARAMETER`, dormant until extension parameters
   enter the pack format). A three-way drift test keeps the CSV, the
   generated document, and the shipped list in sync. See ADR-012.
+- **Atmosphere, radiation, and ET0 (M11).** `agri_core.climate` adds 19
+  pure calculators over 7 primary-literature methods: Tetens 1930 and
+  Allen 1996 (VPD, dew point); Stull 2011 (wet-bulb); Cooper 1969 and
+  Spencer 1971 (daylength, extraterrestrial radiation); Allen 1996
+  (solar radiation, net radiation, clearness index, pressure and
+  temperature from elevation); Hargreaves & Samani 1985 (Rs, ET0);
+  Thimijan & Heins 1983 (PPFD, DLI); WMO 2018 (wind speed, direction,
+  run); Monteith 1965 and Allen 1996 (Penman-Monteith ET0). Every
+  calculator returns `Outcome` (ADR-009) with a deterministic
+  `request_id`, empty `provenance` (no pack read), and explicit
+  assumptions for every estimated input. A dispatcher `et0()` prefers
+  Penman-Monteith and falls back to Hargreaves-Samani with a
+  `used_hargreaves_fallback` warning. Golden vectors hand-derived from
+  the published equations ship in `tests/golden/climate/`.
 - `MetaInfo.engine_min` exposes the pack's declared minimum engine
   version (`pack.manifest.engine_min`). `RESOLUTION_POLICY_VERSION`
   moves to `1.4.0` (MINOR — additive; no behavior change). ADR-004
