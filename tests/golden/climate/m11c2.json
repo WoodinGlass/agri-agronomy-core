@@ -1,0 +1,75 @@
+{
+  "wind_speed_from_uv": [
+    {
+      "inputs": {
+        "u_ms": 3.0,
+        "v_ms": 4.0
+      },
+      "expected": 5.0,
+      "tol_rel": 1e-06,
+      "derivation": "sqrt(3^2 + 4^2) = 5 m s-1"
+    }
+  ],
+  "wind_direction_from_uv": [
+    {
+      "inputs": {
+        "u_ms": 0.0,
+        "v_ms": -1.0
+      },
+      "expected": 0.0,
+      "tol_abs": 1e-06,
+      "derivation": "u=0, v=-1 (FROM north): 270 - atan2(-1,0)*180/pi = 270 - (-90) = 360 mod 360 = 0"
+    },
+    {
+      "inputs": {
+        "u_ms": -1.0,
+        "v_ms": 0.0
+      },
+      "expected": 90.0,
+      "tol_abs": 1e-06,
+      "derivation": "u=-1, v=0 (FROM east): 270 - atan2(0,-1)*180/pi = 270 - 180 = 90"
+    }
+  ],
+  "wind_height_adjust": [
+    {
+      "inputs": {
+        "speed_ms": 5.0,
+        "measurement_height_m": 10.0
+      },
+      "expected": 3.74,
+      "tol_rel": 0.01,
+      "derivation": "u2 = 5 * 4.87 / ln(67.8*10 - 5.42) = 5 * 4.87 / 6.511 = 3.74 m s-1"
+    }
+  ],
+  "wind_run": [
+    {
+      "inputs": {
+        "speed_ms": 5.0
+      },
+      "expected": 432.0,
+      "tol_rel": 1e-06,
+      "derivation": "run_km = 5 m/s * 24 h * 3.6 (km h / m s) = 432 km"
+    }
+  ],
+  "pressure_from_elevation": [
+    {
+      "inputs": {
+        "elevation_m": 1000.0
+      },
+      "expected": 90.1,
+      "tol_rel": 0.01,
+      "derivation": "P = 101.3 * ((293 - 6.5)/293)^5.26 = 101.3 * 0.9778^5.26 = 90.1 kPa"
+    }
+  ],
+  "temp_from_elevation": [
+    {
+      "inputs": {
+        "temp_c_at_sea_level": 28.0,
+        "elevation_m": 1000.0
+      },
+      "expected": 21.5,
+      "tol_abs": 0.01,
+      "derivation": "T = 28 - 6.5*1.0 = 21.5 degC"
+    }
+  ]
+}
