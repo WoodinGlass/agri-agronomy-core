@@ -10,6 +10,7 @@ from agri_core.climate.elevation import (
     pressure_from_elevation,
     temp_from_elevation,
 )
+from agri_core.climate.et0 import et0, et0_hargreaves_samani, et0_penman_monteith
 from agri_core.climate.par import dli, ppfd
 from agri_core.climate.psychrometry import dew_point, vpd, wet_bulb
 from agri_core.climate.radiation import net_radiation, solar_radiation
@@ -30,6 +31,9 @@ __all__ = [
     "daylength",
     "dew_point",
     "dli",
+    "et0",
+    "et0_hargreaves_samani",
+    "et0_penman_monteith",
     "extraterrestrial_radiation",
     "net_radiation",
     "ppfd",

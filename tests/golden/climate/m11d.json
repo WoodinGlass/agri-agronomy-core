@@ -1,0 +1,28 @@
+{
+  "et0_penman_monteith": [
+    {
+      "inputs": {
+        "net_radiation_mj": 14.07,
+        "temp_mean_c": 25.0,
+        "rh_pct": 60.0,
+        "wind_speed_2m_ms": 2.0
+      },
+      "expected": 5.29,
+      "tol_rel": 0.05,
+      "derivation": "es(25) = 3.168 kPa; ea = 1.901; VPD = 1.267; Delta = 4098*3.168/(25+237.3)^2 = 0.1887; gamma = 0.06737 (sea level); Rn = 14.07; u2 = 2. num = 0.408*0.1887*14.07 + 0.06737*(900/298)*2*1.267 = 1.083 + 0.515 = 1.598; den = 0.1887 + 0.06737*(1+0.34*2) = 0.3019; ET0 = 1.598 / 0.3019 = 5.29 mm/day"
+    }
+  ],
+  "et0_hargreaves_samani": [
+    {
+      "inputs": {
+        "temp_max_c": 30.0,
+        "temp_min_c": 18.0,
+        "temp_mean_c": 24.0,
+        "extraterrestrial_radiation_mj": 20.0
+      },
+      "expected": 6.66,
+      "tol_rel": 0.01,
+      "derivation": "ET0 = 0.0023 * (24 + 17.8) * sqrt(30-18) * 20 = 0.0023 * 41.8 * 3.4641 * 20 = 6.66 mm/day"
+    }
+  ]
+}
