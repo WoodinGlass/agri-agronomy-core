@@ -109,6 +109,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   model. See `docs/decisions/ADR-006-categorical-outcome.md` (now
   Accepted).
 
+### Changed
+
+- ADR-002, ADR-006, ADR-007, and ADR-009 milestone references
+  updated to the current numbering. M10 (atmosphere, radiation and
+  ET0) → M11; M13 (thresholds and stages, first categorical
+  calculators) → remains M13; M11 (irrigation) → M14; M12
+  (suitability) → M15; M13 (tool schemas / exports) → M16. The
+  advisories error message now points to ADR-004 §G3 instead of
+  a milestone number. `PACK_FORMAT.md` example `version` uses
+  SemVer (`0.1.0`), matching the first `agri-knowledge` pack. The
+  `Result` payload table in `README.md` documents `subject` and
+  `request_id` (ADR-009, shipped in PR #123).
+
 ## [0.1.2] - 2026-10-31
 
 ### Changed

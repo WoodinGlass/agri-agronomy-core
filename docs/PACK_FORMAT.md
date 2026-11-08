@@ -50,7 +50,7 @@ Example:
 
 ```toml
 name = "agri-knowledge"
-version = "2026.10.0"
+version = "0.1.0"
 schema_version = 1
 engine_min = "0.1.0"
 dictionary_min = "1.0.0"

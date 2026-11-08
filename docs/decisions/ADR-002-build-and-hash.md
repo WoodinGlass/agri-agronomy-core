@@ -144,7 +144,7 @@ Trade-offs:
   connections deliver that without a design that can deadlock.
 - **~1 ms per call.** Opening a `mode=ro&immutable=1` connection is
   cheap but not free. Resolvers that call `facts_for` many times in
-  a loop (M8 `resolve_fact`, M12 batch suitability) will pay this
+  a loop (M8 `resolve_fact`, M15 batch suitability) will pay this
   cost per query. If the M9 performance budget fails, an alternative
   is documented below as a v2 change.
 - **No connection lifetime hazards.** A shared connection would

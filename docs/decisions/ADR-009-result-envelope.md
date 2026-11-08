@@ -21,10 +21,10 @@ cannot bind result #3 to its input, nor deduplicate results across
 retries. VPD from raw weather inputs has no `fact_id` to fall back on;
 the current `provenance` is empty for those outcomes.
 
-The decision must land **before M10 ships**. Factories are keyword-only
+The decision must land **before M11 ships**. Factories are keyword-only
 (ADR-006), so adding fields is non-breaking for existing callers; but
-adding them after M10 ships would force a `schema_version` bump and
-break M13 `tool_schemas.json`.
+adding them after M11 ships would force a `schema_version` bump and
+break M16 `tool_schemas.json`.
 
 ## Decision
 
@@ -39,7 +39,7 @@ break M13 `tool_schemas.json`.
 
    `taxon_id` and `scope` are `None`/empty for calculations with no
    taxon (VPD from weather, temperature from elevation).
-   `calculation_version` starts at `"0.1.0"` for all M10 calculators;
+   `calculation_version` starts at `"0.1.0"` for all M11 calculators;
    each calculator may bump it independently when its semantics change.
 
 2. **`request_id: str | None`** on every `Outcome` member. Deterministic
@@ -65,7 +65,7 @@ break M13 `tool_schemas.json`.
 
 3. **`subject: Subject | None = None`** on every `Outcome` member.
    Optional so current tests that call `ok(...)` without a subject keep
-   working. M10 calculators **MUST** populate it; enforcement is a
+   working. M11 calculators **MUST** populate it; enforcement is a
    test, not a model validator (see the Enforcement section below).
 
 4. **All 8 outcome variants** carry the envelope:
@@ -115,7 +115,7 @@ break M13 `tool_schemas.json`.
 ## Non-goals
 
 - No `Request` model in this ADR. That is **Step 2** of the review and
-  lands together with the first M10 calculator. `Subject` and
+  lands together with the first M11 calculator. `Subject` and
   `request_id` are the envelope fields; `Request` is the input
   container.
 - No `TraceRecord` / `summarize`. **Step 3** of the review.
@@ -129,7 +129,7 @@ break M13 `tool_schemas.json`.
 
 - Adding optional `subject` and `request_id` to 8 models is mechanical
   but touches 8 model classes and 8 factory functions.
-- M13 `tool_schemas.json` will describe the envelope once. Every
+- M16 `tool_schemas.json` will describe the envelope once. Every
   outcome variant appears with the same envelope fields; LLM agents
   see `status`, `subject`, `request_id` at the top of every response.
 - Existing tests calling `ok(...)`, `unknown(...)`, etc. without the
@@ -139,10 +139,10 @@ break M13 `tool_schemas.json`.
   response size. This is the cost of determinism; a future schema bump
   may shorten the hex suffix.
 
-## Enforcement of M10 (a test, not a model rule)
+## Enforcement of M11 (a test, not a model rule)
 
-`tests/contract/test_m10_envelope.py` (added with M10, not this ADR)
-asserts, for every M10 calculator function:
+`tests/contract/test_m11_envelope.py` (added with M11, not this ADR)
+asserts, for every M11 calculator function:
 
     outcome = vpd(temp_c=25.0, rh_pct=60.0)  # or gdd, dli, ...
     assert outcome.subject is not None
@@ -156,7 +156,7 @@ a different one.
 
 ## Revisit when
 
-- A second calculation group (M11, M12) ships and `Subject.scope`
+- A second calculation group (M14, M15) ships and `Subject.scope`
   needs to carry more than `dict[str, Any]`.
 - An application needs `inputs` inside the outcome (currently only the
   digest is captured via `request_id`).

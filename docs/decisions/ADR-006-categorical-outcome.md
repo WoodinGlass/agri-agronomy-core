@@ -12,7 +12,7 @@ Accepted 2026-11-02. Implemented in the same release cycle.
           | ReferToLabel | Ambiguous | ReferToAuthority
 
 `Result.value` is `float`, enforced by `allow_inf_nan=False`. This is
-correct for M10 numeric calculators:
+correct for M11 numeric calculators:
 
 - `vpd()` -> kPa
 - `gdd()` -> degree-days
@@ -20,18 +20,18 @@ correct for M10 numeric calculators:
 - `et0()` -> mm/day
 - `temp_from_elevation()` -> degC
 
-M10 also introduces two calculators whose answer is **not numeric**:
+M13 introduces two calculators whose answer is **not numeric**:
 
 - `check_threshold()` -> `"optimal"` | `"suboptimal"` | `"critical"`
 - `stage_resolver()` -> `"vegetative"` | `"flowering"` | `"maturity"`
 
-M11 (irrigation) and M12 (suitability) add more categorical answers.
+M14 (irrigation) and M15 (suitability) add more categorical answers.
 Coercing them into `Result.value: float` is not an option: there is no
 natural numeric encoding, and `stage_resolver` outputs are not ordered.
 
-The decision must land **before M10**. `tool_schemas.json` (M13) is the
+The decision must land **before M13**. `tool_schemas.json` (M16) is the
 public tool-calling contract for downstream LLM agents; reshaping
-`Outcome` after M13 exists would force a `schema_version` bump.
+`Outcome` after M16 exists would force a `schema_version` bump.
 
 ## Options considered
 
@@ -119,18 +119,18 @@ str | None`.
 
 - **No breaking change** for any existing code. `Result.value` stays
   `float`.
-- M10 calculators return `Result` (numeric) or `CategoricalResult`
+- M11+ calculators return `Result` (numeric) or `CategoricalResult`
   (categorical). Both carry the same provenance/evidence/warnings shape,
   so generic helpers (`format_outcome`, tool schemas) can share code.
 - **Callers** switch on `status`. A helper
   `is_success(outcome) -> bool` returning `outcome.status in {"ok",
   "ok_category"}` will be added to make the two-status success path
   ergonomic.
-- **M13 tool schemas** will describe two `"ok"`-family variants. LLM
+- **M16 tool schemas** will describe two `"ok"`-family variants. LLM
   agents see `status` as the discriminator and pick accordingly; this is
   already how the refusal family works today.
 - **No migration** required: no production consumer of `Result` exists
-  (M10 has not shipped, M13 does not exist).
+  (M11 has not shipped, M16 does not exist).
 
 ## Non-goals
 
@@ -145,4 +145,4 @@ str | None`.
 - `src/agri_core/registry/resolution.py` - existing pattern of sibling
   success models with distinct discriminators
 - ADR-004 (resolution policy) - why discriminated unions are used
-- Handoff sec.3 - M10 scope (which calculators return which shape)
+- Handoff sec.3 - M11 and M13 scope (which calculators return which shape)

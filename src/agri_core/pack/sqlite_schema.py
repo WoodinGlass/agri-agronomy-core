@@ -255,7 +255,8 @@ def _build_sqlite_and_hash(files: Mapping[str, bytes]) -> tuple[bytes, str]:
 
     if files.get("advisories.csv", b"").strip():
         raise PackFeatureUnsupportedError(
-            "advisories.csv has non-whitespace content; unsupported until M8",
+            "advisories.csv has non-whitespace content; unsupported until "
+            "advisory loading ships (ADR-004 §G3)",
             file="advisories.csv",
         )
 
