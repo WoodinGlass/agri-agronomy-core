@@ -106,7 +106,7 @@ No API key or GPU is needed. Pure Python, CPU only.
 
 ### Data packs
 
-Data packs are released separately by [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge) under Semantic Versioning. A release carries `agri-knowledge-<version>.tar.gz` (a built pack that extracts to `agri-knowledge-<version>/`) and a `SHA256SUMS` file. Check the hash, extract the archive and pass the directory to `load_knowledge_set`. The first data release, `v0.1.0`, is planned after `agri-knowledge` milestone K5; until then the synthetic sample pack bundled with the package (used by `--pack sample`) is the only pack available.
+Data packs are released separately by [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge) under Semantic Versioning. A release carries `agri-knowledge-<version>.tar.gz` (a built pack that extracts to `agri-knowledge-<version>/`) and a `SHA256SUMS` file. Check the hash, extract the archive and pass the directory to `load_knowledge_set`. The first data pack release, `agri-knowledge` `v0.1.0`, is published when that repository's K0 milestone completes; until that tag is published, the synthetic sample pack bundled with the package (used by `--pack sample`) is the only pack available.
 
 ```bash
 VERSION=0.1.0   # planned; not released yet
@@ -345,7 +345,7 @@ Adding a **core** parameter is a minor engine release. Adding an **extension** p
 
 ## Coverage
 
-**Data release plan.** The first data release, `agri-knowledge` `v0.1.0` (planned after its milestone K5), carries tomato and rice at tier T2 for Indonesia and one more country, a T0 taxonomic backbone with multilingual names for the priority list, and legal flags. After that, `agri-knowledge` adds one group per iteration (fruit, fodder, ornamentals, then rare plants), each starting with a source audit.
+**Data release plan.** The first data pack release, `agri-knowledge` `v0.1.0` (published when that repository's K0 milestone completes), carries tomato and rice at tier T2 for Indonesia and one more country, a T0 taxonomic backbone with multilingual names for the priority list, and legal flags. After that, `agri-knowledge` adds one group per iteration (fruit, fodder, ornamentals, then rare plants), each starting with a source audit.
 
 **Design targets for the engine.** Six reference profiles across five archetypes are chosen to exercise every irrigation mode, the propagation planner and the suitability refusal path. They arrive in `agri-knowledge` as their groups come up; until then the tests use the synthetic sample pack.
 
