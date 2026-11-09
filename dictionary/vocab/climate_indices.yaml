@@ -1,0 +1,108 @@
+schema_version: 1
+# Climate index registry. Each entry names a threshold/window/aggregation
+# recipe that threshold_index() applies to a daily series.
+#
+# Field meanings:
+#   unit          One of CANONICAL_UNITS (see src/agri_core/models/units.py).
+#   operator      Comparison of each value against `threshold`:
+#                 lt, le, gt, ge. Ignored for `min` / `max` aggregations.
+#   threshold     Numeric threshold; `null` for `min` / `max` aggregations
+#                 (the threshold does not participate).
+#   aggregation   count | max_run | max_rolling_sum | sum | min | max.
+#   window_days   Only for `max_rolling_sum` (>=1); `null` otherwise.
+indices:
+  # --- day counts (4) ---
+  frost_days:
+    description: "Days with Tmin < 0 degC (default; caller may override)."
+    unit: "degree_Celsius"
+    operator: "lt"
+    threshold: 0.0
+    aggregation: "count"
+    window_days: null
+  heat_days:
+    description: "Days with Tmax > 35 degC (default; caller may override)."
+    unit: "degree_Celsius"
+    operator: "gt"
+    threshold: 35.0
+    aggregation: "count"
+    window_days: null
+  dry_days:
+    description: "Days with precipitation < 1 mm."
+    unit: "millimeter"
+    operator: "lt"
+    threshold: 1.0
+    aggregation: "count"
+    window_days: null
+  wet_days:
+    description: "Days with precipitation >= 1 mm."
+    unit: "millimeter"
+    operator: "ge"
+    threshold: 1.0
+    aggregation: "count"
+    window_days: null
+  # --- spells (4): max consecutive run ---
+  frost_spell_max:
+    description: "Longest run of consecutive days with Tmin < 0 degC."
+    unit: "degree_Celsius"
+    operator: "lt"
+    threshold: 0.0
+    aggregation: "max_run"
+    window_days: null
+  heat_spell_max:
+    description: "Longest run of consecutive days with Tmax > 35 degC."
+    unit: "degree_Celsius"
+    operator: "gt"
+    threshold: 35.0
+    aggregation: "max_run"
+    window_days: null
+  dry_spell_max:
+    description: "Longest run of consecutive days with precipitation < 1 mm."
+    unit: "millimeter"
+    operator: "lt"
+    threshold: 1.0
+    aggregation: "max_run"
+    window_days: null
+  wet_spell_max:
+    description: "Longest run of consecutive days with precipitation >= 1 mm."
+    unit: "millimeter"
+    operator: "ge"
+    threshold: 1.0
+    aggregation: "max_run"
+    window_days: null
+  # --- rolling sums (2): max window sum ---
+  rolling_sum_7d_max:
+    description: "Maximum 7-day rolling sum of the series."
+    unit: "millimeter"
+    operator: "ge"
+    threshold: 0.0
+    aggregation: "max_rolling_sum"
+    window_days: 7
+  rolling_sum_30d_max:
+    description: "Maximum 30-day rolling sum of the series."
+    unit: "millimeter"
+    operator: "ge"
+    threshold: 0.0
+    aggregation: "max_rolling_sum"
+    window_days: 30
+  # --- aggregates (3) ---
+  precip_total:
+    description: "Total precipitation over the series (sum of all values)."
+    unit: "millimeter"
+    operator: "ge"
+    threshold: 0.0
+    aggregation: "sum"
+    window_days: null
+  temp_min:
+    description: "Minimum value in the series (e.g. of a Tmin series)."
+    unit: "degree_Celsius"
+    operator: "lt"
+    threshold: null
+    aggregation: "min"
+    window_days: null
+  temp_max:
+    description: "Maximum value in the series (e.g. of a Tmax series)."
+    unit: "degree_Celsius"
+    operator: "gt"
+    threshold: null
+    aggregation: "max"
+    window_days: null

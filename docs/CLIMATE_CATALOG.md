@@ -4,14 +4,21 @@
 
 See `climate_catalog_v1_rationale.md` for the rationale and `decisions/ADR-012-climate-catalog.md` for the decision record.
 
-Total rows: **45**.
+Total rows: **54**.
 
-## Computed (21)
+## Computed (30)
 
 | param_id | group | unit | status | milestone | method_ref | safety_tier |
 |---|---|---|---|---|---|---|
-| `compute_chill_hours` | thermal | `hour` | planned | M12 | Weinberger 1950 | low |
-| `compute_chill_portions` | thermal | `dimensionless` | planned | M12 | Fishman 1987 | low |
+| `compute_bio_01` | bioclim | `degree_Celsius` | implemented | M12 | Nix 1986 | low |
+| `compute_bio_06` | bioclim | `degree_Celsius` | implemented | M12 | Nix 1986 | low |
+| `compute_bio_07` | bioclim | `degree_Celsius` | implemented | M12 | Nix 1986 | low |
+| `compute_bio_12` | bioclim | `millimeter` | implemented | M12 | Nix 1986 | low |
+| `compute_bio_13` | bioclim | `millimeter` | implemented | M12 | Nix 1986 | low |
+| `compute_bio_14` | bioclim | `millimeter` | implemented | M12 | Nix 1986 | low |
+| `compute_bio_15` | bioclim | `percent` | implemented | M12 | Nix 1986 | low |
+| `compute_chill_hours` | thermal | `hour` | implemented | M12 | Weinberger 1950 | low |
+| `compute_chill_portions` | thermal | `dimensionless` | backlog | M12 | Fishman et al. 1987 | low |
 | `compute_clearness_index` | radiation | `dimensionless` | implemented | M11 | Allen 1996 | low |
 | `compute_daylength` | radiation | `hour` | implemented | M11 | Cooper 1969; Spencer 1971 | low |
 | `compute_dew_point` | atmosphere | `degree_Celsius` | implemented | M11 | Tetens 1930 | low |
@@ -19,12 +26,14 @@ Total rows: **45**.
 | `compute_et0_hargreaves_samani` | evaporation | `millimeter/day` | implemented | M11 | Hargreaves & Samani 1985 | low |
 | `compute_et0_penman_monteith` | evaporation | `millimeter/day` | implemented | M11 | Monteith 1965; Allen 1996 | low |
 | `compute_extraterrestrial_radiation` | radiation | `megajoule/meter**2/day` | implemented | M11 | Allen 1996 | low |
-| `compute_gdd` | thermal | `degree_day` | planned | M12 | McMaster & Wilhelm 1997 | low |
+| `compute_gdd` | thermal | `degree_day` | implemented | M12 | McMaster & Wilhelm 1997 | low |
 | `compute_net_radiation` | radiation | `megajoule/meter**2/day` | implemented | M11 | Allen 1996 | low |
+| `compute_photothermal_units` | thermal | `dimensionless` | implemented | M12 | McMaster & Wilhelm 1997; Cooper 1969 | low |
 | `compute_ppfd` | radiation | `micromole/meter**2/second` | implemented | M11 | Thimijan & Heins 1983 | low |
 | `compute_pressure_from_elevation` | atmosphere | `kilopascal` | implemented | M11 | Allen 1996 | low |
 | `compute_solar_radiation` | radiation | `megajoule/meter**2/day` | implemented | M11 | Hargreaves & Samani 1985 | low |
 | `compute_temp_from_elevation` | atmosphere | `degree_Celsius` | implemented | M11 | Allen 1996 | low |
+| `compute_utah_chill_units` | thermal | `dimensionless` | implemented | M12 | Richardson et al. 1974 | low |
 | `compute_vpd` | atmosphere | `kilopascal` | implemented | M11 | Tetens 1930; Allen 1996 | low |
 | `compute_wet_bulb` | atmosphere | `degree_Celsius` | implemented | M11 | Stull 2011 | low |
 | `compute_wind_direction_from_uv` | atmosphere | `degree` | implemented | M11 | WMO 2018 | low |
