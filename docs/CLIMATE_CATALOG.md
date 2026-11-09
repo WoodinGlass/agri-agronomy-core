@@ -36,8 +36,8 @@ Total rows: **61**.
 | `compute_photothermal_units` | thermal | `dimensionless` | implemented | M12 | McMaster & Wilhelm 1997; Cooper 1969 | low |
 | `compute_ppfd` | radiation | `micromole/meter**2/second` | implemented | M11 | Thimijan & Heins 1983 | low |
 | `compute_pressure_from_elevation` | atmosphere | `kilopascal` | implemented | M11 | Allen 1996 | low |
-| `compute_rsc` | water_quality | `dimensionless` | planned | M14 | Eaton 1950 | low |
-| `compute_sar` | water_quality | `dimensionless` | planned | M14 | Richards 1954 | low |
+| `compute_rsc` | water_quality | `dimensionless` | implemented | M14 | Eaton 1950 | low |
+| `compute_sar` | water_quality | `dimensionless` | implemented | M14 | Richards 1954 | low |
 | `compute_solar_radiation` | radiation | `megajoule/meter**2/day` | implemented | M11 | Hargreaves & Samani 1985 | low |
 | `compute_temp_from_elevation` | atmosphere | `degree_Celsius` | implemented | M11 | Allen 1996 | low |
 | `compute_utah_chill_units` | thermal | `dimensionless` | implemented | M12 | Richardson et al. 1974 | low |
