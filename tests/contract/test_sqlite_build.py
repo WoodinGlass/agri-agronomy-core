@@ -177,14 +177,14 @@ def test_row_counts_match_source_tables() -> None:
             counts[table_name] = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
     finally:
         conn.close()
-    # Sample pack has 8 taxa, 19 names, 2 hazards, 1 dataset, 3 sources, 20 facts
+    # Sample pack has 8 taxa, 19 names, 2 hazards, 1 dataset, 3 sources, 48 facts
     assert counts == {
         "taxa": 8,
         "names": 19,
         "hazards": 2,
         "datasets": 1,
         "sources": 3,
-        "facts": 20,
+        "facts": 48,
     }
 
 
