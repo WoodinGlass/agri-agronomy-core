@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Irrigation, fertilizer, media, water (M14).** `agri_core.irrigation`
+  adds `irrigate_field_etc` (numeric, `max(0, Kc·ET0 − P_eff)`),
+  `irrigate_paddy_awd` (categorical, phase-aware via `must_flood_phases`),
+  `irrigate_container_band` (categorical, from `moisture_band`).
+  `agri_core.fertilizer` adds `fertilize_n` / `fertilize_p2o5` /
+  `fertilize_k2o` with per-application dose caps enforced in-function;
+  a missing cap refuses. `agri_core.media` adds `compute_sar`
+  (Richards 1954), `compute_rsc` (Eaton 1950), and `check_water_quality`
+  (`ok` / `exceed_ec` / `exceed_temp` / `exceed_both`). `agri_core.safety`
+  adds `apply_dose_cap` at 100% coverage. All crop-specific values come
+  only from the pack. Catalog: `compute_fertilizer_n`,
+  `compute_fertilizer_p2o5`, `compute_fertilizer_k2o`, `compute_sar`,
+  `compute_rsc` move from `planned` to `implemented`; catalog grows
+  54 → 61 rows. See ADR-015.
 - **Climate parameter catalog (M10).** `docs/design/climate_catalog_v1.csv`
   lists every climate parameter the engine computes (`computed`), expects
   as input (`input`), or reads from a pack (`pack_value`), plus a set of
