@@ -17,6 +17,7 @@ PINT_CANONICAL_UNITS: frozenset[str] = frozenset(
         "degree_Celsius",
         "decisiemens/meter",
         "millimeter/day",
+        "millimeter",
         "kilogram/hectare",
         "1/hectare",
         "mole/meter**2/day",
