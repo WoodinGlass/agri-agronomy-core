@@ -6,11 +6,21 @@ that cannot read a pack return empty ``provenance`` and ``evidence == []``.
 
 from __future__ import annotations
 
+from agri_core.climate.bioclim import (
+    bio_01,
+    bio_06,
+    bio_07,
+    bio_12,
+    bio_13,
+    bio_14,
+    bio_15,
+)
 from agri_core.climate.elevation import (
     pressure_from_elevation,
     temp_from_elevation,
 )
 from agri_core.climate.et0 import et0, et0_hargreaves_samani, et0_penman_monteith
+from agri_core.climate.indices import threshold_index
 from agri_core.climate.par import dli, ppfd
 from agri_core.climate.psychrometry import dew_point, vpd, wet_bulb
 from agri_core.climate.radiation import net_radiation, solar_radiation
@@ -35,6 +45,13 @@ from agri_core.climate.wind import (
 )
 
 __all__ = [
+    "bio_01",
+    "bio_06",
+    "bio_07",
+    "bio_12",
+    "bio_13",
+    "bio_14",
+    "bio_15",
     "chill_hours",
     "clearness_index",
     "daylength",
@@ -53,6 +70,7 @@ __all__ = [
     "pressure_from_elevation",
     "solar_radiation",
     "temp_from_elevation",
+    "threshold_index",
     "utah_chill_units",
     "vpd",
     "wet_bulb",

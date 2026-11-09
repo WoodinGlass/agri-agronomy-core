@@ -17,13 +17,27 @@ INDICES_FILE = VOCAB / "climate_indices.yaml"
 
 _VALID_OPERATORS = {"lt", "le", "gt", "ge"}
 _VALID_AGGREGATIONS = {
-    "count", "max_run", "max_rolling_sum", "sum", "min", "max",
+    "count",
+    "max_run",
+    "max_rolling_sum",
+    "sum",
+    "min",
+    "max",
 }
 _EXPECTED_INDICES = {
-    "frost_days", "heat_days", "dry_days", "wet_days",
-    "frost_spell_max", "heat_spell_max", "dry_spell_max", "wet_spell_max",
-    "rolling_sum_7d_max", "rolling_sum_30d_max",
-    "precip_total", "temp_min", "temp_max",
+    "frost_days",
+    "heat_days",
+    "dry_days",
+    "wet_days",
+    "frost_spell_max",
+    "heat_spell_max",
+    "dry_spell_max",
+    "wet_spell_max",
+    "rolling_sum_7d_max",
+    "rolling_sum_30d_max",
+    "precip_total",
+    "temp_min",
+    "temp_max",
 }
 
 
@@ -91,13 +105,10 @@ def test_threshold_null_only_for_min_max() -> None:
         thr = spec.get("threshold")
         if agg in ("min", "max"):
             assert thr is None, (
-                f"{name}: aggregation {agg!r} but threshold={thr!r} "
-                f"(should be null)"
+                f"{name}: aggregation {agg!r} but threshold={thr!r} (should be null)"
             )
         else:
-            assert thr is not None, (
-                f"{name}: aggregation {agg!r} requires numeric threshold"
-            )
+            assert thr is not None, f"{name}: aggregation {agg!r} requires numeric threshold"
 
 
 def test_window_days_only_for_max_rolling_sum() -> None:
@@ -109,8 +120,7 @@ def test_window_days_only_for_max_rolling_sum() -> None:
             assert wd >= 1, f"{name}: window_days must be >= 1"
         else:
             assert wd is None, (
-                f"{name}: aggregation {agg!r} but window_days={wd!r} "
-                f"(should be null)"
+                f"{name}: aggregation {agg!r} but window_days={wd!r} (should be null)"
             )
 
 
