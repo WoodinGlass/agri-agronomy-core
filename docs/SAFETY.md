@@ -23,8 +23,10 @@ that is **not** covered by a test, it is marked
 Parameters with a `safety_class` other than `none` in
 [`DICTIONARY.md`](DICTIONARY.md) (`dose_cap`, `toxicity_limit`,
 `regulatory`) are never `draft` or `imported`. `resolve_fact` raises the
-status floor to `reviewed` for them regardless of the caller's
-`min_status`, and records a `safety_min_status_raised` warning.
+status floor to `reviewed` if the caller's floor is below it, and
+records a `safety_min_status_raised` warning. A caller who sets
+`min_status="approved"` remains strict: a safety fact that is only
+`reviewed` produces `Unknown` rather than being silently accepted.
 
 - `tests/contract/test_resolve_fact.py::test_safety_floor_raised`
 

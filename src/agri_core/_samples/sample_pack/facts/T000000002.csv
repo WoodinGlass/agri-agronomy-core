@@ -3,3 +3,6 @@ F00000000004,T000000002,water_temp_max,,"{""shape"":""scalar"",""unit"":""degree
 F00000000005,T000000002,awd_reflood_depth,,"{""shape"":""scalar"",""unit"":""centimeter"",""value"":10.0}",{},curated,S001,,Synthetic table 1,B,approved,test-reviewer,2026-01-01,
 F00000000006,T000000002,must_flood_phases,,"{""shape"":""enum_set"",""values"":[""vegetative"",""flowering""]}",{},curated,S001,,Synthetic table 1,A,approved,test-reviewer,2026-01-01,
 F00000000007,T000000002,percolation_rate,,"{""shape"":""scalar"",""unit"":""millimeter/day"",""value"":5.0}",{},curated,S001,,Synthetic table 1,B,approved,test-reviewer,2026-01-01,
+F00000000035,T000000002,ponding_depth,vegetative,"{""shape"":""scalar"",""unit"":""centimeter"",""value"":5.0}","{}",curated,S001,,Synthetic table 1,B,approved,test-reviewer,2026-01-01,
+F00000000036,T000000002,predrain_days,,"{""shape"":""scalar"",""unit"":""day"",""value"":10.0}","{}",curated,S001,,Synthetic table 1,B,approved,test-reviewer,2026-01-01,
+F00000000037,T000000002,water_ec_max,,"{""shape"":""scalar"",""unit"":""decisiemens/meter"",""value"":2.0}","{}",curated,S001,,Synthetic table 1,B,approved,test-reviewer,2026-01-01,
