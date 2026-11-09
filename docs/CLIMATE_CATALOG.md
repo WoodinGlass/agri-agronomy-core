@@ -18,7 +18,7 @@ Total rows: **54**.
 | `compute_bio_14` | bioclim | `millimeter` | planned | M12 | Nix 1986 | low |
 | `compute_bio_15` | bioclim | `percent` | planned | M12 | Nix 1986 | low |
 | `compute_chill_hours` | thermal | `hour` | planned | M12 | Weinberger 1950 | low |
-| `compute_chill_portions` | thermal | `dimensionless` | planned | M12 | Fishman et al. 1987 | low |
+| `compute_chill_portions` | thermal | `dimensionless` | backlog | M12 | Fishman et al. 1987 | low |
 | `compute_clearness_index` | radiation | `dimensionless` | implemented | M11 | Allen 1996 | low |
 | `compute_daylength` | radiation | `hour` | implemented | M11 | Cooper 1969; Spencer 1971 | low |
 | `compute_dew_point` | atmosphere | `degree_Celsius` | implemented | M11 | Tetens 1930 | low |
