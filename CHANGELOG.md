@@ -20,6 +20,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`PACK_CATALOG_EXCLUDED_PARAMETER`, dormant until extension parameters
   enter the pack format). A three-way drift test keeps the CSV, the
   generated document, and the shipped list in sync. See ADR-012.
+- **Thermal time and climate indices (M12).** `agri_core.climate` adds
+  14 public functions: `gdd_method_1` and `gdd_method_2` (McMaster &
+  Wilhelm 1997), `gdd_series`, `chill_hours` (Weinberger 1950),
+  `utah_chill_units` (Richardson et al. 1974), `photothermal_units`;
+  `threshold_index` (generic engine over the 13-index
+  `climate_indices` registry); and `bio_01`, `bio_06`, `bio_07`,
+  `bio_12`, `bio_13`, `bio_14`, `bio_15` (Nix 1986 bioclimatic
+  variables). A gap in a series returns `insufficient_input`; nothing
+  is interpolated. `dictionary_version` bumps 1.0.0 → 1.1.0 with the
+  new `climate_indices` vocab file. The Dynamic Model (chill
+  portions) is `backlog` pending Fishman et al. 1987 paper access.
+  See ADR-013.
 - **Atmosphere, radiation, and ET0 (M11).** `agri_core.climate` adds 19
   pure calculators over 7 primary-literature methods: Tetens 1930 and
   Allen 1996 (VPD, dew point); Stull 2011 (wet-bulb); Cooper 1969 and
