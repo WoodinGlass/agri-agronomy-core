@@ -91,8 +91,8 @@ def _valid_row(**overrides: object) -> CatalogRow:
 
 def test_load_shipped_catalog() -> None:
     rows = load_catalog(CATALOG_CSV)
-    assert len(rows) == 45
-    assert len({r.param_id for r in rows}) == 45
+    assert len(rows) == 54
+    assert len({r.param_id for r in rows}) == 54
     kinds = {r.kind for r in rows}
     assert kinds == {
         CatalogKind.COMPUTED,
