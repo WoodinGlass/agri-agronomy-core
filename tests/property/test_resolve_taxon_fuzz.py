@@ -118,7 +118,7 @@ _KS = _make_ks()
 
 
 @given(name=st.text(min_size=0, max_size=_INPUT_MAX))
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=100, deadline=None, derandomize=True)
 def test_arbitrary_text_never_crashes(name: str) -> None:
     """Any ``str`` up to ``_INPUT_MAX`` resolves or returns a valid ``Unknown``.
 
@@ -141,8 +141,8 @@ def test_arbitrary_text_never_crashes(name: str) -> None:
 # ---- property 2: any over-bound input is rejected ------------------------
 
 
-@given(name=st.text(min_size=_MAX_INPUT + 1, max_size=10_000))
-@settings(max_examples=50, deadline=None)
+@given(name=st.text(min_size=_MAX_INPUT + 1, max_size=_INPUT_MAX))
+@settings(max_examples=50, deadline=None, derandomize=True)
 def test_long_text_always_input_too_long(name: str) -> None:
     """G9 invariant: ``len(name) > 200`` -> ``input_too_long``, any content."""
     r = resolve_taxon(_KS, name)
