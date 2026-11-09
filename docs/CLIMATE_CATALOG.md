@@ -4,9 +4,9 @@
 
 See `climate_catalog_v1_rationale.md` for the rationale and `decisions/ADR-012-climate-catalog.md` for the decision record.
 
-Total rows: **54**.
+Total rows: **61**.
 
-## Computed (30)
+## Computed (37)
 
 | param_id | group | unit | status | milestone | method_ref | safety_tier |
 |---|---|---|---|---|---|---|
@@ -25,12 +25,19 @@ Total rows: **54**.
 | `compute_dli` | radiation | `mole/meter**2/day` | implemented | M11 | Faust & Logan 2002 | low |
 | `compute_et0_hargreaves_samani` | evaporation | `millimeter/day` | implemented | M11 | Hargreaves & Samani 1985 | low |
 | `compute_et0_penman_monteith` | evaporation | `millimeter/day` | implemented | M11 | Monteith 1965; Allen 1996 | low |
+| `compute_etc` | evaporation | `millimeter/day` | planned | M14 | Allen 1996; Kc from pack | low |
 | `compute_extraterrestrial_radiation` | radiation | `megajoule/meter**2/day` | implemented | M11 | Allen 1996 | low |
+| `compute_fertilizer_k2o` | fertilizer | `kilogram/hectare` | planned | M14 | IUPAC atomic weights | low |
+| `compute_fertilizer_n` | fertilizer | `kilogram/hectare` | planned | M14 | IUPAC atomic weights | low |
+| `compute_fertilizer_p2o5` | fertilizer | `kilogram/hectare` | planned | M14 | IUPAC atomic weights | low |
 | `compute_gdd` | thermal | `degree_day` | implemented | M12 | McMaster & Wilhelm 1997 | low |
+| `compute_irrigation_field_etc` | irrigation | `millimeter/day` | planned | M14 | Allen 1996; Kc from pack | low |
 | `compute_net_radiation` | radiation | `megajoule/meter**2/day` | implemented | M11 | Allen 1996 | low |
 | `compute_photothermal_units` | thermal | `dimensionless` | implemented | M12 | McMaster & Wilhelm 1997; Cooper 1969 | low |
 | `compute_ppfd` | radiation | `micromole/meter**2/second` | implemented | M11 | Thimijan & Heins 1983 | low |
 | `compute_pressure_from_elevation` | atmosphere | `kilopascal` | implemented | M11 | Allen 1996 | low |
+| `compute_rsc` | water_quality | `dimensionless` | planned | M14 | Eaton 1950 | low |
+| `compute_sar` | water_quality | `dimensionless` | planned | M14 | Richards 1954 | low |
 | `compute_solar_radiation` | radiation | `megajoule/meter**2/day` | implemented | M11 | Hargreaves & Samani 1985 | low |
 | `compute_temp_from_elevation` | atmosphere | `degree_Celsius` | implemented | M11 | Allen 1996 | low |
 | `compute_utah_chill_units` | thermal | `dimensionless` | implemented | M12 | Richardson et al. 1974 | low |
