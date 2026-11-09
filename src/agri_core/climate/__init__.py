@@ -19,6 +19,14 @@ from agri_core.climate.solar import (
     daylength,
     extraterrestrial_radiation,
 )
+from agri_core.climate.thermal import (
+    chill_hours,
+    gdd_method_1,
+    gdd_method_2,
+    gdd_series,
+    photothermal_units,
+    utah_chill_units,
+)
 from agri_core.climate.wind import (
     wind_direction_from_uv,
     wind_height_adjust,
@@ -27,6 +35,7 @@ from agri_core.climate.wind import (
 )
 
 __all__ = [
+    "chill_hours",
     "clearness_index",
     "daylength",
     "dew_point",
@@ -35,11 +44,16 @@ __all__ = [
     "et0_hargreaves_samani",
     "et0_penman_monteith",
     "extraterrestrial_radiation",
+    "gdd_method_1",
+    "gdd_method_2",
+    "gdd_series",
     "net_radiation",
+    "photothermal_units",
     "ppfd",
     "pressure_from_elevation",
     "solar_radiation",
     "temp_from_elevation",
+    "utah_chill_units",
     "vpd",
     "wet_bulb",
     "wind_direction_from_uv",
