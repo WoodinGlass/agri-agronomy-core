@@ -20,6 +20,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`PACK_CATALOG_EXCLUDED_PARAMETER`, dormant until extension parameters
   enter the pack format). A three-way drift test keeps the CSV, the
   generated document, and the shipped list in sync. See ADR-012.
+- **Threshold checks and stage resolution (M13).** `agri_core.thresholds`
+  adds `threshold_check` (four-point trapezoid classification into
+  `optimal` / `suboptimal` / `critical`, with inclusive boundaries and
+  thresholds read from the pack only). `agri_core.stages` adds
+  `resolve_stage` for three modes: perennial events (caller-supplied
+  dated events), annual thermal (planting_date + gdd_cumulative, using
+  phase_thermal_time facts), and annual age (planting_date only, using
+  phase_duration facts). Boundary semantics are `cumulative >= target`,
+  so a phase whose cumulative duration equals the target stays in that
+  phase. `ptu_cumulative` is accepted but returns `not_applicable`
+  (photothermal staging needs a `phase_photothermal_time` parameter
+  that is not yet in the dictionary). Both calculators return
+  `CategoricalResult` (ADR-006). See ADR-014.
 - **Thermal time and climate indices (M12).** `agri_core.climate` adds
   14 public functions: `gdd_method_1` and `gdd_method_2` (McMaster &
   Wilhelm 1997), `gdd_series`, `chill_hours` (Weinberger 1950),
