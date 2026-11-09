@@ -16,6 +16,10 @@ permissions:
 jobs:
   build:
     name: Build wheel + sdist
+    # v0.1.x is distributed as git tags and GitHub Releases only; PyPI
+    # publication begins at a later tag (see CHANGELOG). Skip PyPI for
+    # v0.1.* release events; manual workflow_dispatch is always allowed.
+    if: github.event_name == 'workflow_dispatch' || !startsWith(github.event.release.tag_name, 'v0.1.')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

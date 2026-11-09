@@ -5,7 +5,7 @@ Every crop-specific value comes from a verified knowledge pack, never from a lan
 
 <p align="center">
   <a href="https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml"><img src="https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/status-0.1.2--foundation-blue" alt="Status">
+  <img src="https://img.shields.io/badge/status-0.1.3--irrigation-fertilizer-media-water" alt="Status">
   <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue" alt="Python">
   <img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License">
   <img src="https://img.shields.io/badge/mypy-strict-blue" alt="mypy">
@@ -85,10 +85,10 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 Releases are distributed as git tags. Pin one:
 
 ```bash
-pip install "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.2"
+pip install "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.3"
 ```
 
-`v0.1.2` is the current tagged release; `v0.1.0` is the foundation release. `v0.1.1` remains available but does not enforce the license allowlist; use `v0.1.2` for new work. The `main` branch now carries M10 through M14 (climate catalog, atmosphere and radiation and ET0, thermal time and climate indices, thresholds and stages, irrigation and fertilizer and media and water); it will be tagged `v0.1.3` once its release gates complete. To track the development branch, replace `@v0.1.2` with `@main` (development only; not recommended for anything you deploy).
+`v0.1.3` is the current tagged release; `v0.1.0` is the foundation release. `v0.1.1` remains available but does not enforce the license allowlist; use `v0.1.3` for new work. To track the development branch, replace `@v0.1.3` with `@main` (development only; not recommended for anything you deploy).
 
 `v0.1.x` releases are distributed as git tags and GitHub Releases only; PyPI publication will begin at a later tag, announced in [CHANGELOG](CHANGELOG.md) when it is prepared.
 
@@ -99,14 +99,14 @@ Requires Python 3.11 or newer (tested on 3.11, 3.12, 3.13 and 3.14 on Ubuntu-lat
 Install in any Colab cell:
 
 ```python
-!pip install -q "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.2"
+!pip install -q "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.3"
 ```
 
 No API key or GPU is needed. Pure Python, CPU only.
 
 ### Data packs
 
-Data packs are released separately by [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge) under Semantic Versioning. A release carries `agri-knowledge-<version>.tar.gz` (a built pack that extracts to `agri-knowledge-<version>/`) and a `SHA256SUMS` file. Check the hash, extract the archive and pass the directory to `load_knowledge_set`. The first data pack release, `agri-knowledge` `v0.1.0`, is published when that repository's K0 milestone completes; until that tag is published, the synthetic sample pack bundled with the package (used by `--pack sample`) is the only pack available.
+Data packs are released separately by [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge) under Semantic Versioning. A release carries `agri-knowledge-<version>.tar.gz` (a built pack that extracts to `agri-knowledge-<version>/`) and a `SHA256SUMS` file. Check the hash, extract the archive and pass the directory to `load_knowledge_set`. The first data release, `v0.1.0`, is planned after `agri-knowledge` milestone K5; until then the synthetic sample pack bundled with the package (used by `--pack sample`) is the only pack available.
 
 ```bash
 VERSION=0.1.0   # planned; not released yet
@@ -345,7 +345,7 @@ Adding a **core** parameter is a minor engine release. Adding an **extension** p
 
 ## Coverage
 
-**Data release plan.** The first data pack release, `agri-knowledge` `v0.1.0` (published when that repository's K0 milestone completes), carries tomato and rice at tier T2 for Indonesia and one more country, a T0 taxonomic backbone with multilingual names for the priority list, and legal flags. After that, `agri-knowledge` adds one group per iteration (fruit, fodder, ornamentals, then rare plants), each starting with a source audit.
+**Data release plan.** The first data release, `agri-knowledge` `v0.1.0` (planned after its milestone K5), carries tomato and rice at tier T2 for Indonesia and one more country, a T0 taxonomic backbone with multilingual names for the priority list, and legal flags. After that, `agri-knowledge` adds one group per iteration (fruit, fodder, ornamentals, then rare plants), each starting with a source audit.
 
 **Design targets for the engine.** Six reference profiles across five archetypes are chosen to exercise every irrigation mode, the propagation planner and the suitability refusal path. They arrive in `agri-knowledge` as their groups come up; until then the tests use the synthetic sample pack.
 
