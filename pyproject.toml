@@ -90,6 +90,10 @@ include = [
 ]
 
 [tool.ruff]
+# Notebooks are validated by nbmake, not ruff format; older ruff
+# (floor 0.14) formats .ipynb differently from newer ruff, causing
+# "ruff format --check" drift across CI matrix legs.
+exclude = ["notebooks"]
 target-version = "py311"
 line-length = 100
 src = ["src", "tests"]
