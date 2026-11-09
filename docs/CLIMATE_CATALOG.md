@@ -27,9 +27,9 @@ Total rows: **61**.
 | `compute_et0_penman_monteith` | evaporation | `millimeter/day` | implemented | M11 | Monteith 1965; Allen 1996 | low |
 | `compute_etc` | evaporation | `millimeter/day` | planned | M14 | Allen 1996; Kc from pack | low |
 | `compute_extraterrestrial_radiation` | radiation | `megajoule/meter**2/day` | implemented | M11 | Allen 1996 | low |
-| `compute_fertilizer_k2o` | fertilizer | `kilogram/hectare` | planned | M14 | IUPAC atomic weights | low |
-| `compute_fertilizer_n` | fertilizer | `kilogram/hectare` | planned | M14 | IUPAC atomic weights | low |
-| `compute_fertilizer_p2o5` | fertilizer | `kilogram/hectare` | planned | M14 | IUPAC atomic weights | low |
+| `compute_fertilizer_k2o` | fertilizer | `kilogram/hectare` | implemented | M14 | caller composition (division) | low |
+| `compute_fertilizer_n` | fertilizer | `kilogram/hectare` | implemented | M14 | caller composition (division) | low |
+| `compute_fertilizer_p2o5` | fertilizer | `kilogram/hectare` | implemented | M14 | caller composition (division) | low |
 | `compute_gdd` | thermal | `degree_day` | implemented | M12 | McMaster & Wilhelm 1997 | low |
 | `compute_irrigation_field_etc` | irrigation | `millimeter/day` | planned | M14 | Allen 1996; Kc from pack | low |
 | `compute_net_radiation` | radiation | `megajoule/meter**2/day` | implemented | M11 | Allen 1996 | low |
