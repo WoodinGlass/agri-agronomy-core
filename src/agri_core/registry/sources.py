@@ -308,6 +308,17 @@ def lint_csv_text(
 
 
 def lint_csv_file(path: Path, *, today: date) -> list[Finding]:
+    """Lint a ``sources.csv`` file on disk and return all findings.
+
+    A missing or non-regular file yields a single ``SRC000`` error
+    finding with the path attached. Otherwise the file is read with
+    ``utf-8-sig`` (BOM-tolerant) and delegated to
+    :func:`lint_csv_text` for row-level validation.
+
+    ``today`` is the reference date passed to the text linter;
+    supplying it as an argument keeps the check deterministic and
+    offline.
+    """
     if not path.is_file():
         return [
             Finding(
