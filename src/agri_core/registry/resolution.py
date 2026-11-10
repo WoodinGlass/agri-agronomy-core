@@ -97,7 +97,7 @@ Uses its own adapter (``TaxonOutcomeAdapter``) rather than
 ``status="ok"``; a single union would be ambiguous.
 """
 
-TaxonOutcomeAdapter: TypeAdapter[TaxonOutcome] = TypeAdapter(TaxonOutcome)  # type: ignore[arg-type, unused-ignore]
+TaxonOutcomeAdapter: TypeAdapter[TaxonOutcome] = TypeAdapter(TaxonOutcome)
 """Validate or serialize any :data:`TaxonOutcome` value."""
 
 
@@ -634,7 +634,7 @@ Kept separate from ``Outcome`` (and from ``TaxonOutcome``) because
 combining them in one union would make the discriminator ambiguous.
 """
 
-FactOutcomeAdapter: TypeAdapter[FactOutcome] = TypeAdapter(FactOutcome)  # type: ignore[arg-type, unused-ignore]
+FactOutcomeAdapter: TypeAdapter[FactOutcome] = TypeAdapter(FactOutcome)
 """Validate or serialize any :data:`FactOutcome` value."""
 
 

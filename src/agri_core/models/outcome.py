@@ -32,7 +32,7 @@ Outcome = Annotated[
 # mypy strict cannot see through Annotated at the TypeAdapter call site;
 # pydantic resolves it at runtime (tests exercise both validate_python and
 # dump_python through OutcomeAdapter).
-OutcomeAdapter: TypeAdapter[Outcome] = TypeAdapter(Outcome)  # type: ignore[arg-type, unused-ignore]
+OutcomeAdapter: TypeAdapter[Outcome] = TypeAdapter(Outcome)
 """Validate or serialize any :data:`Outcome` value."""
 
 
