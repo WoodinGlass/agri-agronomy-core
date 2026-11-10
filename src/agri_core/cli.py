@@ -925,6 +925,14 @@ def _show_fact(ks: KnowledgeSet, fact_id: str, *, json_output: bool) -> int:
 
 
 def main() -> NoReturn:
+    """Run the ``agri-core`` command-line interface.
+
+    This is the Typer / Click entry point. Its docstring is what
+    appears as the CLI description in ``agri-core --help``. The
+    individual subcommands (``validate``, ``pack``, ``show``,
+    ``coverage``, ``diff``, ``lint-sources``, ``lint-catalog``)
+    carry their own help text on their Typer decorators.
+    """
     try:
         app()
     except SystemExit:
