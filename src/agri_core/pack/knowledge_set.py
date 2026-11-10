@@ -43,7 +43,14 @@ class KnowledgeSet(Protocol):
     """
 
     @property
-    def manifest(self) -> PackManifest: ...
+    def manifest(self) -> PackManifest:
+        """Return the pack manifest as loaded and verified at construction time.
+
+        The manifest carries name, version, ``schema_version``, ``engine_min``,
+        ``dictionary_min``, ``synthetic`` and ``content_hash``. Its
+        ``content_hash`` matches :attr:`pack_hash`.
+        """
+        ...
 
     @property
     def pack_hash(self) -> str:
@@ -281,31 +288,39 @@ class InMemoryKnowledgeSet:
 
     @property
     def manifest(self) -> PackManifest:
+        """See :meth:`KnowledgeSet.manifest`."""
         return self._manifest
 
     @property
     def pack_hash(self) -> str:
+        """See :meth:`KnowledgeSet.pack_hash`."""
         return self._pack_hash
 
     @property
     def dictionary_version(self) -> str:
+        """See :meth:`KnowledgeSet.dictionary_version`."""
         return self._dictionary_version
 
     @property
     def verified(self) -> bool:
+        """See :meth:`KnowledgeSet.verified`."""
         return self._verified
 
     @property
     def dictionary(self) -> Dictionary:
+        """See :meth:`KnowledgeSet.dictionary`."""
         return self._dictionary
 
     def taxon(self, taxon_id: str) -> TaxonRow:
+        """See :meth:`KnowledgeSet.taxon`."""
         return self._taxa_by_id[taxon_id]
 
     def taxa(self) -> Iterator[TaxonRow]:
+        """See :meth:`KnowledgeSet.taxa`."""
         return iter(self._taxa_sorted)
 
     def facts_for(self, taxon_id: str, parameter: str | None = None) -> tuple[FactRow, ...]:
+        """See :meth:`KnowledgeSet.facts_for`."""
         if taxon_id not in self._taxa_by_id:
             raise KeyError(taxon_id)
         if parameter is None:
@@ -313,34 +328,43 @@ class InMemoryKnowledgeSet:
         return self._facts_by_taxon_param.get((taxon_id, parameter), ())
 
     def facts(self) -> Iterator[FactRow]:
+        """See :meth:`KnowledgeSet.facts`."""
         return iter(self._facts_all)
 
     def ids_lock(self) -> frozenset[str] | None:
+        """See :meth:`KnowledgeSet.ids_lock`."""
         return self._ids_lock
 
     def names_for(self, taxon_id: str) -> tuple[NameRow, ...]:
+        """See :meth:`KnowledgeSet.names_for`."""
         if taxon_id not in self._taxa_by_id:
             raise KeyError(taxon_id)
         return self._names_by_taxon.get(taxon_id, ())
 
     def names(self) -> Iterator[NameRow]:
+        """See :meth:`KnowledgeSet.names`."""
         return iter(self._names_all)
 
     def hazards_for(self, taxon_id: str) -> tuple[HazardRow, ...]:
+        """See :meth:`KnowledgeSet.hazards_for`."""
         if taxon_id not in self._taxa_by_id:
             raise KeyError(taxon_id)
         return self._hazards_by_taxon.get(taxon_id, ())
 
     def hazards(self) -> Iterator[HazardRow]:
+        """See :meth:`KnowledgeSet.hazards`."""
         return iter(self._hazards_all)
 
     def source(self, source_id: str) -> SourceRow:
+        """See :meth:`KnowledgeSet.source`."""
         return self._sources_by_id[source_id]
 
     def dataset(self, dataset_id: str) -> DatasetRow:
+        """See :meth:`KnowledgeSet.dataset`."""
         return self._datasets_by_id[dataset_id]
 
     def names_index(self, query: str) -> tuple[NameIndexEntry, ...]:
+        """See :meth:`KnowledgeSet.names_index`."""
         normalized = normalize_name(query)
         return self._name_index.get(normalized, ())
 
@@ -575,27 +599,33 @@ class SQLiteKnowledgeSet:
 
     @property
     def manifest(self) -> PackManifest:
+        """See :meth:`KnowledgeSet.manifest`."""
         return self._manifest
 
     @property
     def pack_hash(self) -> str:
+        """See :meth:`KnowledgeSet.pack_hash`."""
         return self._pack_hash
 
     @property
     def dictionary_version(self) -> str:
+        """See :meth:`KnowledgeSet.dictionary_version`."""
         return self._dictionary_version
 
     @property
     def verified(self) -> bool:
+        """See :meth:`KnowledgeSet.verified`."""
         return self._verified
 
     @property
     def dictionary(self) -> Dictionary:
+        """See :meth:`KnowledgeSet.dictionary`."""
         return self._dictionary
 
     # ---- per-item lookups ---------------------------------------------
 
     def taxon(self, taxon_id: str) -> TaxonRow:
+        """See :meth:`KnowledgeSet.taxon`."""
         result = self._row_or_none(
             "SELECT * FROM taxa WHERE taxon_id = ?",
             (taxon_id,),
@@ -607,6 +637,7 @@ class SQLiteKnowledgeSet:
         return result
 
     def source(self, source_id: str) -> SourceRow:
+        """See :meth:`KnowledgeSet.source`."""
         result = self._row_or_none(
             "SELECT * FROM sources WHERE id = ?",
             (source_id,),
@@ -618,6 +649,7 @@ class SQLiteKnowledgeSet:
         return result
 
     def dataset(self, dataset_id: str) -> DatasetRow:
+        """See :meth:`KnowledgeSet.dataset`."""
         result = self._row_or_none(
             "SELECT * FROM datasets WHERE dataset_id = ?",
             (dataset_id,),
@@ -629,6 +661,7 @@ class SQLiteKnowledgeSet:
         return result
 
     def names_index(self, query: str) -> tuple[NameIndexEntry, ...]:
+        """See :meth:`KnowledgeSet.names_index`."""
         self._check_not_stale()
         normalized = normalize_name(query)
         return self._name_index.get(normalized, ())
@@ -636,6 +669,7 @@ class SQLiteKnowledgeSet:
     # ---- iterators ----------------------------------------------------
 
     def taxa(self) -> Iterator[TaxonRow]:
+        """See :meth:`KnowledgeSet.taxa`."""
         return self._iter_models(
             "SELECT * FROM taxa ORDER BY taxon_id",
             TABLES["taxa"],
@@ -643,6 +677,7 @@ class SQLiteKnowledgeSet:
         )
 
     def facts(self) -> Iterator[FactRow]:
+        """See :meth:`KnowledgeSet.facts`."""
         return self._iter_models(
             "SELECT * FROM facts ORDER BY fact_id",
             TABLES["facts"],
@@ -650,10 +685,12 @@ class SQLiteKnowledgeSet:
         )
 
     def ids_lock(self) -> frozenset[str] | None:
+        """See :meth:`KnowledgeSet.ids_lock`."""
         # Built packs do not preserve ids.lock; content_hash covers the source.
         return None
 
     def names(self) -> Iterator[NameRow]:
+        """See :meth:`KnowledgeSet.names`."""
         return self._iter_models(
             "SELECT * FROM names ORDER BY taxon_id, name, language, script, kind",
             TABLES["names"],
@@ -661,6 +698,7 @@ class SQLiteKnowledgeSet:
         )
 
     def hazards(self) -> Iterator[HazardRow]:
+        """See :meth:`KnowledgeSet.hazards`."""
         return self._iter_models(
             "SELECT * FROM hazards ORDER BY taxon_id, hazard_code",
             TABLES["hazards"],
@@ -670,6 +708,7 @@ class SQLiteKnowledgeSet:
     # ---- per-taxon collections ----------------------------------------
 
     def facts_for(self, taxon_id: str, parameter: str | None = None) -> tuple[FactRow, ...]:
+        """See :meth:`KnowledgeSet.facts_for`."""
         conn = self._connect()
         try:
             if parameter is None:
@@ -690,6 +729,7 @@ class SQLiteKnowledgeSet:
         return tuple(FactRow.model_validate(_row_to_dict(r, TABLES["facts"])) for r in rows)
 
     def names_for(self, taxon_id: str) -> tuple[NameRow, ...]:
+        """See :meth:`KnowledgeSet.names_for`."""
         conn = self._connect()
         try:
             cursor = conn.execute(
@@ -704,6 +744,7 @@ class SQLiteKnowledgeSet:
         return tuple(NameRow.model_validate(_row_to_dict(r, TABLES["names"])) for r in rows)
 
     def hazards_for(self, taxon_id: str) -> tuple[HazardRow, ...]:
+        """See :meth:`KnowledgeSet.hazards_for`."""
         conn = self._connect()
         try:
             cursor = conn.execute(
