@@ -550,14 +550,17 @@ class ValidationReport(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def ok(self) -> bool:
+        """``True`` if this report contains no ``ERROR`` findings."""
         return not any(f.severity == FindingSeverity.ERROR for f in self.findings)
 
     @property
     def errors(self) -> tuple[Finding, ...]:
+        """All findings with ``severity == ERROR``, in report order."""
         return tuple(f for f in self.findings if f.severity == FindingSeverity.ERROR)
 
     @property
     def warnings(self) -> tuple[Finding, ...]:
+        """All findings with ``severity == WARNING``, in report order."""
         return tuple(f for f in self.findings if f.severity == FindingSeverity.WARNING)
 
 

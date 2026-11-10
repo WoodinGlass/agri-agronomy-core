@@ -82,14 +82,17 @@ class Dictionary(BaseModel):
         )
 
     def lookup(self, key: str) -> ParameterDef:
+        """Return the :class:`ParameterDef` for *key*; raise ``KeyError`` when absent."""
         if key not in self.parameters:
             raise KeyError(f"parameter {key!r} not in dictionary")
         return self.parameters[key]
 
     def by_stage(self, stage: str) -> list[ParameterDef]:
+        """All parameters whose ``stage`` equals *stage*, in stable order."""
         return [p for p in self.parameters.values() if p.stage == stage]
 
     def by_module(self, module: str) -> list[ParameterDef]:
+        """All parameters that declare *module* in their ``used_by`` list."""
         return [p for p in self.parameters.values() if module in p.used_by]
 
     def content_hash(self) -> str:

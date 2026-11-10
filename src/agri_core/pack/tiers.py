@@ -95,6 +95,26 @@ def _param_satisfied(
 
 
 def derive_tier(ks: KnowledgeSet, taxon_id: str, dictionary: Dictionary) -> TierResult:
+    """Derive the tier (T0-T3) of *taxon_id* in *ks*, per ADR-003.
+
+    Tiers are computed, not declared:
+
+    * **T0**: no live facts; the taxon has identity only.
+    * **T1**: at least one live fact, but at least one ``tier_required``
+      parameter matching the taxon is not satisfied at ``reviewed``.
+    * **T2**: every required parameter satisfied at ``reviewed`` or
+      above (an ``unknown`` value with a reviewed reason also counts).
+    * **T3**: T2 plus every required parameter satisfied at
+      ``approved`` plus every safety-critical fact on the taxon is
+      ``approved`` with at least two distinct reviewer IDs in
+      ``reviewed_by``.
+
+    Required parameters are those with ``tier_required=True`` that
+    match the taxon's ``applies_to`` and are not scoped by
+    ``applies_to.systems``. System-scoped parameters without a
+    matching fact are collected in ``system_gaps`` and excluded
+    from the tier computation.
+    """
     taxon = ks.taxon(taxon_id)
     taxon_facts = list(ks.facts_for(taxon_id))
     live_facts = [f for f in taxon_facts if f.superseded_by is None]
@@ -168,4 +188,8 @@ def derive_tier(ks: KnowledgeSet, taxon_id: str, dictionary: Dictionary) -> Tier
 
 
 def derive_all_tiers(ks: KnowledgeSet, dictionary: Dictionary) -> dict[str, TierResult]:
+    """Return ``{taxon_id: derive_tier(...)}`` for every taxon in *ks*.
+
+    Order follows ``ks.taxa()``.
+    """
     return {t.taxon_id: derive_tier(ks, t.taxon_id, dictionary) for t in ks.taxa()}
