@@ -118,6 +118,14 @@ def _check(
 
 
 def is_protection_domain(param: ParameterDef) -> bool:
+    """Return ``True`` if *param* belongs to the plant-protection domain.
+
+    A parameter is in the protection domain when its stage equals
+    ``"protection"``, when its key contains a protection token
+    (``pest``, ``disease``, ``pathogen``, ``weed``, ``threat``,
+    ``biocontrol``), or when its key contains the contiguous phrase
+    ``"plant protection"``. ADR-007.
+    """
     if param.stage == PROTECTION_STAGE:
         return True
     tokens = _tokens(param.key)
@@ -146,6 +154,28 @@ class HazardCodeViolation:
 def find_protection_violations(
     parameters: dict[str, ParameterDef],
 ) -> list[ProtectionViolation]:
+    """Scan a parameter dictionary for plant-protection scope violations.
+
+    Applies two tiers per ADR-007:
+
+    * **Global** tokens and phrases are checked on every parameter
+      key and on every ``enum_values`` entry. These carry no
+      legitimate use in a cultivation knowledge pack (for example,
+      ``fungicide_interval_days``).
+    * **Domain-only** tokens and phrases are checked only on
+      protection-domain parameters (per :func:`is_protection_domain`).
+      Dose-like tokens that are legitimate in fertilizer or
+      irrigation (``concentration``, ``pre_harvest_*``) are rejected
+      here.
+
+    For protection-domain parameters, additional flags each add a
+    reason: a unit outside ``ALLOWED_UNITS``, ``shape="rule"``
+    (free-form payload), ``kind="extension"`` (bypasses engine
+    review), and ``tier_required=True``.
+
+    Returns violations in ``parameter`` sort order, each carrying a
+    tuple of reason strings.
+    """
     out: list[ProtectionViolation] = []
     for key in sorted(parameters):
         p = parameters[key]
@@ -182,6 +212,14 @@ def find_protection_violations(
 def find_hazard_code_violations(
     hazard_codes: list[str] | set[str] | tuple[str, ...],
 ) -> list[HazardCodeViolation]:
+    """Scan hazard codes for plant-protection scope violations.
+
+    Hazard codes are short labels, not full parameter definitions.
+    Both the global and domain-only token/phrase lists are checked
+    on each code; any hit is recorded as a reason. ADR-007.
+
+    Returns violations in sorted, de-duplicated code order.
+    """
     out: list[HazardCodeViolation] = []
     for code in sorted(set(hazard_codes)):
         reasons: list[str] = []

@@ -144,6 +144,7 @@
       "type": "array"
     },
     "ok": {
+      "description": "``True`` if this report contains no ``ERROR`` findings.",
       "readOnly": true,
       "title": "Ok",
       "type": "boolean"
