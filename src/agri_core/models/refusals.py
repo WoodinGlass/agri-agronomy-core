@@ -169,6 +169,11 @@ class ReferToAuthority(BaseModel):
 def insufficient_input(
     missing: list[str], *, subject: Subject | None = None, request_id: str | None = None
 ) -> InsufficientInput:
+    """Refuse because required input is missing.
+
+    *missing* lists the input names the caller must supply.
+    See ADR-009 for the envelope fields (``subject``, ``request_id``).
+    """
     return InsufficientInput(
         status="insufficient_input", missing=missing, subject=subject, request_id=request_id
     )
@@ -181,6 +186,11 @@ def unknown(
     subject: Subject | None = None,
     request_id: str | None = None,
 ) -> Unknown:
+    """Refuse because no fact covers the request.
+
+    *code* is a stable registry code from
+    ``schema/unknown_code_registry.json`` when one applies; ``None`` otherwise.
+    """
     return Unknown(
         status="unknown", reason=reason, code=code, subject=subject, request_id=request_id
     )
@@ -189,6 +199,11 @@ def unknown(
 def not_applicable(
     reason: str, *, subject: Subject | None = None, request_id: str | None = None
 ) -> NotApplicable:
+    """Refuse because the question does not apply.
+
+    For example: no standard Kc for this taxon, or a propagation method
+    the taxon does not use.
+    """
     return NotApplicable(
         status="not_applicable", reason=reason, subject=subject, request_id=request_id
     )
@@ -197,6 +212,12 @@ def not_applicable(
 def refer_to_label(
     reason: str, *, subject: Subject | None = None, request_id: str | None = None
 ) -> ReferToLabel:
+    """Refuse because the answer is a plant-protection question.
+
+    Pesticide, herbicide and fungicide doses are never computed by this
+    library. Follow the product label and local regulations.
+    See ADR-007 for the two-tier guard.
+    """
     return ReferToLabel(
         status="refer_to_label", reason=reason, subject=subject, request_id=request_id
     )
@@ -209,6 +230,12 @@ def ambiguous(
     subject: Subject | None = None,
     request_id: str | None = None,
 ) -> Ambiguous:
+    """Refuse because a taxon name matched more than one candidate.
+
+    *candidates* is capped at 20 (see ``_MAX_CANDIDATES``);
+    ``truncated=True`` means the cap was hit and the caller must narrow
+    the query.
+    """
     return Ambiguous(
         status="ambiguous",
         candidates=candidates,
@@ -225,6 +252,11 @@ def refer_to_authority(
     subject: Subject | None = None,
     request_id: str | None = None,
 ) -> ReferToAuthority:
+    """Refuse because the answer depends on a legal or regulatory authority.
+
+    *flags* is a sorted, unique list of stable uppercase codes naming the
+    authorities involved (for example ``["CITES"]``, ``["EU_NITRATES"]``).
+    """
     return ReferToAuthority(
         status="refer_to_authority",
         reason=reason,
