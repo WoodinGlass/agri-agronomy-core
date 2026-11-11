@@ -221,6 +221,36 @@ Both domains face four shared design questions:
   `suitability` and `propagation-plan`; richer outputs are M16
   exports work.
 
+## Amendments
+
+### 2026-11-11 (M15 final)
+
+Four notes recorded during implementation that were not in the original
+decision:
+
+- **`ReferToAuthority` is in `PropagationOutcome` but not emitted in
+  M15.** The union member is reserved for M16 when the propagation
+  hazard short-circuit policy is finalized. `propagation_plan()` never
+  returns it in M15. (D-M15-P2)
+
+- **`FlagCode` uppercase transform.** `ReferToAuthority.flags` requires
+  `^[A-Z][A-Z0-9_]{1,63}$`. `HazardRow.hazard_code` is lowercase
+  snake_case (`^[a-z][a-z0-9_]*$`). `site_suitability` uppercases hazard
+  codes when emitting `ReferToAuthority.flags`; the pack value itself
+  stays lowercase. (D-M15-S3)
+
+- **`propagation_step_durations_defaulted`.** `propagation_duration_days`
+  from the pack is the duration of the `propagate` step only.
+  `prepare=1d`, `establish=7d`, `ready=1d` are fixed in code and
+  recorded via `Notice(code="propagation_step_durations_defaulted")` in
+  each plan's `assumptions`. Total plan span is `N + 9` days. (D-M15-P1,
+  D-M15-P4)
+
+- **`evaluate_trapezoid` is a public rename of `thresholds._evaluate`.**
+  Suitability shares the one trapezoid classifier with `threshold_check`;
+  there is no second implementation. The rename is additive;
+  `threshold_check` behaviour is unchanged. (D-M15-S1)
+
 ## See also
 
 - [ADR-004](ADR-004-resolution-policy.md) -- Deterministic fact
