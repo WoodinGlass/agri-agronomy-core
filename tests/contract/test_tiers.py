@@ -138,7 +138,7 @@ def test_sample_all_taxa_t1_except_fungal_t0() -> None:
     ks = _sample_ks()
     d = _sample_dict()
     results = derive_all_tiers(ks, d)
-    assert len(results) == 8
+    assert len(results) == 9
     by_tier: dict[Tier, list[str]] = {}
     for tid, r in results.items():
         by_tier.setdefault(r.tier, []).append(tid)
@@ -151,6 +151,7 @@ def test_sample_all_taxa_t1_except_fungal_t0() -> None:
         "T000000006",
         "T000000007",
         "T000000008",
+        "T000000009",
     }
     assert Tier.T2 not in by_tier
     assert Tier.T3 not in by_tier

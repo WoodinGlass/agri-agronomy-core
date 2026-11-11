@@ -44,10 +44,10 @@ def _load_facts(files) -> dict[str, list[dict]]:
     return out
 
 
-def test_sample_pack_has_8_taxa() -> None:
+def test_sample_pack_has_9_taxa() -> None:
     files = read_pack_bytes(SAMPLE)
     table = _load_table(files, "taxa")
-    assert len(table.rows) == 8
+    assert len(table.rows) == 9
 
 
 def test_sample_pack_covers_8_archetypes() -> None:
@@ -178,7 +178,7 @@ def test_sample_pack_shape_coverage() -> None:
 # to the sample pack data or format is intentional, update the literal
 # here. This is a known-answer test: it does not re-derive the value,
 # it pins it.
-SAMPLE_PACK_CONTENT_HASH = "sha256:4e1aa9e44d66ffed76477074f5adc9b6dcd3d85e6af455cb4e3be1cb1c9b2278"
+SAMPLE_PACK_CONTENT_HASH = "sha256:77a5a112f2eb5d2d839a363a16e9160522beb6a80a01d83cec9d8b6565380e9e"
 
 
 def test_sample_pack_content_hash_kat() -> None:
