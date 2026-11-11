@@ -42,6 +42,7 @@ __all__ = [
     "TaxonOutcomeAdapter",
     "meta",
     "resolve_fact",
+    "resolve_facts",
     "resolve_taxon",
 ]
 
@@ -402,58 +403,24 @@ def _scope_values_available_warnings(
     ]
 
 
-def resolve_fact(
+def _resolve_single(
     pack: KnowledgeSet,
-    taxon_id: str,
+    taxon: TaxonRow,
     parameter: str,
     *,
-    phase: str | None = None,
-    scope: dict[str, Any] | None = None,
-    min_status: FactStatus | None = "approved",
-    require_commercial: bool = False,
+    phase: str | None,
+    scope: dict[str, Any] | None,
+    min_status: FactStatus | None,
+    require_commercial: bool,
 ) -> FactResolved | Unknown | NotApplicable | InsufficientInput:
-    """Resolve a fact query against *pack*.
+    """Steps 2-9 of resolution for one parameter, given a resolved taxon.
 
-    Filters (in order):
-
-    1. ``taxon_id`` must exist in the pack; else ``Unknown(code="no_match")``.
-    2. ``parameter`` must exist in the dictionary; else
-       ``Unknown(code="no_match")``.
-    3. ``parameter.applies_to`` must match the taxon; else ``NotApplicable``.
-    4. If ``parameter.phase_set != "none"`` and ``phase`` is None or not
-       allowed for the taxon's archetype, ``InsufficientInput(missing=["phase"])``.
-    5. Superseded facts are excluded.
-    6. Facts with status below ``min_status`` are excluded. Safety-critical
-       parameters raise the effective floor to ``"reviewed"``; the elevation
-       is reported as ``Notice(code="safety_min_status_raised")``.
-    7. Facts whose phase does not match ``phase`` are excluded (only for
-       phase-bearing parameters).
-    8. Facts whose scope does not match ``scope`` are excluded (union
-       semantics: fact keys subset OR request keys subset; per-key value
-       check on the intersection; range scope uses cover semantics).
-    9. If ``require_commercial``, facts whose sources are not all
-       ``commercial_use="yes"`` are excluded; empty result yields
-       ``Unknown(code="license_excluded")``.
-
-    The winner is the most specific candidate (largest ``len(scope)``), then
-    highest status, then most recent review, then smallest ``fact_id``. If
-    any alternative carries a different ``value``, a
-    ``Notice(code="fact_conflict")`` is attached to the warnings.
-
-    This function is pure apart from the ``pack`` it reads through; it does
-    not touch the filesystem or clock.
+    ``resolve_fact`` and ``resolve_facts`` call this after resolving the
+    taxon. The per-parameter filter loop, tie-break and provenance
+    construction are unchanged from the pre-refactor inline body of
+    ``resolve_fact``; only the taxon lookup (step 1) moved out.
     """
     request_scope = scope or {}
-
-    # 1. taxon exists
-    try:
-        taxon = pack.taxon(taxon_id)
-    except KeyError:
-        return Unknown(
-            status="unknown",
-            reason=f"taxon {taxon_id!r} not in pack",
-            code="no_match",
-        )
 
     # 2. parameter exists
     try:
@@ -469,7 +436,7 @@ def resolve_fact(
     if not _applies_to_matches(pdef, taxon):
         return NotApplicable(
             status="not_applicable",
-            reason=f"parameter {parameter!r} does not apply to taxon {taxon_id!r}",
+            reason=f"parameter {parameter!r} does not apply to taxon {taxon.taxon_id!r}",
         )
 
     # 4. phase
@@ -507,7 +474,7 @@ def resolve_fact(
 
     # 6-8. filter facts
     try:
-        all_facts = pack.facts_for(taxon_id, parameter)
+        all_facts = pack.facts_for(taxon.taxon_id, parameter)
     except KeyError:
         all_facts = ()
 
@@ -541,7 +508,7 @@ def resolve_fact(
             request_scope,
             all_facts,
             base_reason=(
-                f"no fact for taxon {taxon_id!r}, parameter {parameter!r} "
+                f"no fact for taxon {taxon.taxon_id!r}, parameter {parameter!r} "
                 f"matching the given constraints"
             ),
         )
@@ -595,6 +562,118 @@ def resolve_fact(
         warnings=warnings,
         min_status_applied=effective_min if effective_min is not None else "imported",
     )
+
+
+def resolve_fact(
+    pack: KnowledgeSet,
+    taxon_id: str,
+    parameter: str,
+    *,
+    phase: str | None = None,
+    scope: dict[str, Any] | None = None,
+    min_status: FactStatus | None = "approved",
+    require_commercial: bool = False,
+) -> FactResolved | Unknown | NotApplicable | InsufficientInput:
+    """Resolve a fact query against *pack*.
+
+    Filters (in order):
+
+    1. ``taxon_id`` must exist in the pack; else ``Unknown(code="no_match")``.
+    2. ``parameter`` must exist in the dictionary; else
+       ``Unknown(code="no_match")``.
+    3. ``parameter.applies_to`` must match the taxon; else ``NotApplicable``.
+    4. If ``parameter.phase_set != "none"`` and ``phase`` is None or not
+       allowed for the taxon's archetype, ``InsufficientInput(missing=["phase"])``.
+    5. Superseded facts are excluded.
+    6. Facts with status below ``min_status`` are excluded. Safety-critical
+       parameters raise the effective floor to ``"reviewed"``; the elevation
+       is reported as ``Notice(code="safety_min_status_raised")``.
+    7. Facts whose phase does not match ``phase`` are excluded (only for
+       phase-bearing parameters).
+    8. Facts whose scope does not match ``scope`` are excluded (union
+       semantics: fact keys subset OR request keys subset; per-key value
+       check on the intersection; range scope uses cover semantics).
+    9. If ``require_commercial``, facts whose sources are not all
+       ``commercial_use="yes"`` are excluded; empty result yields
+       ``Unknown(code="license_excluded")``.
+
+    The winner is the most specific candidate (largest ``len(scope)``), then
+    highest status, then most recent review, then smallest ``fact_id``. If
+    any alternative carries a different ``value``, a
+    ``Notice(code="fact_conflict")`` is attached to the warnings.
+
+    This function is pure apart from the ``pack`` it reads through; it does
+    not touch the filesystem or clock.
+    """
+    try:
+        taxon = pack.taxon(taxon_id)
+    except KeyError:
+        return Unknown(
+            status="unknown",
+            reason=f"taxon {taxon_id!r} not in pack",
+            code="no_match",
+        )
+    return _resolve_single(
+        pack,
+        taxon,
+        parameter,
+        phase=phase,
+        scope=scope,
+        min_status=min_status,
+        require_commercial=require_commercial,
+    )
+
+
+def resolve_facts(
+    pack: KnowledgeSet,
+    taxon_id: str,
+    parameters: list[str] | tuple[str, ...],
+    *,
+    phase: str | None = None,
+    scope: dict[str, Any] | None = None,
+    min_status: FactStatus | None = "approved",
+    require_commercial: bool = False,
+) -> dict[str, FactResolved | Unknown | NotApplicable | InsufficientInput]:
+    """Resolve several parameters for one taxon.
+
+    Semantically identical to calling ``resolve_fact`` once per parameter:
+    each entry is the exact result ``resolve_fact`` would return for that
+    parameter against the same inputs. Shares only the taxon lookup across
+    parameters; the per-parameter filter loop, tie-break and provenance
+    construction run unchanged.
+
+    Duplicate ``parameters`` are deduplicated (dict keys are unique by
+    construction); the returned dict preserves first-seen order.
+
+    If the taxon is unknown, every parameter maps to the same
+    ``Unknown(code="no_match")`` so callers can iterate without per-parameter
+    try/except.
+
+    This function is pure apart from the ``pack`` it reads through; it does
+    not touch the filesystem or clock.
+    """
+    try:
+        taxon = pack.taxon(taxon_id)
+    except KeyError:
+        miss = Unknown(
+            status="unknown",
+            reason=f"taxon {taxon_id!r} not in pack",
+            code="no_match",
+        )
+        return {p: miss for p in parameters}
+
+    return {
+        p: _resolve_single(
+            pack,
+            taxon,
+            p,
+            phase=phase,
+            scope=scope,
+            min_status=min_status,
+            require_commercial=require_commercial,
+        )
+        for p in parameters
+    }
 
 
 class MetaInfo(BaseModel):
