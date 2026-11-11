@@ -29,9 +29,9 @@ def dictionary() -> Dictionary:
     return Dictionary.load(PARAMS_YAML)
 
 
-def test_dictionary_version_is_1_0_0() -> None:
+def test_dictionary_version_is_1_2_0() -> None:
     data = yaml.safe_load(PARAMS_YAML.read_text(encoding="utf-8"))
-    assert data["dictionary_version"] == "1.1.0"
+    assert data["dictionary_version"] == "1.2.0"
 
 
 def test_all_params_have_required_shape_fields(dictionary: Dictionary) -> None:
@@ -277,6 +277,19 @@ def test_all_keys_pinned(dictionary: Dictionary) -> None:
         "n_max_per_application",
         "p2o5_max_per_application",
         "k2o_max_per_application",
+        # m15 (12)
+        "suitability_weight_soil_ph",
+        "suitability_weight_soil_ec",
+        "suitability_weight_air_temp_day",
+        "suitability_weight_air_temp_night",
+        "suitability_weight_air_rh",
+        "suitability_weight_vpd",
+        "suitability_weight_dli",
+        "suitability_threshold_marginal",
+        "suitability_threshold_suitable",
+        "propagation_method",
+        "propagation_duration_days",
+        "propagation_start_months",
     }
     actual = set(dictionary.parameters.keys())
     added = actual - expected

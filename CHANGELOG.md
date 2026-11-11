@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Suitability + propagation dictionary parameters (M15): 12 new core
+  params, `methods.yaml` vocab, `modules.yaml` reads fill. See ADR-016.
+
+### Changed
+
+- Perf workload 200k -> 320k facts; five CLI/load budgets rebaselined
+  from M15 measurements. See ADR-010 amendment.
+
 ## [0.1.3] - 2026-11-10
 
 ### Added

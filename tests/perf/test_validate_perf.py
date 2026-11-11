@@ -1,6 +1,6 @@
 """Perf gate: `agri-core validate --strict` on a 10k-taxa SOURCE pack.
 
-Budget: 70 s.
+Budget: 90 s.
 
 Target is the source tree, not the built pack: `validate` expects
 source CSVs (`taxa.csv`, `facts/*.csv`, etc.). A built pack contains
@@ -8,8 +8,8 @@ source CSVs (`taxa.csv`, `facts/*.csv`, etc.). A built pack contains
 (`PACK_INVALID: required file missing: taxa.csv`). Built-pack load
 correctness is covered by `test_built_load_budget`.
 
-Measured on Colab-class CPU: 47 s (min of 2). Budget is ~1.5x that.
-See ADR-010.
+Measured on Colab-class CPU at M15: 71.4 s (single run) at 320k
+workload. Budget is ~26% headroom over that. See ADR-010.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ import pytest
 
 pytestmark = pytest.mark.perf
 
-_BUDGET_MS = 70_000.0
+_BUDGET_MS = 90_000.0
 
 
 def test_validate_budget(perf_pack: tuple[Path, Path]) -> None:

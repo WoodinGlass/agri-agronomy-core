@@ -23,14 +23,14 @@ budget is meaningful.
 ## Decision
 
 Add four CLI perf gates. Each spawns `agri-core <cmd>` once on a
-10k-taxa / 200k-fact synthetic pack and asserts wall time.
+10k-taxa / 320k-fact synthetic pack and asserts wall time.
 
 | Command | Target | Budget |
 |---|---|---|
-| `agri-core pack build` | 10k source -> out | 135 s |
-| `agri-core validate --strict` | 10k **source** | 70 s |
+| `agri-core pack build` | 10k source -> out | 160 s |
+| `agri-core validate --strict` | 10k **source** | 90 s |
 | `agri-core coverage --json` | 10k **built** | 27 s |
-| `agri-core diff --json` | 10k built <-> built | 36 s |
+| `agri-core diff --json` | 10k built <-> built | 48 s |
 
 Budgets are **min-of-2/3 in Colab x 1.5**, rounded to the nearest
 1000 ms. CI runners are typically 2-4x faster than the throttled
@@ -89,7 +89,27 @@ artifact. Built-pack load correctness is covered by
   splitting `pack build` into validate-only and write-only phases for
   CI (separate decision).
 - Revisit if `agri-knowledge` pack sizes grow beyond 10k taxa /
-  200k facts (the reference workload in README §Performance).
+  320k facts (the reference workload in README §Performance, M15).
+
+
+## Amendment 2026-11-11 (M15)
+
+M15 added 12 suitability and propagation parameters to the dictionary
+(v1.2.0), taking the reference workload from 200k to 320k facts
+(10k taxa x 32 `phase_set=none` params). Five budgets were rebaselined
+from measurements on the same Colab-class CPU:
+
+| Test | Before | After | M15 actual |
+|---|---|---|---|
+| `test_build_budget` | 135 s | 160 s | 128.2 s |
+| `test_validate_budget` | 70 s | 90 s | 71.4 s |
+| `test_diff_budget` | 36 s | 48 s | 36.9 s |
+| `test_built_load_budget` | 1000 ms | 1400 ms | 1116 ms |
+| `test_source_load_canary` | 40 s | 90 s | 67.4 s |
+
+`test_coverage_budget` (27 s vs 24.5 s measured) and
+`test_built_load_peak_memory` (200 MB vs 61.8 MB measured) still
+pass with headroom and are unchanged.
 
 ## References
 

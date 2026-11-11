@@ -4,10 +4,10 @@ Workload (matches README Performance section):
 
 - ``n_taxa`` taxa (default 10,000)
 - 3 names per taxon (en common, id common, la scientific)
-- 20 facts per taxon (every parameter with ``phase_set == "none"`` in
-  ``dictionary/parameters.core.yaml``), so facts need no phase.
+- 32 facts per taxon (every parameter with ``phase_set == "none"`` in
+  ``dictionary/parameters.core.yaml`` at v1.2.0), so facts need no phase.
 
-Total for 10k: 10,000 taxa, 30,000 names, 200,000 facts.
+Total for 10k: 10,000 taxa, 30,000 names, 320,000 facts.
 
 Fact values are taken from ``src/agri_core/_samples/sample_pack`` where
 present, otherwise synthesized from ``physical_range`` (midpoint for
@@ -27,7 +27,7 @@ from agri_core.models.dictionary import Dictionary
 from agri_core.models.parameter import ParameterDef
 from agri_core.pack import compute_pack_hash
 
-_N_FACTS_PER_TAXON = 20
+_N_FACTS_PER_TAXON = 32
 _N_NAMES_PER_TAXON = 3
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -97,11 +97,25 @@ def _fallback_value(pr: ParameterDef) -> str:
         lo = mn if mn is not None else 0.0
         hi = mx if mx is not None else 1.0
         return json.dumps({"min": lo, "max": hi, "shape": "range", "unit": pr.unit})
+    if shape == "enum":
+        if not pr.enum_values:
+            raise RuntimeError(
+                f"shape 'enum' for {pr.key!r} requires enum_values "
+                f"(enum_source not handled by _fallback_value)"
+            )
+        return json.dumps({"shape": "enum", "value": pr.enum_values[0]})
+    if shape == "enum_set":
+        if not pr.enum_values:
+            raise RuntimeError(
+                f"shape 'enum_set' for {pr.key!r} requires enum_values "
+                f"(enum_source not handled by _fallback_value)"
+            )
+        return json.dumps({"shape": "enum_set", "values": list(pr.enum_values)})
     raise RuntimeError(f"shape {shape!r} not handled for parameter {pr.key!r}")
 
 
 def _load_templates() -> list[dict[str, str]]:
-    """Return 20 (parameter, value, scope, provenance, locator) templates."""
+    """Return 32 (parameter, value, scope, provenance, locator) templates."""
     dictionary = Dictionary.load(_DICT_PATH)
     phase_none = [k for k, p in dictionary.parameters.items() if p.phase_set == "none"]
     assert len(phase_none) == _N_FACTS_PER_TAXON, (

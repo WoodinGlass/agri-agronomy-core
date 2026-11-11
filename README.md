@@ -624,7 +624,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 
 ## Performance
 
-These targets are measured in CI and in Colab at v0.1.0 (unchanged in the v0.1.1 and v0.1.2 patches) on a synthetic pack (10k taxa, 30k names, 200k facts). They will be recalibrated once real `agri-knowledge` pack sizes are known. **Since v0.1.2**, the M8 review follow-up added `test_resolve_fact_perf.py` (G7) and `test_resolve_scaling.py` (G14, 1k/10k/100k) to `tests/perf/`.
+These targets are measured in CI and in Colab at v0.1.0 (unchanged in the v0.1.1 and v0.1.2 patches) on a synthetic pack (10k taxa, 30k names, 320k facts; M15 dictionary v1.2.0). They will be recalibrated once real `agri-knowledge` pack sizes are known. **Since v0.1.2**, the M8 review follow-up added `test_resolve_fact_perf.py` (G7) and `test_resolve_scaling.py` (G14, 1k/10k/100k) to `tests/perf/`.
 
 CLI-level budgets (`build`, `validate`, `coverage`, `diff`) were
 calibrated at v0.1.2 on Colab with a 1.5x margin; see
@@ -634,19 +634,19 @@ tightened once real CI medians are available.
 | Operation | Budget |
 |---|---|
 | Batch suitability, 5,000 taxa | ≤ 200 ms p95 (deferred to M15; suitability module not yet present) |
-| Load a pack with 10,000 taxa (built SQLite) | ≤ 1 s |
+| Load a pack with 10,000 taxa (built SQLite) | ≤ 1.4 s |
 | Peak memory during pack load | ≤ 200 MB |
 | `resolve_taxon` p95 | ≤ 5 ms (measured ≈ 12 µs on a 10k-taxa pack in M8) |
 | `resolve_fact` p95 (G7) | ≤ 75 µs per call; ≤ 450 ms per 5,000-call batch (min-of-3; see `tests/perf/test_resolve_fact_perf.py`) |
 | Multi-scale scaling (G14) | `resolve_taxon` ratio 100k/1k ≤ 3.0×; `resolve_fact` ratio ≤ 4.0× (see `tests/perf/test_resolve_scaling.py`) |
-| `agri-core pack build` on 10k source | ≤ 135 s (Colab min × 1.5; see [ADR-010](docs/decisions/ADR-010-perf-budgets.md)) |
-| `agri-core validate --strict` on 10k source | ≤ 70 s (Colab min × 1.5; see ADR-010) |
+| `agri-core pack build` on 10k source | ≤ 160 s (Colab min × 1.5; see [ADR-010](docs/decisions/ADR-010-perf-budgets.md)) |
+| `agri-core validate --strict` on 10k source | ≤ 90 s (Colab min × 1.5; see ADR-010) |
 | `agri-core coverage --json` on 10k built | ≤ 27 s (Colab min × 1.5; see ADR-010) |
-| `agri-core diff --json` on 10k built (self-diff) | ≤ 36 s (Colab min × 1.5; see ADR-010) |
+| `agri-core diff --json` on 10k built (self-diff) | ≤ 48 s (Colab min × 1.5; see ADR-010) |
 
 **How "peak memory" is measured.** The 200 MB budget refers to memory allocated *during* `load_knowledge_set`, measured with `tracemalloc`. It deliberately excludes the Python interpreter and third-party dependencies (`pydantic`, `jsonschema`, `pint`, `typer`, `pyyaml`), which together consume roughly 200 MB at import time in a Colab-class runtime. Including them would make the budget measure dependency bloat rather than the engine's own footprint, which is what this project controls. If you need a hard total cap, budget `absolute RSS ≤ 400 MB` as a smoke check.
 
-**Built vs source pack.** The 1 s load budget is for a *built* pack (`pack.sqlite` + `pack.toml`). Loading from the CSV source tree is a development path and is roughly 10× slower; a separate source-pack budget ships with the perf test in a follow-up PR.
+**Built vs source pack.** The 1.4 s load budget is for a *built* pack (`pack.sqlite` + `pack.toml`). Loading from the CSV source tree is a development path and is roughly 10× slower; a separate source-pack budget ships with the perf test in a follow-up PR.
 
 ## Repository layout
 
