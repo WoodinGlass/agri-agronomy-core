@@ -111,6 +111,23 @@ from measurements on the same Colab-class CPU:
 `test_built_load_peak_memory` (200 MB vs 61.8 MB measured) still
 pass with headroom and are unchanged.
 
+### In-process batch suitability (M15, measure only)
+
+M15 ships `test_suitability_perf.py` to measure `batch_suitability` on
+5,000 taxa in-process (not via subprocess). Per Q7 (M15): measure, do
+not claim a p95 budget yet.
+
+| Test | Aspirational target | Current gate | M15 actual (Colab, 3-run) |
+|---|---|---|---|
+| `test_batch_5000_actual` | 200 ms p95 (from M9 planning) | catastrophic only (`< 5000 ms`) | min 2266 / median 2886 / max 4347 ms |
+
+The 200 ms target was set at M9 when suitability was spec'd as a tight
+batch gate. Actual M15 is ~14x that number on a Colab-class CPU.
+Tightening is a follow-up (M16+), once a CI baseline exists. The
+current test prints min/median/max and asserts only that the best run
+is under 5,000 ms (~1.7x the observed median), so it catches
+catastrophic regressions without failing on Colab throttling.
+
 ## References
 
 - ADR-003 (tiers, license, duplicates) -- `derive_all_tiers` backs

@@ -1,8 +1,11 @@
-"""Perf gate: batch_suitability 5000 taxa.
+"""Perf measurement: batch_suitability 5000 taxa.
 
-Per Q7 (M15): measure actual, do not claim a budget. The only assertion
-is a catastrophic-regression guard (< 5000 ms). The real budget is
-calibrated at P10 once this number is on record.
+Per Q7 (M15): measure, do not claim a p95 budget. The only assertion
+is a catastrophic-regression guard (< 5000 ms). The actual M15
+measurement (min 2266 / median 2886 / max 4347 ms on Colab-class CPU)
+is recorded in README Performance section and in ADR-010 M15
+amendment. A real p95 gate is a follow-up (M16+) once a CI baseline
+exists.
 """
 
 from __future__ import annotations

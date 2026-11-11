@@ -633,7 +633,7 @@ tightened once real CI medians are available.
 
 | Operation | Budget |
 |---|---|
-| Batch suitability, 5,000 taxa | ≤ 200 ms p95 (deferred to M15; suitability module not yet present) |
+| Batch suitability, 5,000 taxa | measured M15: 2.9 s median (2.3 / 4.3 min / max, 3-run Colab); no p95 budget yet — see [ADR-010](docs/decisions/ADR-010-perf-budgets.md) |
 | Load a pack with 10,000 taxa (built SQLite) | ≤ 1.4 s |
 | Peak memory during pack load | ≤ 200 MB |
 | `resolve_taxon` p95 | ≤ 5 ms (measured ≈ 12 µs on a 10k-taxa pack in M8) |
