@@ -16,6 +16,12 @@ from typing import Annotated, NoReturn
 import typer
 
 from agri_core import __version__
+from agri_core.models import (
+    CategoricalResult,
+    FactStatus,
+    OutcomeAdapter,
+    Result,
+)
 from agri_core.models.fact import FactRow, format_value
 from agri_core.models.finding import Finding, FindingSeverity
 from agri_core.models.refusals import Ambiguous
@@ -36,7 +42,12 @@ from agri_core.pack.build import build_pack, render_source_manifest, strip_conte
 from agri_core.pack.loader import _default_dictionary
 from agri_core.pack.scaffold import scaffold_taxon
 from agri_core.pack.validate import validate_pack, validate_pack_report
+from agri_core.propagation import (
+    PropagationOutcomeAdapter,
+    propagation_plan,
+)
 from agri_core.registry import TaxonOk, lint_csv_text, resolve_taxon
+from agri_core.suitability import Site, batch_suitability, site_suitability
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -922,6 +933,329 @@ def _show_fact(ks: KnowledgeSet, fact_id: str, *, json_output: bool) -> int:
             f"parameter={target.parameter} value={pretty} status={target.status}"
         )
     return EXIT_OK
+
+
+# ===== M15: suitability + propagation-plan commands =====
+
+_SUITABILITY_SITE_FLAGS: tuple[str, ...] = (
+    "soil_ph",
+    "soil_ec",
+    "air_temp_day",
+    "air_temp_night",
+    "air_rh",
+    "vpd",
+    "dli",
+)
+
+_VALID_STATUSES: tuple[FactStatus, ...] = ("imported", "draft", "reviewed", "approved")
+
+
+def _parse_json_object(value: str | None, option_name: str) -> dict[str, object]:
+    """Parse a JSON object option. On failure, print and exit 2."""
+    if value is None:
+        return {}
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as exc:
+        typer.echo(f"error: invalid {option_name} JSON: {exc}", err=True)
+        raise typer.Exit(EXIT_USAGE) from exc
+    if not isinstance(parsed, dict):
+        typer.echo(f"error: {option_name} must be a JSON object", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    return parsed
+
+
+def _parse_min_status(value: str | None) -> FactStatus | None:
+    """Validate --min-status. On failure, print and exit 2."""
+    if value is None:
+        return None
+    if value not in _VALID_STATUSES:
+        valid = ", ".join(_VALID_STATUSES)
+        typer.echo(
+            f"error: invalid --min-status {value!r}; valid: {valid}",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
+    return value
+
+
+def _suitability_status(outcome: object) -> str:
+    """Return the ``status`` attribute as a string (works on all Outcome members)."""
+    return str(getattr(outcome, "status", ""))
+
+
+def _emit_suitability_text(outcome: object) -> None:
+    """Human-readable form of one suitability outcome."""
+    status = _suitability_status(outcome)
+    if status == "ok_category":
+        assert isinstance(outcome, CategoricalResult)
+        typer.echo(f"ok_category: {outcome.category}")
+        if outcome.subject is not None and outcome.subject.taxon_id:
+            typer.echo(f"  taxon: {outcome.subject.taxon_id}")
+        typer.echo(f"  method: {outcome.method}")
+        if outcome.warnings:
+            typer.echo(f"  warnings: {len(outcome.warnings)}")
+            for w in outcome.warnings:
+                typer.echo(f"    [{w.code}] {w.message}")
+    elif status == "ok":
+        assert isinstance(outcome, Result)
+        typer.echo(f"ok: value={outcome.value} {outcome.unit}")
+    elif status == "unknown":
+        typer.echo(f"unknown: {getattr(outcome, 'reason', '')}")
+        code = getattr(outcome, "code", None)
+        if code:
+            typer.echo(f"  code: {code}")
+    elif status == "not_applicable":
+        typer.echo(f"not_applicable: {getattr(outcome, 'reason', '')}")
+    elif status == "insufficient_input":
+        typer.echo(f"insufficient_input: missing={getattr(outcome, 'missing', [])}")
+    elif status == "refer_to_authority":
+        typer.echo(f"refer_to_authority: {getattr(outcome, 'reason', '')}")
+        typer.echo(f"  flags: {getattr(outcome, 'flags', [])}")
+    else:
+        typer.echo(f"{status or 'unhandled'}: (unknown outcome)")
+
+
+def _emit_propagation_text(outcome: object) -> None:
+    """Human-readable form of one propagation outcome."""
+    status = _suitability_status(outcome)
+    if status == "ok":
+        # PropagationPlan
+        taxon_id = getattr(outcome, "taxon_id", "?")
+        method = getattr(outcome, "method", "?")
+        start = getattr(outcome, "start_date", None)
+        steps = getattr(outcome, "steps", [])
+        typer.echo(f"ok: plan for {taxon_id}")
+        typer.echo(f"  method: {method}")
+        if start is not None:
+            typer.echo(f"  start_date: {start.isoformat()}")
+        typer.echo(f"  steps: {len(steps)}")
+        for step in steps:
+            typer.echo(
+                f"    {step.step_name}: {step.start_date.isoformat()} -> "
+                f"{step.end_date.isoformat()} ({step.duration_days}d)"
+            )
+    elif status == "unknown":
+        typer.echo(f"unknown: {getattr(outcome, 'reason', '')}")
+        code = getattr(outcome, "code", None)
+        if code:
+            typer.echo(f"  code: {code}")
+    elif status == "not_applicable":
+        typer.echo(f"not_applicable: {getattr(outcome, 'reason', '')}")
+    elif status == "insufficient_input":
+        typer.echo(f"insufficient_input: missing={getattr(outcome, 'missing', [])}")
+    elif status == "refer_to_authority":
+        typer.echo(f"refer_to_authority: {getattr(outcome, 'reason', '')}")
+        typer.echo(f"  flags: {getattr(outcome, 'flags', [])}")
+    else:
+        typer.echo(f"{status or 'unhandled'}: (unknown outcome)")
+
+
+@app.command(name="suitability")
+def suitability_cmd(
+    pack: Annotated[
+        str,
+        typer.Option("--pack", help="Path to a pack directory, or 'sample'."),
+    ],
+    taxon: Annotated[
+        list[str],
+        typer.Option("--taxon", help="Taxon ID; repeatable for batch."),
+    ],
+    phase: Annotated[
+        str | None,
+        typer.Option("--phase", help="Biological phase (e.g. flowering)."),
+    ] = None,
+    soil_ph: Annotated[float | None, typer.Option("--soil-ph")] = None,
+    soil_ec: Annotated[float | None, typer.Option("--soil-ec")] = None,
+    air_temp_day: Annotated[float | None, typer.Option("--air-temp-day")] = None,
+    air_temp_night: Annotated[float | None, typer.Option("--air-temp-night")] = None,
+    air_rh: Annotated[float | None, typer.Option("--air-rh")] = None,
+    vpd: Annotated[float | None, typer.Option("--vpd")] = None,
+    dli: Annotated[float | None, typer.Option("--dli")] = None,
+    site_json: Annotated[
+        str | None,
+        typer.Option(
+            "--site-json",
+            help="JSON object of site values (mutually exclusive with individual flags).",
+        ),
+    ] = None,
+    scope_json: Annotated[
+        str | None,
+        typer.Option("--scope-json", help="JSON object for the fact scope."),
+    ] = None,
+    min_status: Annotated[
+        str | None,
+        typer.Option("--min-status", help="imported | draft | reviewed | approved."),
+    ] = None,
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Emit JSON instead of text."),
+    ] = False,
+) -> None:
+    """Evaluate site suitability for one or more taxa (M15)."""
+    individual_given = any(
+        v is not None for v in [soil_ph, soil_ec, air_temp_day, air_temp_night, air_rh, vpd, dli]
+    )
+    if site_json is not None and individual_given:
+        typer.echo(
+            "error: use either --site-json or individual site flags, not both",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
+    if site_json is None and not individual_given:
+        typer.echo(
+            "error: supply site values via --site-json or individual flags "
+            "(--soil-ph, --soil-ec, --air-temp-day, --air-temp-night, "
+            "--air-rh, --vpd, --dli)",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
+
+    scope = _parse_json_object(scope_json, "--scope-json")
+    status_floor = _parse_min_status(min_status)
+
+    if site_json is not None:
+        raw = _parse_json_object(site_json, "--site-json")
+        try:
+            site = Site.model_validate(raw)
+        except Exception as exc:  # pydantic ValidationError
+            typer.echo(f"error: invalid --site-json: {exc}", err=True)
+            raise typer.Exit(EXIT_USAGE) from exc
+    else:
+        kwargs: dict[str, float] = {}
+        for name, val in [
+            ("soil_ph", soil_ph),
+            ("soil_ec", soil_ec),
+            ("air_temp_day", air_temp_day),
+            ("air_temp_night", air_temp_night),
+            ("air_rh", air_rh),
+            ("vpd", vpd),
+            ("dli", dli),
+        ]:
+            if val is not None:
+                kwargs[name] = val
+        site = Site(**kwargs)
+
+    path = _resolve_pack_path(pack)
+    try:
+        ks = load_knowledge_set(path, allow_synthetic=True)
+    except PackError as exc:
+        typer.echo(f"error: {exc.code}: {exc}", err=True)
+        raise typer.Exit(EXIT_PACK) from exc
+
+    if ks.manifest.synthetic:
+        typer.echo("SYNTHETIC DATA", err=True)
+
+    if len(taxon) == 1:
+        outcomes: list[object] = [
+            site_suitability(
+                ks,
+                taxon[0],
+                site,
+                phase=phase,
+                scope=scope,
+                min_status=status_floor,
+            )
+        ]
+    else:
+        outcomes = list(
+            batch_suitability(
+                ks,
+                site,
+                taxon,
+                phase=phase,
+                scope=scope,
+                min_status=status_floor,
+            )
+        )
+
+    all_ok = True
+    if json_output:
+        dumps = [OutcomeAdapter.dump_python(o, mode="json") for o in outcomes]  # type: ignore[arg-type]
+        if len(dumps) == 1:
+            typer.echo(json.dumps(dumps[0], indent=2, sort_keys=True))
+        else:
+            typer.echo(json.dumps(dumps, indent=2, sort_keys=True))
+    else:
+        for o in outcomes:
+            _emit_suitability_text(o)
+            if _suitability_status(o) not in ("ok", "ok_category"):
+                all_ok = False
+
+    if json_output:
+        for o in outcomes:
+            if _suitability_status(o) not in ("ok", "ok_category"):
+                all_ok = False
+
+    if not all_ok:
+        raise typer.Exit(EXIT_ERROR)
+
+
+@app.command(name="propagation-plan")
+def propagation_plan_cmd(
+    pack: Annotated[
+        str,
+        typer.Option("--pack", help="Path to a pack directory, or 'sample'."),
+    ],
+    taxon: Annotated[str, typer.Option("--taxon", help="Taxon ID.")],
+    start_date: Annotated[
+        str,
+        typer.Option("--start-date", help="Start date (ISO YYYY-MM-DD)."),
+    ],
+    method: Annotated[
+        str,
+        typer.Option("--method", help="Propagation method (e.g. seed, grafting)."),
+    ],
+    scope_json: Annotated[
+        str | None,
+        typer.Option("--scope-json", help="JSON object for the fact scope."),
+    ] = None,
+    min_status: Annotated[
+        str | None,
+        typer.Option("--min-status", help="imported | draft | reviewed | approved."),
+    ] = None,
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Emit JSON instead of text."),
+    ] = False,
+) -> None:
+    """Build a dated propagation plan for a taxon (M15)."""
+    try:
+        parsed_date = date.fromisoformat(start_date)
+    except ValueError as exc:
+        typer.echo(f"error: invalid --start-date {start_date!r}: {exc}", err=True)
+        raise typer.Exit(EXIT_USAGE) from exc
+
+    scope = _parse_json_object(scope_json, "--scope-json")
+    status_floor = _parse_min_status(min_status)
+
+    path = _resolve_pack_path(pack)
+    try:
+        ks = load_knowledge_set(path, allow_synthetic=True)
+    except PackError as exc:
+        typer.echo(f"error: {exc.code}: {exc}", err=True)
+        raise typer.Exit(EXIT_PACK) from exc
+
+    if ks.manifest.synthetic:
+        typer.echo("SYNTHETIC DATA", err=True)
+
+    outcome = propagation_plan(
+        ks,
+        taxon,
+        start_date=parsed_date,
+        method=method,
+        scope=scope,
+        min_status=status_floor,
+    )
+
+    if json_output:
+        dumped = PropagationOutcomeAdapter.dump_python(outcome, mode="json")
+        typer.echo(json.dumps(dumped, indent=2, sort_keys=True))
+    else:
+        _emit_propagation_text(outcome)
+
+    if _suitability_status(outcome) != "ok":
+        raise typer.Exit(EXIT_ERROR)
 
 
 def main() -> NoReturn:

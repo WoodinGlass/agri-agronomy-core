@@ -1,0 +1,530 @@
+{
+  "$defs": {
+    "InsufficientInput": {
+      "additionalProperties": false,
+      "description": "A required input is missing.\n\n``missing`` names each missing input in the caller's vocabulary (for\nexample ``\"temp_c\"`` or ``\"ec_to_ppm_factor (choose 0.5, 0.64 or 0.7)\"``).\nEach entry must be a non-empty string.",
+      "properties": {
+        "missing": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing",
+          "type": "array"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
+        "status": {
+          "const": "insufficient_input",
+          "title": "Status",
+          "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status",
+        "missing"
+      ],
+      "title": "InsufficientInput",
+      "type": "object"
+    },
+    "NotApplicable": {
+      "additionalProperties": false,
+      "description": "The question does not apply (no standard Kc, propagation method not used, etc.).",
+      "properties": {
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
+        "status": {
+          "const": "not_applicable",
+          "title": "Status",
+          "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status",
+        "reason"
+      ],
+      "title": "NotApplicable",
+      "type": "object"
+    },
+    "Notice": {
+      "additionalProperties": false,
+      "description": "A structured warning or assumption attached to a result.\n\n``code`` is a stable snake_case identifier and part of the contract.\n``message`` is human-readable and may change between releases.",
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "Notice",
+      "type": "object"
+    },
+    "PropagationPlan": {
+      "additionalProperties": false,
+      "description": "A successful dated propagation plan.\n\n``steps`` must be contiguous: ``steps[i].start_date`` equals\n``steps[i-1].end_date + 1 day``. ``request_id`` requires ``subject``\n(ADR-009 envelope consistency).",
+      "properties": {
+        "assumptions": {
+          "items": {
+            "$ref": "#/$defs/Notice"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "method": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Method",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
+        "start_date": {
+          "format": "date",
+          "title": "Start Date",
+          "type": "string"
+        },
+        "status": {
+          "const": "ok",
+          "title": "Status",
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/PropagationStep"
+          },
+          "minItems": 1,
+          "title": "Steps",
+          "type": "array"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "taxon_id": {
+          "pattern": "^T[0-9A-HJKMNP-TV-Z]{9}$",
+          "title": "Taxon Id",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/Notice"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "taxon_id",
+        "method",
+        "start_date",
+        "steps",
+        "provenance",
+        "evidence",
+        "assumptions",
+        "warnings"
+      ],
+      "title": "PropagationPlan",
+      "type": "object"
+    },
+    "PropagationStep": {
+      "additionalProperties": false,
+      "description": "One dated step in a propagation plan.",
+      "properties": {
+        "duration_days": {
+          "minimum": 1,
+          "title": "Duration Days",
+          "type": "integer"
+        },
+        "end_date": {
+          "format": "date",
+          "title": "End Date",
+          "type": "string"
+        },
+        "start_date": {
+          "format": "date",
+          "title": "Start Date",
+          "type": "string"
+        },
+        "step_name": {
+          "enum": [
+            "prepare",
+            "propagate",
+            "establish",
+            "ready"
+          ],
+          "title": "Step Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_name",
+        "start_date",
+        "end_date",
+        "duration_days"
+      ],
+      "title": "PropagationStep",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "description": "Where a calculation's numbers came from.\n\n``fact_ids`` names the facts that contributed values.\n``pack_version`` is the version of the pack that supplied those facts;\nit is ``None`` when the calculation does not read a pack (for example,\nraw VPD from weather inputs).\n``pack_hash`` is the pack's ``content_hash`` (``sha256:<hex>``), which\npins the exact data used; it is ``None`` under the same conditions as\n``pack_version``.\n``source_ids`` lists the ``src`` IDs from ``sources.csv`` behind the\nvalues used.\n``resolution_policy_version`` is the ``RESOLUTION_POLICY_VERSION``\nat the time this provenance was produced. Defaults to the current\nversion; explicit for results stored across engine upgrades.",
+      "properties": {
+        "fact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fact Ids",
+          "type": "array"
+        },
+        "pack_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pack Hash"
+        },
+        "pack_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pack Version"
+        },
+        "resolution_policy_version": {
+          "default": "1.4.0",
+          "title": "Resolution Policy Version",
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "title": "Provenance",
+      "type": "object"
+    },
+    "ReferToAuthority": {
+      "additionalProperties": false,
+      "description": "The answer depends on a legal or regulatory authority; the caller must consult it.",
+      "properties": {
+        "flags": {
+          "items": {
+            "pattern": "^[A-Z][A-Z0-9_]{1,63}$",
+            "type": "string"
+          },
+          "title": "Flags",
+          "type": "array"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
+        "status": {
+          "const": "refer_to_authority",
+          "title": "Status",
+          "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status",
+        "reason"
+      ],
+      "title": "ReferToAuthority",
+      "type": "object"
+    },
+    "Subject": {
+      "additionalProperties": false,
+      "description": "What a calculation was about (ADR-009).\n\n``taxon_id`` and ``scope`` are ``None``/empty for calculations with\nno taxon (VPD from weather, temperature from elevation).\n``calculation`` is the stable name of the calculation function.\n``calculation_version`` is semver; starts at ``\"0.1.0\"`` for M10.",
+      "properties": {
+        "calculation": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Calculation",
+          "type": "string"
+        },
+        "calculation_version": {
+          "minLength": 1,
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Calculation Version",
+          "type": "string"
+        },
+        "scope": {
+          "additionalProperties": true,
+          "title": "Scope",
+          "type": "object"
+        },
+        "taxon_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Taxon Id"
+        },
+        "taxon_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Taxon Name"
+        }
+      },
+      "required": [
+        "calculation",
+        "calculation_version"
+      ],
+      "title": "Subject",
+      "type": "object"
+    },
+    "Unknown": {
+      "additionalProperties": false,
+      "description": "The answer needs a value the profile marks as unknown.\n\nThis includes the case where no value covers the requested scope.",
+      "properties": {
+        "code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Code"
+        },
+        "filter_counts": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filter Counts"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^req_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
+        "status": {
+          "const": "unknown",
+          "title": "Status",
+          "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Subject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/Notice"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "reason"
+      ],
+      "title": "Unknown",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "insufficient_input": "#/$defs/InsufficientInput",
+      "not_applicable": "#/$defs/NotApplicable",
+      "ok": "#/$defs/PropagationPlan",
+      "refer_to_authority": "#/$defs/ReferToAuthority",
+      "unknown": "#/$defs/Unknown"
+    },
+    "propertyName": "status"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/PropagationPlan"
+    },
+    {
+      "$ref": "#/$defs/Unknown"
+    },
+    {
+      "$ref": "#/$defs/NotApplicable"
+    },
+    {
+      "$ref": "#/$defs/InsufficientInput"
+    },
+    {
+      "$ref": "#/$defs/ReferToAuthority"
+    }
+  ]
+}

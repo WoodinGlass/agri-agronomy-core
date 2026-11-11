@@ -12,6 +12,7 @@ from agri_core.registry.resolution import (
     TaxonOutcomeAdapter,
     meta,
     resolve_fact,
+    resolve_facts,
     resolve_taxon,
 )
 from agri_core.registry.sources import (
@@ -43,5 +44,6 @@ __all__ = [
     "lint_csv_text",
     "meta",
     "resolve_fact",
+    "resolve_facts",
     "resolve_taxon",
 ]

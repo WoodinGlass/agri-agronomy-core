@@ -56,10 +56,22 @@ modules:
       - water_temp_max
   suitability:
     description: "Site suitability."
-    reads: []
+    reads:
+      - suitability_weight_soil_ph
+      - suitability_weight_soil_ec
+      - suitability_weight_air_temp_day
+      - suitability_weight_air_temp_night
+      - suitability_weight_air_rh
+      - suitability_weight_vpd
+      - suitability_weight_dli
+      - suitability_threshold_marginal
+      - suitability_threshold_suitable
   propagation:
     description: "Propagation planner."
-    reads: []
+    reads:
+      - propagation_method
+      - propagation_duration_days
+      - propagation_start_months
   safety:
     description: "Dose caps and label referral."
     reads:

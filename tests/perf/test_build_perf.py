@@ -1,10 +1,11 @@
 """Perf gate: `agri-core pack build` on a 10k-taxa source pack.
 
-Budget: 135 s.
+Budget: 160 s.
 
 Measured on Colab-class CPU (shared, throttled) on a 10k-taxa /
-200k-fact synthetic pack: 88.5 s (min of 3 runs). Budget is ~1.5x
-that, to allow for CI variance and slower-than-usual runners.
+320k-fact synthetic pack (v1.2.0 dictionary, M15): 128.2 s (single
+run). Budget is ~25% headroom over that, to allow for CI variance
+and slower-than-usual runners.
 
 This is a CLI smoke test, not an algorithm measurement. The budget
 includes process startup, Python imports, and pack I/O. It catches
@@ -23,7 +24,7 @@ import pytest
 
 pytestmark = pytest.mark.perf
 
-_BUDGET_MS = 135_000.0
+_BUDGET_MS = 160_000.0
 
 
 def test_build_budget(perf_pack: tuple[Path, Path], tmp_path: Path) -> None:

@@ -6,6 +6,6 @@ pack only; nothing is invented.
 
 from __future__ import annotations
 
-from agri_core.thresholds.check import threshold_check
+from agri_core.thresholds.check import evaluate_trapezoid, threshold_check
 
-__all__ = ["threshold_check"]
+__all__ = ["evaluate_trapezoid", "threshold_check"]

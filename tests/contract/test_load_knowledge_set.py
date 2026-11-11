@@ -181,7 +181,7 @@ def test_minimal_pack_loads(tmp_path: Path) -> None:
 
 def test_sample_pack_loads_allow_synthetic() -> None:
     ks = load_knowledge_set(_SAMPLE, allow_synthetic=True, dictionary=_DICT)
-    assert len(list(ks.taxa())) == 8
+    assert len(list(ks.taxa())) == 9
     assert ks.manifest.synthetic is True
     assert ks.verified is True
 

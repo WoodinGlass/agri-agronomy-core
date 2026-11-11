@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Suitability module (M15).** `agri_core.suitability` adds
+  `site_suitability`, `batch_suitability` and the `Site` input model.
+  `evaluate_trapezoid` is promoted from `thresholds._evaluate` to a
+  public function shared with `threshold_check`. `resolve_facts` added
+  to `agri_core.registry` for batch resolution. See ADR-016.
+- **Propagation module (M15).** `agri_core.propagation` adds
+  `PropagationPlan`, `PropagationStep`, `PropagationOutcome` (parallel
+  union), `PropagationOutcomeAdapter` and `propagation_plan()`. See
+  ADR-016.
+- **CLI (M15).** `agri-core suitability` (single or batch via
+  repeatable `--taxon`) and `agri-core propagation-plan`. Both accept
+  `--json` and share the `show`/`coverage` exit-code convention
+  (0 ok/ok_category, 1 refusal, 2 usage, 3 pack error).
+- **Sample pack (M15).** `T000000009 Testus unsuitabilis` (annual,
+  tropical) for the `unsuitable` scenario, used by
+  `tests/scenario/test_sample_pack_suitability.py`.
+- Suitability + propagation dictionary parameters (M15): 12 new core
+  params, `methods.yaml` vocab, `modules.yaml` reads fill. See ADR-016.
+- ADR-016 amendment: `ReferToAuthority` deferral (propagation M16),
+  `FlagCode` uppercase transform, `propagation_step_durations_defaulted`,
+  `evaluate_trapezoid` rename.
+
+### Changed
+
+- Dictionary 1.1.0 -> 1.2.0 (12 additive params, no removals, no
+  shape changes). See ADR-016 D-M15-X2.
+- Sample pack `dictionary_min` 1.0.0 -> 1.2.0; `content_hash`
+  regenerated to match.
+- Perf workload 200k -> 320k facts; five CLI/load budgets rebaselined
+  from M15 measurements. See ADR-010 amendment.
+- README: feature table rows 9 (suitability) and 14 (CLI) reflect M15
+  Done; test count 1995 -> 2092.
+
 ## [0.1.3] - 2026-11-10
 
 ### Added

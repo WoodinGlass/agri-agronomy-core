@@ -27,7 +27,7 @@ def test_coverage_sample_distribution() -> None:
     result = _invoke("--pack", "sample")
     assert result.exit_code == 0
     assert "T0: 1" in result.stdout
-    assert "T1: 7" in result.stdout
+    assert "T1: 8" in result.stdout
     assert "T2: 0" in result.stdout
     assert "T3: 0" in result.stdout
 
@@ -57,9 +57,9 @@ def test_coverage_json_output() -> None:
     assert data["pack"]["name"] == "sample"
     assert data["pack"]["version"] == "0.1.0"
     assert data["pack"]["synthetic"] is True
-    assert len(data["taxa"]) == 8
+    assert len(data["taxa"]) == 9
     taxon_ids = {t["taxon_id"] for t in data["taxa"]}
-    expected_ids = {f"T{i:09d}" for i in range(1, 9)}
+    expected_ids = {f"T{i:09d}" for i in range(1, 10)}
     assert taxon_ids == expected_ids
 
 
@@ -67,7 +67,7 @@ def test_coverage_json_summary() -> None:
     result = _invoke("--pack", "sample", "--json")
     assert result.exit_code == 0
     data = json.loads(result.stdout)
-    assert data["summary"] == {"T0": 1, "T1": 7, "T2": 0, "T3": 0}
+    assert data["summary"] == {"T0": 1, "T1": 8, "T2": 0, "T3": 0}
 
 
 def test_coverage_tier_filter_exact() -> None:
@@ -78,14 +78,14 @@ def test_coverage_tier_filter_exact() -> None:
     assert data["taxa"][0]["taxon_id"] == "T000000005"
     assert data["taxa"][0]["tier"] == "T0"
     # summary is always total, not filtered
-    assert data["summary"] == {"T0": 1, "T1": 7, "T2": 0, "T3": 0}
+    assert data["summary"] == {"T0": 1, "T1": 8, "T2": 0, "T3": 0}
 
 
 def test_coverage_tier_filter_multiple() -> None:
     result = _invoke("--pack", "sample", "--json", "--tier", "T0", "--tier", "T1")
     assert result.exit_code == 0
     data = json.loads(result.stdout)
-    assert len(data["taxa"]) == 8
+    assert len(data["taxa"]) == 9
 
 
 def test_coverage_tier_filter_invalid_exit_2() -> None:

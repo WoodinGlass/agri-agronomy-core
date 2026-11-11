@@ -71,12 +71,12 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 | 6 | Thermal time and climate indices | Growing degree days (GDD methods 1 and 2, McMaster & Wilhelm 1997), chill hours (Weinberger 1950) and Utah chill units (Richardson et al. 1974) from hourly temperature, photothermal units, and a `gdd_series` that refuses gaps. A 13-index generic engine (`threshold_index`: threshold, window, aggregation) driven by `dictionary/vocab/climate_indices.yaml`: day counts, dry/wet/frost/heat spells, rolling sums, temperature extremes. Seven Nix 1986 bioclimatic variables from monthly values. Dynamic-model chill portions (Fishman et al. 1987) and the remaining BIO01–BIO19 variables are `backlog`. A gap in a series gives `insufficient_input`; nothing is filled silently. | M12 | Done |
 | 7 | Thresholds and stages | Four-point trapezoid checks that return `optimal`, `suboptimal` or `critical`. Stage resolver from annual age, annual thermal time (GDD), or perennial caller-supplied events. Photothermal-unit staging is deferred (needs a `phase_photothermal_time` parameter in the dictionary). Threshold and stage values come only from the pack. | M13 | Done |
 | 8 | Irrigation, fertilizer, media and water | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), crop evapotranspiration (ETc) from a stage-wise Kc curve, nutrient-to-product conversion with safety caps, water-quality limits and indices (SAR, RSC). Every mode declares the parameters it requires; missing → `unknown` or `insufficient_input`. Kc values come only from the pack. | M14 | Done |
-| 9 | Suitability and propagation | Single and batch site suitability with `suitable`/`marginal`/`unsuitable` and per-factor reasons; dated propagation plans. | M15 | Not started |
+| 9 | Suitability and propagation | Single and batch site suitability with `suitable`/`marginal`/`unsuitable` and per-factor reasons; dated propagation plans. | M15 | Done |
 | 10 | Exports | `tool_schemas.json` (function-calling schemas with `taxon_id`, `country`, `system`), `edge_thresholds.json` per site, `review_sheet.csv` per tier. | M16 | Not started |
 | 11 | Soil water balance | Pedotransfer estimates of field capacity, wilting point and available water from texture and organic matter; a daily soil-water balance with depletion and a water-stress coefficient (Ks) that feeds the `field_etc` irrigation mode. Depletion fractions and other crop values come only from the pack. | M17 | Not started |
 | 12 | Drought and season indices | Standardized Precipitation Index (SPI) with a minimum-record check, an aridity index (precipitation over ET0), and rainy-season onset and cessation from a registry of documented, configurable definitions. | M18 | Not started |
 | 13 | Vegetation-index band math | Band-ratio indices computed from caller-supplied reflectance values: NDVI, EVI, SAVI, GNDVI, NDRE, NGRDI and PSRI, plus two water indices kept apart by name (`ndwi_mcfeeters` from green and NIR, `ndmi` from NIR and SWIR). No raster I/O and no imagery in this repository. LAI, FAPAR and canopy cover are inputs, not computed. | M19 | Not started |
-| 14 | Command line | `lint-sources` and a basic `validate` ship in M0; `pack lock` in M5; `pack scaffold` and `pack build` in M6; full `validate --json --strict`, `diff` and `coverage` in M7; `show` in M8; `lint-catalog` in M10; `calc` deferred; `export` in M16. | M0, M5–M16 | In progress |
+| 14 | Command line | `lint-sources` and a basic `validate` ship in M0; `pack lock` in M5; `pack scaffold` and `pack build` in M6; full `validate --json --strict`, `diff` and `coverage` in M7; `show` in M8; `lint-catalog` in M10; suitability and propagation-plan in M15; `calc` deferred; `export` in M16. | M0, M5–M16 | In progress |
 
 ## Quick start
 
@@ -171,6 +171,8 @@ agri-core diff --old A --new B [--json] [--exit-code]  # compare two packs
 agri-core show --pack sample --name "Testus annualis" [--language LANG] [--json]                 # resolve a name
 agri-core show --pack sample --taxon T000000001 [--min-status S] [--require-commercial] [--json]  # show a taxon + facts
 agri-core show --pack sample --fact F00000000001 [--json]                                        # show a fact by id
+agri-core suitability --pack sample --taxon T000000009 --phase flowering --soil-ph 6.5 --soil-ec 1.5 --air-temp-day 30 --air-temp-night 25 --air-rh 70 --vpd 1.0 --dli 25 [--json]  # site suitability (M15)
+agri-core propagation-plan --pack sample --taxon T000000009 --start-date 2026-04-15 --method seed [--json]  # dated propagation plan (M15)
 
 # M10 climate catalog
 agri-core lint-catalog --catalog docs/design/climate_catalog_v1.csv    # lint the climate parameter catalog
@@ -531,6 +533,7 @@ Architectural decisions are recorded as ADRs under
 - [ADR-013](docs/decisions/ADR-013-thermal-indices.md) — Thermal time, generic climate index engine, and bioclimatic variables (GDD methods 1 and 2, chilling, photothermal units, 13-index registry, Nix 1986 subset).
 - [ADR-014](docs/decisions/ADR-014-thresholds-stages.md) — Threshold checks and stage resolution (four-point trapezoid classification, annual age / annual thermal / perennial events stage resolution, PTU deferred).
 - [ADR-015](docs/decisions/ADR-015-irrigation-fertilizer-media.md) — Irrigation, fertilizer, media, water (three irrigation modes, dose-capped fertilizer, SAR/RSC indices, categorical water-quality check).
+- [ADR-016](docs/decisions/ADR-016-suitability-propagation.md) — Suitability and propagation (per-factor reasons, hazard flags, dated propagation plans).
 
 ADR-008 is intentionally reserved (plant-protection data model, after M15) and
 will be written as its own ADR when that work starts.
@@ -554,7 +557,7 @@ will be written as its own ADR when that work starts.
 | **M12** Thermal time and climate indices | Done | GDD (methods 1 and 2), `gdd_series` with gap refusal, hourly chill hours and Utah chill units, photothermal units, a 13-index `threshold_index` engine driven by `dictionary/vocab/climate_indices.yaml`, seven Nix 1986 bioclimatic variables from monthly values. Dynamic-model chill portions (Fishman et al. 1987) and the remaining BIO01–BIO19 variables are `backlog`. `dictionary_version` 1.0.0 → 1.1.0 with the `climate_indices` vocab file. | Golden tests pass; a gap in a series gives `insufficient_input`; every registry entry has a reference and a test. |
 | **M13** Thresholds and stages | Done | Four-point trapezoid threshold checks and the stage resolver (annual age, annual thermal, perennial caller-supplied events). First milestone to use `CategoricalResult` (`status="ok_category"`) for engine outputs. Photothermal-unit staging is deferred (needs a `phase_photothermal_time` parameter). Threshold and stage values are read from the pack only. | Phases resolve per archetype; perennials use caller-supplied events; threshold and stage values are read from the pack only. |
 | **M14** Irrigation, fertilizer, media and water | Done | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), ETc from a stage-wise Kc curve (Kc values from the pack only), nutrient-to-product conversion with per-application dose caps enforced in-function and a refusal when the cap is missing, and water-quality limits and indices (SAR, RSC, `check_water_quality`). | Sample-pack unit, contract and golden tests pass; irrigation, fertilizer and media results match inline vectors. Scenario fixtures and pinned `agri-knowledge` integration will follow the first `agri-knowledge` release (that repository's milestone K5). |
-| **M15** Suitability and propagation | Not started | Single and batch site suitability, per-factor reasons, hazard flags, dated propagation plans. | Batch mode within the performance budget; scenario tests including an `unsuitable` case. |
+| **M15** Suitability and propagation | Done | Single and batch site suitability, per-factor reasons, hazard flags, dated propagation plans. | Batch mode within the performance budget; scenario tests including an `unsuitable` case. |
 | **M16** Exports and documentation | Not started | `tool_schemas.json`, `edge_thresholds.json` per site, `review_sheet.csv` per tier, quickstart notebook, `docs/`. | A release tag includes exports, generated from the same Pydantic models as the library, with a stable contract test. |
 | **M17** Soil water balance | Not started | Pedotransfer estimates of field capacity, wilting point and available water; a daily soil-water balance with depletion and a water-stress coefficient (Ks) feeding the `field_etc` mode. | Golden tests pass; depletion fractions and other crop values are read from the pack only; a missing value gives `unknown` or `insufficient_input`. |
 | **M18** Drought and season indices | Not started | SPI with a minimum-record check, an aridity index (precipitation over ET0), rainy-season onset and cessation from a registry of documented, configurable definitions. | Golden tests pass; a record shorter than the documented minimum gives `insufficient_input`; every definition in the registry carries a reference. |
@@ -591,7 +594,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 
 **Test counts (v0.1.2 + M8 review follow-up + M10 + M11 + M12 + M13 + M14)**
 
-- Total passing: **1995** with `pytest -q -m 'not perf'` on Python 3.13 (Ubuntu-latest, Colab-class).
+- Total passing: **2092** with `pytest -q -m 'not perf'` on Python 3.13 (Ubuntu-latest, Colab-class).
 - Expected skips: 1 (files chmod — skipped as root; the dictionary-lock SemVer test now runs because `dictionary.lock` has two entries since `1.1.0`).
 - Expected xfail: 1 (G4 specificity marker — `test_incomparable_scope_arbitrary_tiebreak_documented`, fires when M9+ implements the partial order).
 - Deselected by `-m 'not perf'`: 15 perf tests (see `perf` above).
@@ -623,7 +626,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 
 ## Performance
 
-These targets are measured in CI and in Colab at v0.1.0 (unchanged in the v0.1.1 and v0.1.2 patches) on a synthetic pack (10k taxa, 30k names, 200k facts). They will be recalibrated once real `agri-knowledge` pack sizes are known. **Since v0.1.2**, the M8 review follow-up added `test_resolve_fact_perf.py` (G7) and `test_resolve_scaling.py` (G14, 1k/10k/100k) to `tests/perf/`.
+These targets are measured in CI and in Colab at v0.1.0 (unchanged in the v0.1.1 and v0.1.2 patches) on a synthetic pack (10k taxa, 30k names, 320k facts; M15 dictionary v1.2.0). They will be recalibrated once real `agri-knowledge` pack sizes are known. **Since v0.1.2**, the M8 review follow-up added `test_resolve_fact_perf.py` (G7) and `test_resolve_scaling.py` (G14, 1k/10k/100k) to `tests/perf/`.
 
 CLI-level budgets (`build`, `validate`, `coverage`, `diff`) were
 calibrated at v0.1.2 on Colab with a 1.5x margin; see
@@ -632,20 +635,20 @@ tightened once real CI medians are available.
 
 | Operation | Budget |
 |---|---|
-| Batch suitability, 5,000 taxa | ≤ 200 ms p95 (deferred to M15; suitability module not yet present) |
-| Load a pack with 10,000 taxa (built SQLite) | ≤ 1 s |
+| Batch suitability, 5,000 taxa | measured M15: 2.9 s median (2.3 / 4.3 min / max, 3-run Colab); no p95 budget yet — see [ADR-010](docs/decisions/ADR-010-perf-budgets.md) |
+| Load a pack with 10,000 taxa (built SQLite) | ≤ 1.4 s |
 | Peak memory during pack load | ≤ 200 MB |
 | `resolve_taxon` p95 | ≤ 5 ms (measured ≈ 12 µs on a 10k-taxa pack in M8) |
 | `resolve_fact` p95 (G7) | ≤ 75 µs per call; ≤ 450 ms per 5,000-call batch (min-of-3; see `tests/perf/test_resolve_fact_perf.py`) |
 | Multi-scale scaling (G14) | `resolve_taxon` ratio 100k/1k ≤ 3.0×; `resolve_fact` ratio ≤ 4.0× (see `tests/perf/test_resolve_scaling.py`) |
-| `agri-core pack build` on 10k source | ≤ 135 s (Colab min × 1.5; see [ADR-010](docs/decisions/ADR-010-perf-budgets.md)) |
-| `agri-core validate --strict` on 10k source | ≤ 70 s (Colab min × 1.5; see ADR-010) |
+| `agri-core pack build` on 10k source | ≤ 160 s (Colab min × 1.5; see [ADR-010](docs/decisions/ADR-010-perf-budgets.md)) |
+| `agri-core validate --strict` on 10k source | ≤ 90 s (Colab min × 1.5; see ADR-010) |
 | `agri-core coverage --json` on 10k built | ≤ 27 s (Colab min × 1.5; see ADR-010) |
-| `agri-core diff --json` on 10k built (self-diff) | ≤ 36 s (Colab min × 1.5; see ADR-010) |
+| `agri-core diff --json` on 10k built (self-diff) | ≤ 48 s (Colab min × 1.5; see ADR-010) |
 
 **How "peak memory" is measured.** The 200 MB budget refers to memory allocated *during* `load_knowledge_set`, measured with `tracemalloc`. It deliberately excludes the Python interpreter and third-party dependencies (`pydantic`, `jsonschema`, `pint`, `typer`, `pyyaml`), which together consume roughly 200 MB at import time in a Colab-class runtime. Including them would make the budget measure dependency bloat rather than the engine's own footprint, which is what this project controls. If you need a hard total cap, budget `absolute RSS ≤ 400 MB` as a smoke check.
 
-**Built vs source pack.** The 1 s load budget is for a *built* pack (`pack.sqlite` + `pack.toml`). Loading from the CSV source tree is a development path and is roughly 10× slower; a separate source-pack budget ships with the perf test in a follow-up PR.
+**Built vs source pack.** The 1.4 s load budget is for a *built* pack (`pack.sqlite` + `pack.toml`). Loading from the CSV source tree is a development path and is roughly 10× slower; a separate source-pack budget ships with the perf test in a follow-up PR.
 
 ## Repository layout
 

@@ -146,7 +146,7 @@ def test_properties_reflect_inputs() -> None:
     assert ks.manifest.name == "test"
     assert ks.manifest.version == "1.0.0"
     assert ks.pack_hash == "sha256:" + "1" * 64
-    assert ks.dictionary_version == "1.1.0"
+    assert ks.dictionary_version == "1.2.0"
     assert ks.verified is False
 
 

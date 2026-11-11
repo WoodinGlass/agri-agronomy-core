@@ -1,0 +1,32 @@
+schema_version: 1
+methods:
+  seed:
+    description: "Sexual propagation from seed or spore."
+  stem_cutting:
+    description: "Asexual propagation from a stem, leaf, or root cutting."
+  air_layering:
+    description: "Asexual propagation by rooting a stem while still attached to the parent."
+  marcotting:
+    description: "Asexual propagation by wounding and rooting a branch (variant of air layering)."
+  budding:
+    description: "Grafting a single bud from the scion onto a rootstock."
+  grafting:
+    description: "Joining a scion to a rootstock so they grow as one plant."
+  division:
+    description: "Splitting a clump into separate plants."
+  rhizome:
+    description: "Propagation from rhizome segments."
+  tuber:
+    description: "Propagation from tuber pieces or whole seed tubers."
+  bulb:
+    description: "Propagation from bulb offsets or bulbils."
+  offset:
+    description: "Propagation from offshoots or pups."
+  runner:
+    description: "Propagation from stolons or runners."
+  spore:
+    description: "Propagation from spores (ferns, mosses, fungi)."
+  tissue_culture:
+    description: "In-vitro propagation from explant tissue."
+  sucker:
+    description: "Propagation from basal suckers."
