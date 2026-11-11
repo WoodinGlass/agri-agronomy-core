@@ -5,7 +5,7 @@ Every crop-specific value comes from a verified knowledge pack, never from a lan
 
 <p align="center">
   <a href="https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml"><img src="https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/status-0.1.3--M10__M14-blue" alt="Status">
+  <img src="https://img.shields.io/badge/status-0.1.4--M15-blue" alt="Status">
   <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue" alt="Python">
   <img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License">
   <img src="https://img.shields.io/badge/mypy-strict-blue" alt="mypy">
@@ -13,7 +13,7 @@ Every crop-specific value comes from a verified knowledge pack, never from a lan
   <img src="https://img.shields.io/github/last-commit/WoodinGlass/agri-agronomy-core" alt="Last commit">
 </p>
 
-> **0.1.2 (foundation release) plus the M8 review follow-up and milestones M10–M14 on `main` (unreleased).** The tag `v0.1.2` covers the data contract, the pack lifecycle, and deterministic fact resolution; `v0.1.1` fixed `agri-core pack lock` on a stale `content_hash`; `v0.1.2` makes the data license gate default-deny with an explicit allowlist and adds `NOTICE`, `ADR-005`, and related CI checks (see [CHANGELOG](CHANGELOG.md)). **Since `v0.1.2`, on `main` (unreleased):** the **M8 review follow-up (G1–G14)** tightened the resolution contract (`RESOLUTION_POLICY_VERSION` 1.0.0 → 1.4.0, `filter_counts`/`warnings`/refined refusal codes, `MetaInfo.engine_min`, 200-char input guard, Hypothesis fuzz, multi-scale perf); **M10** ships the climate parameter catalog (`docs/design/climate_catalog_v1.csv`, 61 rows after M11/M14) with the `lint-catalog` gate, generated `CLIMATE_CATALOG.md`, and shipped excluded list (see [ADR-012](docs/decisions/ADR-012-climate-catalog.md)); **M11** adds 19 atmosphere, radiation and ET0 calculators with golden vectors and explicit assumptions (Penman–Monteith ET0 with Hargreaves–Samani fallback); **M12** adds 14 thermal time and index calculators (GDD methods 1 and 2, hourly chill hours and Utah chill units, photothermal units, a 13-index `threshold_index` engine driven by `dictionary/vocab/climate_indices.yaml`, seven Nix 1986 bioclimatic variables; `dictionary_version` bumps 1.0.0 → 1.1.0; Dynamic-model chill portions and full BIO01–BIO19 are `backlog`); **M13** adds `threshold_check` (four-point trapezoid) and `resolve_stage` (annual age, annual thermal, perennial caller-supplied events), the first milestone to use `CategoricalResult` for engine outputs (photothermal-unit staging is deferred); **M14** adds three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), fertilizer calculators (`fertilize_n`, `fertilize_p2o5`, `fertilize_k2o`) with per-application dose caps enforced in-function and a refusal when the cap is missing, water-quality indices (`compute_sar`, `compute_rsc`, both dimensionless), and a categorical water-quality check (`check_water_quality`), together with `safety.apply_dose_cap` and [ADR-015](docs/decisions/ADR-015-irrigation-fertilizer-media.md). All recorded in the `[Unreleased]` section of [CHANGELOG](CHANGELOG.md). The M14 calculators are on `main`; `v0.1.3` will tag the current M10–M14 batch once its remaining release gates complete — the `notebooks/` quickstart executed by `nbmake` in CI, and a canary CI job against `agri-knowledge` `main` (see [Versioning and releases](#versioning-and-releases)). Each later milestone then ships its own tag: suitability and propagation (M15, `v0.1.4`), exports (M16, `v0.1.5`), soil-water balance (M17, `v0.1.6`), drought and season indices (M18, `v0.1.7`), and vegetation-index band math (M19, `v0.1.8`). Interfaces, the pack format and the JSON Schemas may still change in the 0.x line; see [Versioning and releases](#versioning-and-releases). This project provides a calculation engine and a data contract; it is not professional agronomic advice. Read [Safety and limitations](#safety-and-limitations) before relying on any output.
+> **v0.1.4 (2026-11-11): suitability and propagation (M15).** The current release adds the `agri_core.suitability` module (`site_suitability`, `batch_suitability`, `Site`), the `agri_core.propagation` module (`propagation_plan`, `PropagationPlan`, `PropagationStep`, `PropagationOutcome`), 12 new core dictionary parameters (`suitability_weight_*` x 7, `suitability_threshold_*` x 2, `propagation_method`, `propagation_duration_days`, `propagation_start_months`; dictionary v1.1.0 -> v1.2.0), `resolve_facts` (batch resolution sharing the filter loop with `resolve_fact`), `evaluate_trapezoid` (public rename of `thresholds._evaluate`, one shared classifier), the `agri-core suitability` and `agri-core propagation-plan` CLI subcommands, sample-pack taxon `T000000009` (Testus unsuitabilis, tropical annual) for the milestone's unsuitable scenario, and a perf rebaseline from 200k -> 320k facts (five budgets rebaselined on the same Colab-class CPU). **v0.1.3 (2026-11-09)** bundled M10-M14: climate parameter catalog, atmosphere/radiation/ET0, thermal time and climate indices, thresholds and stages, irrigation/fertilizer/media/water. **v0.1.2 (2026-10-31)** added the default-deny license gate, `NOTICE`, `ADR-005`. **v0.1.1 (2026-10-29)** fixed `agri-core pack lock` on a stale `content_hash`. **v0.1.0 (2026-10-29)** was the foundation. All `v0.1.x` releases ship as git tags and GitHub Releases; PyPI publication begins at a later tag (see [CHANGELOG](CHANGELOG.md)). Read [Safety and limitations](#safety-and-limitations) before relying on any output.
 
 ## What this is
 
@@ -85,10 +85,10 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 Releases are distributed as git tags. Pin one:
 
 ```bash
-pip install "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.3"
+pip install "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.4"
 ```
 
-`v0.1.3` is the current tagged release; `v0.1.0` is the foundation release. `v0.1.1` remains available but does not enforce the license allowlist; use `v0.1.3` for new work. To track the development branch, replace `@v0.1.3` with `@main` (development only; not recommended for anything you deploy).
+`v0.1.4` is the current tagged release; `v0.1.0` is the foundation release. `v0.1.1` remains available but does not enforce the license allowlist; use `v0.1.4` for new work. To track the development branch, replace `@v0.1.4` with `@main` (development only; not recommended for anything you deploy).
 
 `v0.1.x` releases are distributed as git tags and GitHub Releases only; PyPI publication will begin at a later tag, announced in [CHANGELOG](CHANGELOG.md) when it is prepared.
 
@@ -99,7 +99,7 @@ Requires Python 3.11 or newer (tested on 3.11, 3.12, 3.13 and 3.14 on Ubuntu-lat
 Install in any Colab cell:
 
 ```python
-!pip install -q "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.3"
+!pip install -q "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.4"
 ```
 
 No API key or GPU is needed. Pure Python, CPU only.
@@ -503,7 +503,7 @@ does not match.
 - **Tagging cadence.** Each milestone that lands on `main` is tagged when its release gates complete. `v0.1.0` covers the foundation work (M0 through M9); `v0.1.1` and `v0.1.2` are patches. The M10 through M14 work currently on `main` is tagged `v0.1.3` as a single batch, because those milestones merged as a continuous run; from M15 onward, each milestone ships its own tag: `v0.1.4` (M15), `v0.1.5` (M16), `v0.1.6` (M17), `v0.1.7` (M18), `v0.1.8` (M19). Later releases continue `v0.1.9`, `v0.1.10`, and so on, without gaps. Within the 0.x line, there is no separate "mature" tag concept; every tag is an incremental release, and PATCH versions within the same MINOR are corrections.
 - Every pack carries a `schema_version` and an `engine_min`. The engine supports two consecutive `schema_version` values and ships `agri-core pack migrate` to move a pack forward. A pack that declares a `schema_version` the engine does not support is rejected; a pack that requires a newer engine than the one running is rejected.
 - Every fact has a stable `fact_id`. A superseded fact is marked with `superseded_by`; a critical correction will be published as an advisory in the pack (planned; the loader currently rejects non-empty `advisories.csv`). See ADR-004 G3 for the advisory contract that fires when loading ships.
-- Every release pins the `agri-knowledge` version it was tested against. A canary CI job against `agri-knowledge` `main`, to surface incompatibilities early, is planned for `v0.1.3` (not yet implemented).
+- Every release pins the `agri-knowledge` version it was tested against. A canary CI job against `agri-knowledge` `main`, to surface incompatibilities early, shipped with `v0.1.3` (see `.github/workflows/canary-knowledge.yml`).
 - **Order of changes across the two repositories.** A change that needs a new core parameter or a new method lands in this order: the catalog row and the dictionary change here (an engine minor release), then the data in `agri-knowledge`, validated against that engine release, then a new pack release (Semantic Versioning; MAJOR only when `schema_version` or the pack format changes) that declares the `engine_min` and `dictionary_min` it needs. The `agri-knowledge` CI runs the same `agri-core validate --strict` that this repository ships.
 - `dictionary/dictionary.lock` records `<version> <contract_hash>` per dictionary release; the SemVer rule is that adding a key is `MINOR`, removing / renaming / changing shape, unit, phase_set, enum values or narrowing a dimension is `MAJOR`, and description / rationale changes are `PATCH`. `classify_change` enforces this and is exercised by the test suite.
 - Releases are git tags and GitHub Releases (wheel, sdist, sample pack, `SHA256SUMS`, CycloneDX SBOM, and — when the pinned `agri-knowledge` version has shipped — the built packs of `agri-knowledge`). `v0.1.x` releases are not on PyPI. PyPI publication will begin at a later tag, announced in [CHANGELOG](CHANGELOG.md) when it is prepared, using `.github/workflows/publish.yml` (Trusted Publishing).
@@ -592,7 +592,7 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 - `scenario`: end-to-end expectations, for example a taxon whose every suitability factor is `unsuitable` in the requested scope must return `unsuitable`.
 - `unit`: functions in isolation.
 
-**Test counts (v0.1.2 + M8 review follow-up + M10 + M11 + M12 + M13 + M14)**
+**Test counts (v0.1.4: M8 review follow-up + M10-M15)**
 
 - Total passing: **2092** with `pytest -q -m 'not perf'` on Python 3.13 (Ubuntu-latest, Colab-class).
 - Expected skips: 1 (files chmod — skipped as root; the dictionary-lock SemVer test now runs because `dictionary.lock` has two entries since `1.1.0`).
@@ -618,6 +618,12 @@ Tooling: pytest, Hypothesis, pytest-cov, ruff, mypy (strict), nbmake, nbstripout
 - Every test runs with network access blocked.
 - The performance budget is met (see [Performance](#performance)).
 - A `windows-smoke` job runs on `windows-latest` in parallel with the Python 3.11–3.14 matrix on Ubuntu.
+
+**Additional release gates from `v0.1.4`**
+
+No additional release gates beyond `v0.1.3`; M15 ships under the same
+release cadence (notebooks executed via `nbmake`, canary against
+`agri-knowledge` `main`).
 
 **Additional release gates from `v0.1.3`**
 
