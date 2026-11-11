@@ -25,7 +25,7 @@ from agri_core.models.fact import TrapezoidValue
 from agri_core.pack.knowledge_set import KnowledgeSet
 from agri_core.registry.resolution import FactResolved, resolve_fact
 
-__all__ = ["threshold_check"]
+__all__ = ["evaluate_trapezoid", "threshold_check"]
 
 _CALC_VERSION = "0.1.0"
 
@@ -36,7 +36,7 @@ _LABELS: dict[str, str] = {
 }
 
 
-def _evaluate(value: float, pts: tuple[float, float, float, float]) -> str:
+def evaluate_trapezoid(value: float, pts: tuple[float, float, float, float]) -> str:
     """Classify ``value`` against ``pts = (abs_min, opt_min, opt_max, abs_max)``.
 
     Boundaries are inclusive on both ends (``value == abs_min`` and
@@ -125,7 +125,7 @@ def threshold_check(
             request_id=request_id,
         )
 
-    category = _evaluate(value, fr.value.pts)
+    category = evaluate_trapezoid(value, fr.value.pts)
     return ok_category(
         category=category,
         label=_LABELS[category],
