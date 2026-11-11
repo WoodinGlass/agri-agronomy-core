@@ -531,6 +531,7 @@ Architectural decisions are recorded as ADRs under
 - [ADR-013](docs/decisions/ADR-013-thermal-indices.md) — Thermal time, generic climate index engine, and bioclimatic variables (GDD methods 1 and 2, chilling, photothermal units, 13-index registry, Nix 1986 subset).
 - [ADR-014](docs/decisions/ADR-014-thresholds-stages.md) — Threshold checks and stage resolution (four-point trapezoid classification, annual age / annual thermal / perennial events stage resolution, PTU deferred).
 - [ADR-015](docs/decisions/ADR-015-irrigation-fertilizer-media.md) — Irrigation, fertilizer, media, water (three irrigation modes, dose-capped fertilizer, SAR/RSC indices, categorical water-quality check).
+- [ADR-016](docs/decisions/ADR-016-suitability-propagation.md) — Suitability and propagation (per-factor reasons, hazard flags, dated propagation plans).
 
 ADR-008 is intentionally reserved (plant-protection data model, after M15) and
 will be written as its own ADR when that work starts.
