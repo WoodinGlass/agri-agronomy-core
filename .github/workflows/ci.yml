@@ -44,6 +44,7 @@ jobs:
         run: pytest -m "not perf" -p no:nbmake -W ignore::DeprecationWarning
       - name: Coverage gate
         run: coverage report --fail-under=90 --skip-covered
+      - name: Safety coverage gate (100%)
         run: coverage report --include="*/safety/*" --fail-under=100 --skip-covered
       - name: agri-core validate (explicit path)
         run: agri-core validate --pack src/agri_core/_samples/sample_pack
@@ -87,6 +88,7 @@ jobs:
         run: pytest -m "not perf" -p no:nbmake -W ignore::DeprecationWarning
       - name: Coverage gate
         run: coverage report --fail-under=90 --skip-covered
+      - name: Safety coverage gate (100%)
         run: coverage report --include="*/safety/*" --fail-under=100 --skip-covered
 
   lowest-direct:
@@ -116,6 +118,7 @@ jobs:
         run: pytest -m "not perf" -p no:nbmake -W ignore::DeprecationWarning
       - name: Coverage gate
         run: coverage report --fail-under=90 --skip-covered
+      - name: Safety coverage gate (100%)
         run: coverage report --include="*/safety/*" --fail-under=100 --skip-covered
 
   pre-commit:

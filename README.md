@@ -22,7 +22,7 @@ Every crop-specific value comes from a verified knowledge pack, never from a lan
 1. **A data contract.** JSON Schemas, a parameter dictionary, a climate parameter catalog, a pack format (CSV tables, hashed at lock time and verified at load) and a deterministic fact-resolution policy. The contract lives here. The data lives in [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge).
 2. **A calculation engine.** Pure-Python functions that read a knowledge pack and compute climate quantities and indices, threshold checks, growth stages, irrigation, soil-water balance, fertilizer amounts, water-quality indices, site suitability and propagation plans.
 
-The engine covers vegetables, fruit, staple carbohydrates, fodder (grown for feed, not rations), ornamental plants and cultivated fungi. Rare species are carried with a legal-status attribute taken from legal instruments, not from restricted databases (see [Protected species](#protected-species)). "Agronomy" is used loosely to mean cultivation.
+The engine covers vegetables, fruit, staple carbohydrates, fodder (grown for feed, not rations), ornamental plants and cultivated fungi. Rare species are excluded unless a documented lawful cultivation pathway exists; legal status comes from legal instruments, not from restricted databases (see [Protected species](#protected-species)). "Agronomy" is used loosely to mean cultivation.
 
 Adding a taxon or a country is a data change in `agri-knowledge`, not a code change here. Every crop-specific value the engine uses comes from a pack with a citation. Equations and physical constants live in tested code and are referenced in the documentation.
 
