@@ -106,7 +106,7 @@ No API key or GPU is needed. Pure Python, CPU only.
 
 ### Data packs
 
-Data packs are released separately by [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge) under Semantic Versioning. A release carries `agri-knowledge-<version>.tar.gz` (a built pack that extracts to `agri-knowledge-<version>/`) and a `SHA256SUMS` file. Check the hash, extract the archive and pass the directory to `load_knowledge_set`. The first data release, `v0.1.0`, is planned after `agri-knowledge` milestone K5; until then the synthetic sample pack bundled with the package (used by `--pack sample`) is the only pack available.
+Data packs are released separately by [`agri-knowledge`](https://github.com/WoodinGlass/agri-knowledge) under Semantic Versioning. A release carries `agri-knowledge-<version>.tar.gz` (a built pack that extracts to `agri-knowledge-<version>/`) and a `SHA256SUMS` file. Check the hash, extract the archive and pass the directory to `load_knowledge_set`. An empty foundation pack, `agri-knowledge` `v0.1.0`, is tagged when milestone K0 completes. The first full data pack, `v0.1.5`, follows at milestone K5; until then the synthetic sample pack bundled with the package (used by `--pack sample`) is the only pack available.
 
 ```bash
 VERSION=0.1.0   # planned; not released yet
@@ -254,8 +254,8 @@ A pack is a directory with a manifest and CSV tables. `agri-core pack build` com
 name = "agri-knowledge"
 version = "0.1.0"
 schema_version = 1
-engine_min = "0.1.2"
-dictionary_min = "1.0.0"
+engine_min = "0.1.4"
+dictionary_min = "1.2.0"
 synthetic = false
 # Regenerate with `agri-core pack lock --pack PATH`. sha256 of the pack's
 # canonical content; see docs/PACK_FORMAT.md for the algorithm.
@@ -347,7 +347,7 @@ Adding a **core** parameter is a minor engine release. Adding an **extension** p
 
 ## Coverage
 
-**Data release plan.** The first data release, `agri-knowledge` `v0.1.0` (planned after its milestone K5), carries tomato and rice at tier T2 for Indonesia and one more country, a T0 taxonomic backbone with multilingual names for the priority list, and legal flags. After that, `agri-knowledge` adds one group per iteration (fruit, fodder, ornamentals, then rare plants), each starting with a source audit.
+**Data release plan.** An empty foundation pack, `agri-knowledge` `v0.1.0`, is tagged when milestone K0 completes. The first full data pack, `agri-knowledge` `v0.1.5` (milestone K5), carries tomato and rice at tier T2 for Indonesia and one more country, a T0 taxonomic backbone with multilingual names for the priority list, and legal flags. After that, `agri-knowledge` adds one group per iteration (fruit, fodder, ornamentals, then rare plants), each starting with a source audit.
 
 **Design targets for the engine.** Six reference profiles across five archetypes are chosen to exercise every irrigation mode, the propagation planner and the suitability refusal path. They arrive in `agri-knowledge` as their groups come up; until then the tests use the synthetic sample pack.
 
@@ -556,7 +556,7 @@ will be written as its own ADR when that work starts.
 | **M11** Atmosphere, radiation and ET0 | Done | VPD, dew point, wet-bulb temperature, daylength and photoperiod, solar and net radiation, PAR, PPFD and DLI, wind conversions and height adjustment, temperature and pressure from elevation, ET0 (Penman–Monteith with a Hargreaves–Samani fallback). Methods documented with primary-literature references. | Golden tests (independently derived vectors) pass; every estimated input is reported as an assumption; each `implemented` catalog row has a method reference and a test. |
 | **M12** Thermal time and climate indices | Done | GDD (methods 1 and 2), `gdd_series` with gap refusal, hourly chill hours and Utah chill units, photothermal units, a 13-index `threshold_index` engine driven by `dictionary/vocab/climate_indices.yaml`, seven Nix 1986 bioclimatic variables from monthly values. Dynamic-model chill portions (Fishman et al. 1987) and the remaining BIO01–BIO19 variables are `backlog`. `dictionary_version` 1.0.0 → 1.1.0 with the `climate_indices` vocab file. | Golden tests pass; a gap in a series gives `insufficient_input`; every registry entry has a reference and a test. |
 | **M13** Thresholds and stages | Done | Four-point trapezoid threshold checks and the stage resolver (annual age, annual thermal, perennial caller-supplied events). First milestone to use `CategoricalResult` (`status="ok_category"`) for engine outputs. Photothermal-unit staging is deferred (needs a `phase_photothermal_time` parameter). Threshold and stage values are read from the pack only. | Phases resolve per archetype; perennials use caller-supplied events; threshold and stage values are read from the pack only. |
-| **M14** Irrigation, fertilizer, media and water | Done | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), ETc from a stage-wise Kc curve (Kc values from the pack only), nutrient-to-product conversion with per-application dose caps enforced in-function and a refusal when the cap is missing, and water-quality limits and indices (SAR, RSC, `check_water_quality`). | Sample-pack unit, contract and golden tests pass; irrigation, fertilizer and media results match inline vectors. Scenario fixtures and pinned `agri-knowledge` integration will follow the first `agri-knowledge` release (that repository's milestone K5). |
+| **M14** Irrigation, fertilizer, media and water | Done | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), ETc from a stage-wise Kc curve (Kc values from the pack only), nutrient-to-product conversion with per-application dose caps enforced in-function and a refusal when the cap is missing, and water-quality limits and indices (SAR, RSC, `check_water_quality`). | Sample-pack unit, contract and golden tests pass; irrigation, fertilizer and media results match inline vectors. Scenario fixtures and pinned `agri-knowledge` integration will follow the first full `agri-knowledge` data pack (milestone K5, `v0.1.5`). |
 | **M15** Suitability and propagation | Done | Single and batch site suitability, per-factor reasons, hazard flags, dated propagation plans. | Batch mode within the performance budget; scenario tests including an `unsuitable` case. |
 | **M16** Exports and documentation | Not started | `tool_schemas.json`, `edge_thresholds.json` per site, `review_sheet.csv` per tier, quickstart notebook, `docs/`. | A release tag includes exports, generated from the same Pydantic models as the library, with a stable contract test. |
 | **M17** Soil water balance | Not started | Pedotransfer estimates of field capacity, wilting point and available water; a daily soil-water balance with depletion and a water-stress coefficient (Ks) feeding the `field_etc` mode. | Golden tests pass; depletion fractions and other crop values are read from the pack only; a missing value gives `unknown` or `insufficient_input`. |
@@ -661,7 +661,7 @@ tightened once real CI medians are available.
 ```
 agri-agronomy-core/
 ├─ dictionary/
-│  ├─ parameters.core.yaml   # 31 core parameters at dictionary_version 1.1.0
+│  ├─ parameters.core.yaml   # 43 core parameters at dictionary_version 1.2.0
 │  ├─ dictionary.lock        # append-only: <version> <contract_hash>, one line per release
 │  ├─ history/               # frozen snapshots per release (1.0.0.json, 1.1.0.json, ...)
 │  ├─ unit_registry.yaml     # custom units (pH, ppm, percent, degree_day) + pint aliases
