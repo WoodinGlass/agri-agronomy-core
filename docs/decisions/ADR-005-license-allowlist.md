@@ -96,6 +96,15 @@ must be default-deny.
   tags `v0.1.0` and `v0.1.1` remain as immutable historical snapshots.
   Rewriting history for four labels is disproportionate and would break
   release integrity for existing clones.
+
+  **User decision 2026-11-12 (K5=A).** After reviewing the diagnostic
+  (the four items are single-word category labels; no IUCN assessment ID,
+  population trend, range map, or citation to the restricted database),
+  the project owner chose option A: keep the tags, and mark GitHub
+  Releases `v0.1.0` and `v0.1.1` as deprecated with a note that they
+  contain policy notes referencing IUCN category labels and are
+  superseded by `v0.1.2`. This is a user decision under the project's
+  rule 2 ("do not decide alone"), not an ADR self-decision.
 - **Adding a license to the allowlist** requires an ADR amendment, an
   update to `_ALLOWED_LICENSES` in `sources.py`, an extension to
   `tests/contract/test_validate_license.py` and
