@@ -96,14 +96,19 @@ list is unchanged; taxa affected by the withdrawn criterion are
 re-evaluated under the legal-instrument rules in the next wishlist
 revision.
 
-### Retained: `vanilla`
+### Deferred: `vanilla`
 
 *Vanilla planifolia* is listed under CITES Appendix II as part of
 Orchidaceae, but the listing carries an explicit exemption for
 artificially propagated pods and seeds. *Vanilla planifolia* is **not** in
 Permen LHK 106/2018. Indonesia is one of the world's largest vanilla
 producers, and its cultivation is a legal, mainstream agricultural activity.
-It is retained as the only epiphyte with an unambiguous commercial pathway.
+Decision 2026-11-12: *Vanilla planifolia* is **deferred** from the initial
+release. The CITES exemption covers artificially propagated pods and seeds,
+not living plants, and cultivation data concerns living plants. The taxon
+may be scaffold only after a per-species legal pathway is documented and
+approved. See `agri-knowledge/docs/PROTECTED_SPECIES.md` and
+`agri-knowledge/docs/protected_taxa_deny.csv`.
 
 ### Legal boundary
 
