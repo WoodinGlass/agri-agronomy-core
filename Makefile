@@ -1,4 +1,4 @@
-.PHONY: install install-dev lint format typecheck test coverage check precommit audit build smoke clean
+.PHONY: install install-dev lock lint format typecheck test coverage perf check precommit audit build smoke clean
 
 install:
 	pip install -e .
@@ -47,6 +47,7 @@ smoke: build
 	.smoke-venv/bin/pip install --upgrade pip
 	.smoke-venv/bin/pip install dist/*.whl
 	.smoke-venv/bin/python -c "import agri_core; print(agri_core.__version__)"
+	.smoke-venv/bin/agri-core validate --pack sample
 
 clean:
 	rm -rf build dist .smoke-venv .pytest_cache .ruff_cache .mypy_cache .hypothesis

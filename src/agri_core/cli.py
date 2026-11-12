@@ -57,7 +57,7 @@ EXIT_UNEXPECTED = 70
 
 app = typer.Typer(
     name="agri-core",
-    help="Offline, deterministic crop profiles and agronomy calculators.",
+    help="Offline, deterministic data contract and resolution engine for cultivation knowledge.",
     no_args_is_help=True,
     add_completion=False,
 )
