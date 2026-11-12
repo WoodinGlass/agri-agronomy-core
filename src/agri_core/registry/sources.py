@@ -78,12 +78,15 @@ See ADR-005. Adding a license here requires an ADR amendment and a
 CHANGELOG entry.
 """
 
-_ALLOWED_LICENSES_DATASET: frozenset[str] = _ALLOWED_LICENSES - {"LicenseRef-PublicDomain"}
-"""Dataset allowlist: same as sources, without LicenseRef-PublicDomain.
+_ALLOWED_LICENSES_DATASET: frozenset[str] = _ALLOWED_LICENSES - {
+    "LicenseRef-PublicDomain",
+    "CC-BY-3.0",
+}
+"""Dataset allowlist: sources minus LicenseRef-PublicDomain and CC-BY-3.0.
 
-Datasets have no ``citation`` column in 0.1.2, so a PD dataset cannot
-record the ``basis:`` justification required for sources. PD datasets
-are rejected outright until a schema change lands.
+CC BY 3.0 (unported) does not explicitly cover database rights. Use CC BY 4.0
+for datasets where there is a choice. Prose articles remain acceptable under
+CC BY 3.0 because database rights are not at issue for text.
 """
 
 _PD_SENTINEL = "LicenseRef-PublicDomain"

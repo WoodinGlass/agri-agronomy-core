@@ -33,7 +33,7 @@ Three concrete failure modes:
 2. **Required from this release onward.** `agri-core validate` raises
    `PACK_ID_LEDGER_ABSENT` when the file is missing. Migration for
    older packs: `agri-core pack scaffold` (auto-bootstraps from
-   current `taxa.csv` before appending), or `sort taxa.csv > ids.lock`
+   current `taxa.csv` before appending), or `tail -n +2 taxa.csv | cut -d, -f1 | sort > ids.lock`
    manually.
 
 3. **Append-only.** Only `scaffold` writes the file. A taxon removal

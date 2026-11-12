@@ -110,6 +110,61 @@ def test_validate_rejects_missing_ids_lock(tmp_path: Path) -> None:
     assert "PACK_ID_LEDGER_ABSENT" in codes
 
 
+def test_bootstrap_hint_does_not_suggest_raw_sort(tmp_path: Path) -> None:
+    """The PACK_ID_LEDGER_ABSENT hint must not suggest a command that copies
+    full CSV rows into ids.lock (header + commas), which would fail drift
+    and the sorted-no-dupes contract test."""
+    pack = _copy_sample(tmp_path, strip_lock=True)
+    files = read_pack_bytes(pack)
+    report, _ = validate_pack_report(files, allow_synthetic=True)
+    absent = [f for f in report.errors if f.code == "PACK_ID_LEDGER_ABSENT"]
+    assert absent, "expected PACK_ID_LEDGER_ABSENT finding"
+    msg = absent[0].message
+    assert "`sort taxa.csv > ids.lock`" not in msg, (
+        f"hint suggests raw `sort taxa.csv > ids.lock` (produces CSV rows, not IDs): {msg!r}"
+    )
+    assert "cut -d, -f1" in msg, (
+        f"hint should mention `cut -d, -f1` to extract the taxon_id column: {msg!r}"
+    )
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="POSIX shell pipeline (tail/cut/sort); Windows uses `agri-core pack scaffold`",
+)
+def test_bootstrap_hint_command_produces_id_only_lines(tmp_path: Path) -> None:
+    """The corrected hint command must emit one taxon_id per line, no header,
+    no commas, sorted."""
+    pack = _copy_sample(tmp_path, strip_lock=True)
+    taxa = pack / "taxa.csv"
+    header = taxa.read_text().splitlines()[0]
+    assert header.startswith("taxon_id,"), "taxa.csv first column must be taxon_id"
+    taxa.write_text(
+        "\n".join(
+            [
+                header,
+                "T000000001,species,Fakeus one,,",
+                "T000000002,species,Fakeus two,,",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        "tail -n +2 taxa.csv | cut -d, -f1 | sort",
+        shell=True,
+        cwd=pack,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    out = [ln for ln in result.stdout.splitlines() if ln]
+    assert out == ["T000000001", "T000000002"], f"unexpected output: {out!r}"
+    for line in out:
+        assert "," not in line, f"line contains comma (CSV row leaked): {line!r}"
+        assert line.startswith("T"), f"line does not start with T: {line!r}"
+
+
 # ===== Validate: drift =====
 
 

@@ -439,7 +439,8 @@ def check_id_ledger_absent(
             message=(
                 "pack must declare ids.lock (ADR-011). "
                 "Bootstrap: `agri-core pack scaffold` on the pack (auto-creates "
-                "ids.lock from current taxa.csv), or `sort taxa.csv > ids.lock`."
+                "ids.lock from current taxa.csv), or "
+                "`tail -n +2 taxa.csv | cut -d, -f1 | sort > ids.lock`."
             ),
             location=FindingLocation(file="ids.lock"),
         )
