@@ -236,7 +236,7 @@ A pack is a directory with a manifest and CSV tables. `agri-core pack build` com
 
 ```
 <pack>/
-├─ advisories.csv         # critical corrections keyed by fact_id
+├─ advisories.csv         # reserved, planned (ADR-004 G3); must be empty until loader ships
 ├─ datasets.csv           # reference tables (fertilizer products, media, soil tests) with scope and license
 ├─ facts/                 # one CSV per taxon: facts/<taxon_id>.csv
 │                        #   one row per fact: fact_id, taxon_id, parameter, phase, value, scope, src, evidence, status
@@ -269,7 +269,7 @@ Each fact is one value at one scope. The engine resolves facts deterministically
 | Field | Meaning |
 |---|---|
 | `fact_id` | Stable identifier; never reused. Superseded facts are kept with `superseded_by`. |
-| `taxon_id` | Opaque ID created by `agri-core scaffold` (M6); scientific names may change without changing the ID. |
+| `taxon_id` | Opaque ID created by `agri-core pack scaffold` (M6); scientific names may change without changing the ID. |
 | `parameter` | A core parameter from `parameters.core.yaml` or an extension parameter declared in the pack. |
 | `phase` | A phase from `phases_by_archetype`. |
 | `value` | One of eight shapes: `trapezoid`, `range`, `scalar`, `enum`, `enum_set`, `bool`, `rule`, `unknown`. |
@@ -340,7 +340,7 @@ Adding a **core** parameter is a minor engine release. Adding an **extension** p
 
 ## Taxa and identifiers
 
-- Taxon IDs are created by `agri-core scaffold` (M6) and are opaque (Crockford base32 with a `T` prefix, ten characters). They are never reused.
+- Taxon IDs are created by `agri-core pack scaffold` (M6) and are opaque (Crockford base32 with a `T` prefix, ten characters). They are never reused.
 - Scientific names may change without changing the ID.
 - `rank` is one of `cultivar_group`, `genus`, `hybrid`, `species`.
 - `parent_id` is for navigation only; it does not imply inheritance of facts. Values never flow from parent to child automatically.
