@@ -78,6 +78,16 @@ def test_rule_does_not_fire_on_non_safety_critical() -> None:
     assert "PACK_SAFETY_DOUBLE_REVIEW_MISSING" not in codes
 
 
+def test_rule_fires_on_approved_with_duplicate_reviewers() -> None:
+    """A safety-critical fact approved with the same reviewer twice still
+    needs two distinct reviewers; the rule must dedupe (ADR-018)."""
+    files = _sample_files()
+    files = _add_safety_fact(files, "F99999999999", status="approved", reviewed_by="rev1|rev1")
+    report, _ = validate_pack_report(files, allow_synthetic=True)
+    codes = [f.code for f in report.findings]
+    assert "PACK_SAFETY_DOUBLE_REVIEW_MISSING" in codes
+
+
 def _dict_with_safety_param(key: str, safety_class: str):
     """Extend `_default_dictionary` with a synthetic parameter of the given class."""
     from agri_core.models.parameter import ParameterDef

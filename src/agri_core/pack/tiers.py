@@ -164,7 +164,7 @@ def derive_tier(ks: KnowledgeSet, taxon_id: str, dictionary: Dictionary) -> Tier
         fact_param = dictionary.parameters.get(f.parameter)
         if fact_param is None or fact_param.safety_class == "none":
             continue
-        if f.status != "approved" or len(f.reviewed_by or []) < 2:
+        if f.status != "approved" or len(set(f.reviewed_by or [])) < 2:
             missing_t3.append(f.parameter)
 
     if missing_t3:

@@ -360,7 +360,7 @@ def check_safety_double_review(
             continue
         if fact.status != "approved":
             continue
-        n = len(fact.reviewed_by or [])
+        n = len(set(fact.reviewed_by or []))
         if n < 2:
             yield Finding(
                 code="PACK_SAFETY_DOUBLE_REVIEW_MISSING",
