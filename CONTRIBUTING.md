@@ -51,8 +51,9 @@ not supported for datasets in 0.1.2 because the dataset row has no
 
 A dual-license source is recorded as the single license the pack relies
 on; composite SPDX expressions (`AND`, `OR`, `WITH`, `+`) are rejected.
-CC BY 4.0 is preferred over CC BY 3.0 for datasets: CC BY 3.0 unported
-does not explicitly cover database rights, while 4.0 does.
+CC BY 4.0 is required for datasets: CC BY 3.0 unported does not cover
+database rights. CC BY 3.0 is still accepted for prose articles in
+`sources.csv`.
 
 The allowlist (exact-match SPDX canonical identifiers):
 

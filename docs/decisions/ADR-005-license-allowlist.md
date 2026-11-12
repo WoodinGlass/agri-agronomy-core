@@ -31,6 +31,15 @@ must be default-deny.
    - MIT, BSD-2-Clause, BSD-3-Clause, Apache-2.0
    - LicenseRef-PublicDomain (sources only, see point 3)
 
+   **Amendment 2026-11-12 (K6):** `CC-BY-3.0` is accepted for `sources.csv`
+   (prose articles) but not for `datasets.csv`. CC BY 3.0 unported does not
+   explicitly cover database rights; use CC BY 4.0 for datasets where there
+   is a choice. The ID stays in the shared eight-item list above so the
+   verbatim drift test continues to pass; the dataset allowlist excludes it
+   in `_ALLOWED_LICENSES_DATASET`.
+   - MIT, BSD-2-Clause, BSD-3-Clause, Apache-2.0
+   - LicenseRef-PublicDomain (sources only, see point 3)
+
 2. **`commercial_use=yes` required.** `no` and `unclear` are ERRORs at
    `agri-core validate --strict`, `agri-core lint-sources` (exit != 0)
    and `agri-core pack build`.

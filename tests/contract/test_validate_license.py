@@ -455,3 +455,36 @@ def test_lint_sources_cli_exits_nonzero_for_commercial_no(tmp_path: Path) -> Non
     assert result.exit_code != 0
     combined = result.stdout + result.stderr
     assert "SRC005" in combined
+
+
+# ===== K6: CC-BY-3.0 is datasets-only exclusion =====
+
+
+def test_dataset_cc_by_3_0_rejected() -> None:
+    """K6: CC-BY-3.0 is not accepted for datasets (no database rights)."""
+    files = _sample_files()
+    files["datasets.csv"] = _mutate_csv(
+        files["datasets.csv"],
+        lambda r: r["dataset_id"] == "D000000001",
+        license="CC-BY-3.0",
+    )
+    report, _ = validate_pack_report(files, allow_synthetic=True)
+    codes = [f.code for f in report.errors]
+    assert "PACK_LICENSE_OUTSIDE_ALLOWLIST" in codes, (
+        f"expected PACK_LICENSE_OUTSIDE_ALLOWLIST for dataset CC-BY-3.0, got: {codes}"
+    )
+
+
+def test_source_cc_by_3_0_accepted() -> None:
+    """K6: CC-BY-3.0 is still accepted for sources (prose articles)."""
+    files = _sample_files()
+    files["sources.csv"] = _mutate_csv(
+        files["sources.csv"],
+        lambda r: r["id"] == "S001",
+        license="CC-BY-3.0",
+    )
+    report, _ = validate_pack_report(files, allow_synthetic=True)
+    codes = [f.code for f in report.errors]
+    assert "PACK_LICENSE_OUTSIDE_ALLOWLIST" not in codes, (
+        f"source CC-BY-3.0 should be accepted; got errors: {codes}"
+    )

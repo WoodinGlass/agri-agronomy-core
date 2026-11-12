@@ -77,8 +77,11 @@ def test_allowed_licenses_shape() -> None:
 
 def test_allowed_licenses_dataset_invariant() -> None:
     """The dataset allowlist is the source allowlist minus PD."""
-    assert _ALLOWED_LICENSES - {"LicenseRef-PublicDomain"} == _ALLOWED_LICENSES_DATASET
-    assert len(_ALLOWED_LICENSES_DATASET) == 7
+    # K6: CC-BY-3.0 excluded from datasets (no database rights in 3.0 unported)
+    assert _ALLOWED_LICENSES - {"LicenseRef-PublicDomain", "CC-BY-3.0"} == _ALLOWED_LICENSES_DATASET
+    assert len(_ALLOWED_LICENSES_DATASET) == 6
+    assert "CC-BY-3.0" in _ALLOWED_LICENSES  # still valid for sources
+    assert "CC-BY-3.0" not in _ALLOWED_LICENSES_DATASET
 
 
 def test_adr_005_decision_lists_every_allowed_license() -> None:
@@ -99,3 +102,12 @@ def test_contributing_lists_every_allowed_license() -> None:
         f"CONTRIBUTING.md §Data source license policy is missing allowlist IDs: {missing}. "
         f"Add them alongside the other IDs."
     )
+
+
+def test_dataset_allowlist_excludes_cc_by_3_0() -> None:
+    """K6: CC-BY-3.0 is datasets-only excluded; still valid for sources."""
+    from agri_core.registry.sources import is_allowed_license
+
+    assert is_allowed_license("CC-BY-3.0", for_dataset=True) is False
+    assert is_allowed_license("CC-BY-3.0", for_dataset=False) is True
+    assert is_allowed_license("CC-BY-4.0", for_dataset=True) is True
