@@ -11,6 +11,10 @@ schema_version: 1
 # Salinity (soil_ec, water_ec_max) is not safety-critical: it is a tolerance
 # condition for the plant, not an applied amount and not a hazard to humans,
 # animals, or the environment.
+#
+#   toxicity_limit and regulatory are reserved (ADR-018). No parameter uses
+#   them; a contract test enforces this. A new ADR is required to enable
+#   either class.
 safety_classes:
   none:
     definition: "Not safety-critical."
@@ -19,8 +23,8 @@ safety_classes:
     definition: "Upper bound on the recommendable application amount."
     criterion: "functional (amount constraint)"
   toxicity_limit:
-    definition: "Threshold above which a hazard harms humans, animals, or the environment."
-    criterion: "hazard (type of harm)"
+    definition: "Reserved (ADR-018). No parameter may use this class until an ADR defines the hazard model, the source class and the review workflow."
+    criterion: "hazard (type of harm) -- reserved"
   regulatory:
-    definition: "Flag or limit mandated by a specific jurisdiction."
-    criterion: "obligation (legal)"
+    definition: "Reserved (ADR-018). The engine is not a compliance tool; jurisdiction-specific limits are out of scope."
+    criterion: "obligation (legal) -- reserved"
