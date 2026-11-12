@@ -21,8 +21,10 @@ that is **not** covered by a test, it is marked
 ### Safety-critical parameters
 
 Parameters with a `safety_class` other than `none` in
-[`DICTIONARY.md`](DICTIONARY.md) (`dose_cap`, `toxicity_limit`,
-`regulatory`) are never `draft` or `imported`. `resolve_fact` raises the
+[`DICTIONARY.md`](DICTIONARY.md) are never `draft` or `imported`.
+`dose_cap` is the only class currently in use. `toxicity_limit` and
+`regulatory` are reserved and no parameter may use them (ADR-018).
+`resolve_fact` raises the
 status floor to `reviewed` if the caller's floor is below it, and
 records a `safety_min_status_raised` warning. A caller who sets
 `min_status="approved"` remains strict: a safety fact that is only
