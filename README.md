@@ -535,6 +535,7 @@ Architectural decisions are recorded as ADRs under
 - [ADR-016](docs/decisions/ADR-016-suitability-propagation.md) — Suitability and propagation (per-factor reasons, hazard flags, dated propagation plans).
 - [ADR-017](docs/decisions/ADR-017-no-edge-thresholds.md) — No `edge_thresholds.json`: device-facing thresholds conflict with the 'not a controller' scope.
 - [ADR-018](docs/decisions/ADR-018-safety-reserved.md) — `regulatory` and `toxicity_limit` are reserved; `dose_cap` is the only active safety-critical class.
+- [ADR-019](docs/decisions/ADR-019-rust-native-kernel.md) — Native Rust kernel behind `agri_core._native`; one implementation per behaviour; byte-identical in M20 with the RFC 8785 migration deferred to ADR-020.
 
 ADR-008 is intentionally reserved (plant-protection data model, after M15) and
 will be written as its own ADR when that work starts.
