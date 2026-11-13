@@ -1,5 +1,7 @@
 """Type stubs for the native Rust kernel. Checked by `mypy stubtest`."""
+
 from __future__ import annotations
+
 from typing import Any
 
 __version__: str

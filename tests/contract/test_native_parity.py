@@ -2,6 +2,7 @@
 
 Skipped when `agri_core._native` is not built (e.g. dev without maturin).
 """
+
 from __future__ import annotations
 
 import pytest
@@ -12,6 +13,7 @@ pytestmark = pytest.mark.contract
 
 try:
     from agri_core import _native  # type: ignore[attr-defined]
+
     _NATIVE_AVAILABLE = True
 except ImportError:
     _native = None  # type: ignore[assignment]
@@ -37,17 +39,22 @@ def test_canonical_json_byte_identical_golden() -> None:
 
 @pytest.mark.skipif(not _NATIVE_AVAILABLE, reason="agri_core._native not built")
 def test_canonical_json_hypothesis() -> None:
-    from hypothesis import given, strategies as st
+    from hypothesis import given
+    from hypothesis import strategies as st
 
     scalar = st.one_of(
-        st.none(), st.booleans(),
-        st.integers(min_value=-10**6, max_value=10**6),
+        st.none(),
+        st.booleans(),
+        st.integers(min_value=-(10**6), max_value=10**6),
         st.floats(allow_nan=False, allow_infinity=False, width=64),
         st.text(max_size=20),
     )
     value = st.recursive(
         scalar,
-        lambda c: st.one_of(st.lists(c, max_size=4), st.dictionaries(st.text(max_size=8), c, max_size=4)),
+        lambda c: st.one_of(
+            st.lists(c, max_size=4),
+            st.dictionaries(st.text(max_size=8), c, max_size=4),
+        ),
         max_leaves=20,
     )
 
@@ -63,7 +70,8 @@ def test_canonical_json_hypothesis() -> None:
 @pytest.mark.skipif(not _NATIVE_AVAILABLE, reason="agri_core._native not built")
 def test_sha256_hex_parity() -> None:
     import hashlib
-    for data in [b"", b"hello", b"a"*1000, bytes(range(256))]:
+
+    for data in [b"", b"hello", b"a" * 1000, bytes(range(256))]:
         py = hashlib.sha256(data).hexdigest()
         rust = _native.sha256_hex(data)  # type: ignore[union-attr]
         assert py == rust
