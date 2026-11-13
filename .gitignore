@@ -27,6 +27,14 @@ htmlcov/
 .smoke-venv/
 *.whl
 
+# --- Rust ---
+/target/
+**/*.rs.bk
+
+# --- Build-time copies for wheel packaging (Makefile wheel-prep) ---
+/src/agri_core/_data/
+/src/agri_core/_dictionary/
+
 # --- Editors ---
 .idea/
 .vscode/

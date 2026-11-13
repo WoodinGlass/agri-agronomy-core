@@ -1,4 +1,11 @@
-"""Deterministic JSON encoding used by dictionary and pack hashing."""
+"""Deterministic JSON encoding used by dictionary and pack hashing.
+
+NOT fully RFC 8785-compliant. This implementation intentionally mirrors
+Python's ``json.dumps`` behavior (float repr ``1.0`` -> ``"1.0"``,
+exponent ``1e-07``) so that ``content_hash`` and ``contract_hash`` stay
+byte-stable across platforms and Python versions. Only the ``-0.0``
+normalization required by RFC 8785 is applied. See ADR-019 section P2
+and ADR-020 (planned) for the RFC 8785 migration path."""
 
 from __future__ import annotations
 

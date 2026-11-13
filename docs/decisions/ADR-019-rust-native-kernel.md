@@ -1,6 +1,6 @@
 # ADR-019: Native Rust kernel behind `agri_core._native`
 
-- **Status:** Accepted
+- **Status:** Accepted (amended 2026-11-14)
 - **Date:** 2026-11-13
 - **Deciders:** WoodinGlass (maintainer)
 - **Related:** ADR-001 (KnowledgeSet Protocol seam), ADR-002 (build and hash),
@@ -203,3 +203,29 @@ only, as they are today.
 - The following are explicitly **out of scope**: WASM, edge, device
   builds (see ADR-017), free-threaded Python 3.14t until there is demand,
   and any new Python dependency without its own ADR.
+
+
+## Amendment 2026-11-14: tag order for M20 and M16
+
+The original tag cadence placed M16 (Exports, Python) at `v0.1.5` and
+M20 (Rust foundation) at `v0.1.6`. The maintainer chose to prioritise
+the native foundation: M20 ships first, and M16 follows.
+
+Revised tags (all other milestones unchanged):
+
+| Milestone | Original tag | Revised tag |
+|---|---|---|
+| M20 Rust foundation and M2 port | `v0.1.6` | **`v0.1.5`** |
+| M16 Exports (Python) | `v0.1.5` | **`v0.1.6`** |
+| M21 Pack kernel | `v0.1.7` | `v0.1.7` |
+| M22 Resolution and batch | `v0.1.8` | `v0.1.8` |
+| M17, M18, M19 | `v0.1.9`-`v0.1.11` | `v0.1.9`-`v0.1.11` |
+| M23 (conditional) | `v0.1.12`+ | `v0.1.12`+ |
+
+Consequence acknowledged: K5 in `agri-knowledge` needs `review_sheet.csv`
+from M16 and is therefore deferred by one tag. This is a deliberate
+trade-off, not an oversight.
+
+The P2 rule (M20 byte-identical with Python), the RFC 8785 migration
+path (ADR-020, planned), the PyPI-last policy, and the "no `v0.2.x`
+until a real breaking change" rule are unchanged.

@@ -1,4 +1,4 @@
-.PHONY: install install-dev lock lint format typecheck test coverage perf check precommit audit build smoke clean
+.PHONY: install install-dev lock lint format typecheck test coverage perf check precommit audit build smoke clean wheel-prep cargo-check rust-test rust-lint
 
 install:
 	pip install -e .
@@ -51,3 +51,22 @@ smoke: build
 
 clean:
 	rm -rf build dist .smoke-venv .pytest_cache .ruff_cache .mypy_cache .hypothesis
+
+wheel-prep:
+	mkdir -p src/agri_core/_data
+	rm -rf src/agri_core/_data/schema src/agri_core/_dictionary
+	cp -R schema src/agri_core/_data/schema
+	cp -R dictionary src/agri_core/_dictionary
+
+cargo-check:
+	cargo fmt --all -- --check
+	cargo clippy --all-targets -- -D warnings
+	cargo test --locked
+	cargo deny check
+
+rust-test:
+	cargo test --locked
+
+rust-lint:
+	cargo fmt --all -- --check
+	cargo clippy --all-targets -- -D warnings
