@@ -242,7 +242,7 @@ jobs:
           name: sdist
           path: dist/*.tar.gz
           if-no-files-found: error
-      - name: Build wheel again and compare (reproducibility)
+      - name: Build wheel again and compare (reproducibility, SBOM excluded)
         id: wheel-reproducibility
         shell: bash
         run: |
@@ -251,16 +251,30 @@ jobs:
           SOURCE_DATE_EPOCH=0 python -m build --wheel --outdir dist2
           WHL_A=$(ls dist/*.whl | head -n1)
           WHL_B=$(ls dist2/*.whl | head -n1)
-          HASH_A=$(sha256sum "$WHL_A" | awk '{print $1}')
-          HASH_B=$(sha256sum "$WHL_B" | awk '{print $1}')
-          echo "first:  sha256=$HASH_A  file=$WHL_A"
-          echo "second: sha256=$HASH_B  file=$WHL_B"
+          # Reproducibility gate compares wheel PAYLOAD, excluding SBOM.
+          # The maturin-generated SBOM (agri-py.cyclonedx.json) embeds build-
+          # environment metadata that varies between CI runs even when the
+          # payload is identical. SBOM is documentation about the build, not
+          # part of what users install, so it is excluded from this gate.
+          # See CHANGELOG [0.1.5] "Note" for context. Payload (code, data,
+          # dist-info minus sboms/) must remain byte-identical.
+          rm -rf /tmp/whl_a /tmp/whl_b
+          mkdir -p /tmp/whl_a /tmp/whl_b
+          unzip -q "$WHL_A" -d /tmp/whl_a
+          unzip -q "$WHL_B" -d /tmp/whl_b
+          rm -rf /tmp/whl_a/*.dist-info/sboms /tmp/whl_b/*.dist-info/sboms
+          HASH_A=$(cd /tmp/whl_a && find . -type f -print0 | sort -z \
+                    | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
+          HASH_B=$(cd /tmp/whl_b && find . -type f -print0 | sort -z \
+                    | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
+          echo "first  (payload, no SBOM): sha256=$HASH_A  file=$WHL_A"
+          echo "second (payload, no SBOM): sha256=$HASH_B  file=$WHL_B"
           if [ "$HASH_A" != "$HASH_B" ]; then
-            echo "::error::wheel is not reproducible: sha256 differs"
-            diff <(unzip -l "$WHL_A") <(unzip -l "$WHL_B") || true
+            echo "::error::wheel payload is not reproducible (SBOM excluded)"
+            diff -r /tmp/whl_a /tmp/whl_b || true
             exit 1
           fi
-          echo "OK: wheel reproducible (sha256=$HASH_A)"
+          echo "OK: wheel payload reproducible (SBOM excluded, sha256=$HASH_A)"
       - name: Upload second wheel on mismatch
         if: failure() && steps.wheel-reproducibility.outcome == 'failure'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7

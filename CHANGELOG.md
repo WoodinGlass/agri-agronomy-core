@@ -41,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Note
 
 - `artifact_sha256` changes (build backend switch). Not a gate.
+- Wheel reproducibility gate compares **payload** (code, data, `dist-info`
+  minus `sboms/`), not the maturin-generated SBOM. The SBOM embeds build-
+  environment metadata that varies between invocations; it is documentation
+  about the build, not part of what users install. Payload remains byte-
+  identical across builds, verified by the CI reproducibility step.
 
 ## [0.1.4] - 2026-11-11
 
