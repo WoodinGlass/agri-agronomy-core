@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-11-14
+
+### Added
+
+- **Native Rust kernel (M20).** `agri_core._native` module built with
+  maturin, exposing `canonical_json`, `sha256_hex`,
+  `compute_request_id`. Byte-identical to the Python implementation.
+  See ADR-019.
+- **Rust workspace.** `Cargo.toml`, `rust-toolchain.toml` (1.100.0),
+  `deny.toml` (default-deny, mirrors ADR-005),
+  `crates/agri-kernel`, `crates/agri-py`.
+- **Shared canonical corpus.** `tests/vectors/canonical.json` read by
+  both `pytest` and `cargo test`.
+- **CI workflows.** `rust.yml` (fmt, clippy, test on Linux/Windows/
+  macOS, cargo-deny) and `wheel.yml` (`cp311-abi3` wheels on Linux
+  x86_64, Windows x86_64, macOS arm64, plus sdist).
+
+### Changed
+
+- Build backend: `hatchling` -> `maturin>=1.16`. Wheel is now
+  `cp311-abi3` (one wheel per OS/arch, Python 3.11+). All Python CI
+  jobs install Rust (`dtolnay/rust-toolchain`) because
+  `pip install -e ".[dev]"` now builds the native extension.
+- `canonical.py` docstring now states non-compliance with RFC 8785
+  (ADR-019 P2). No code change; `content_hash`, `contract_hash`,
+  `request_id` are unchanged.
+
+### Fixed
+
+- Nothing. No behaviour change.
+
+### Note
+
+- `artifact_sha256` changes (build backend switch). Not a gate.
+
 ## [0.1.4] - 2026-11-11
 
 ### Added

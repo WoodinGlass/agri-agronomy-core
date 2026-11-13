@@ -22,8 +22,14 @@ impl std::fmt::Display for CanonicalError {
 /// Python `repr(float)` equivalent for finite f64.
 /// Python: 1.0 -> "1.0", 1e-7 -> "1e-07", 1e-4 -> "0.0001", 1e16 -> "1e+16".
 fn py_float_repr(f: f64) -> String {
-    let mut buf = ryu::Buffer::new();
-    let raw = buf.format_finite(f).to_string();
+    // Rust's Debug for f64 uses core::fmt's shortest-roundtrip algorithm,
+    // which matches Python's repr for finite floats (both are David Gay's
+    // shortest-representation family). `ryu::format_finite` has roundtrip
+    // bugs for near-subnormal values (M20b diagnosis: 283/1000 random f64
+    // failed to roundtrip via ryu). See ADR-019 section P2.
+    let raw = format!("{:?}", f);
+    // Python always uses 2+ digit zero-padded exponent with explicit sign:
+    // e-08 (not e-8), e+16 (not e16). Apply only when there is an exponent.
     if let Some(e_pos) = raw.find(['e', 'E']) {
         let (mantissa, exp_part) = raw.split_at(e_pos);
         let exp_str = &exp_part[1..];

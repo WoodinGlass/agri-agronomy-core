@@ -1,9 +1,96 @@
 use pyo3::prelude::*;
 
-fn py_to_json_value(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<serde_json::Value> {
-    let json_mod = py.import("json")?;
-    let s: String = json_mod.call_method1("dumps", (obj,))?.extract()?;
-    serde_json::from_str(&s).map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("{e}")))
+const MAX_JSON_DEPTH: usize = 1000;
+
+fn py_to_json_value(_py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<serde_json::Value> {
+    py_to_json_value_at(obj, 0)
+}
+
+fn py_to_json_value_at(obj: &Bound<'_, PyAny>, depth: usize) -> PyResult<serde_json::Value> {
+    use pyo3::types::{PyBool, PyDict, PyFloat, PyInt, PyList, PyString, PyTuple};
+    use serde_json::{Map, Number, Value};
+
+    if depth > MAX_JSON_DEPTH {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "JSON nesting exceeds maximum depth (1000)",
+        ));
+    }
+
+    // None
+    if obj.is_none() {
+        return Ok(Value::Null);
+    }
+
+    // bool MUST be checked before int (Python bool is a subclass of int).
+    if let Ok(b) = obj.cast::<PyBool>() {
+        return Ok(Value::Bool(b.is_true()));
+    }
+
+    // int -> i64 or u64. Larger integers are not supported (no arbitrary_precision).
+    if let Ok(i) = obj.cast::<PyInt>() {
+        if let Ok(v) = i.extract::<i64>() {
+            return Ok(Value::Number(Number::from(v)));
+        }
+        if let Ok(v) = i.extract::<u64>() {
+            return Ok(Value::Number(Number::from(v)));
+        }
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "integer outside i64/u64 range is not supported",
+        ));
+    }
+
+    // float -> f64 bits preserved via Number::from_f64.
+    if let Ok(f) = obj.cast::<PyFloat>() {
+        let v: f64 = f.extract()?;
+        let num = Number::from_f64(v).ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err(
+                "NaN or infinity is not valid JSON (matches Python allow_nan=False)",
+            )
+        })?;
+        return Ok(Value::Number(num));
+    }
+
+    // str -> UTF-8 (PyO3 extract handles lone-surrogate rejection).
+    if let Ok(s) = obj.cast::<PyString>() {
+        return Ok(Value::String(s.extract()?));
+    }
+
+    // list and tuple -> array (json.dumps treats tuple as array).
+    if let Ok(list) = obj.cast::<PyList>() {
+        let mut arr = Vec::with_capacity(list.len());
+        for item in list.iter() {
+            arr.push(py_to_json_value_at(&item, depth + 1)?);
+        }
+        return Ok(Value::Array(arr));
+    }
+    if let Ok(tup) = obj.cast::<PyTuple>() {
+        let mut arr = Vec::with_capacity(tup.len());
+        for item in tup.iter() {
+            arr.push(py_to_json_value_at(&item, depth + 1)?);
+        }
+        return Ok(Value::Array(arr));
+    }
+
+    // dict -> object with string keys only.
+    if let Ok(dict) = obj.cast::<PyDict>() {
+        let mut map = Map::new();
+        for (k, v) in dict.iter() {
+            let key: String = k.extract().map_err(|_| {
+                pyo3::exceptions::PyTypeError::new_err("JSON object keys must be str")
+            })?;
+            map.insert(key, py_to_json_value_at(&v, depth + 1)?);
+        }
+        return Ok(Value::Object(map));
+    }
+
+    let type_name = obj
+        .get_type()
+        .name()
+        .map(|n| n.to_string())
+        .unwrap_or_else(|_| "<unknown>".to_string());
+    Err(pyo3::exceptions::PyTypeError::new_err(format!(
+        "type {type_name} is not JSON serializable"
+    )))
 }
 
 #[pyfunction]
