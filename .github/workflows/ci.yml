@@ -263,6 +263,12 @@ jobs:
           unzip -q "$WHL_A" -d /tmp/whl_a
           unzip -q "$WHL_B" -d /tmp/whl_b
           rm -rf /tmp/whl_a/*.dist-info/sboms /tmp/whl_b/*.dist-info/sboms
+          # RECORD references each file with hash+size. The SBOM entry in
+          # RECORD differs between builds (see previous comment), so strip
+          # only lines mentioning sboms/ from RECORD. All other RECORD
+          # entries (code, data, other metadata) stay intact and are
+          # compared, preserving the payload reproducibility gate.
+          sed -i '/sboms\//d' /tmp/whl_a/*.dist-info/RECORD /tmp/whl_b/*.dist-info/RECORD
           HASH_A=$(cd /tmp/whl_a && find . -type f -print0 | sort -z \
                     | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
           HASH_B=$(cd /tmp/whl_b && find . -type f -print0 | sort -z \
