@@ -9,6 +9,7 @@ Run before `maturin build` or `python -m build`:
 
 Idempotent. Safe to re-run.
 """
+
 from __future__ import annotations
 
 import shutil
