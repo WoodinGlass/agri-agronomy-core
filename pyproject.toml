@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling>=1.25,<2"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.16,<2"]
+build-backend = "maturin"
 
 [project]
 name = "agri-agronomy-core"
-version = "0.1.4"
+version = "0.1.5"
 description = "Offline, deterministic data contract and resolution engine for cultivation knowledge."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -51,8 +51,7 @@ dev = [
     "build>=1.2,<2",
     "twine>=7,<8",
     "pip-tools>=7.4,<8",
-    "hatchling>=1.25,<2",
-    "editables>=0.5,<1",
+    "maturin>=1.16,<2",
     "types-jsonschema>=4.20,<5",
     "types-PyYAML>=6.0,<7",
 ]
@@ -66,27 +65,18 @@ Changelog = "https://github.com/WoodinGlass/agri-agronomy-core/blob/main/CHANGEL
 [project.scripts]
 agri-core = "agri_core.cli:main"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/agri_core"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"schema" = "agri_core/_data/schema"
-"dictionary" = "agri_core/_dictionary"
-
-[tool.hatch.build.targets.sdist]
+[tool.maturin]
+manifest-path = "crates/agri-py/Cargo.toml"
+python-source = "src"
+module-name = "agri_core._native"
+features = ["pyo3/extension-module"]
+strip = true
 include = [
-    "src/agri_core",
-    "dictionary",
-    "schema",
-    "tests",
-    "README.md",
-    "CHANGELOG.md",
-    "LICENSE",
-    "NOTICE",
-    "CONTRIBUTING.md",
-    "SECURITY.md",
-    "pyproject.toml",
-    "Makefile",
+  { path = "src/agri_core/_data/**/*", format = ["sdist", "wheel"] },
+  { path = "src/agri_core/_dictionary/**/*", format = ["sdist", "wheel"] },
+  { path = "tests/**/*", format = "sdist" },
+  { path = "dictionary/**/*", format = "sdist" },
+  { path = "schema/**/*", format = "sdist" },
 ]
 
 [tool.ruff]

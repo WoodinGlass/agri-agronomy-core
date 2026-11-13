@@ -30,6 +30,8 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Install from lock
         run: |
           pip install -r requirements.lock
@@ -76,6 +78,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Install project
         run: pip install -e ".[dev]"
       - name: ruff check
@@ -104,6 +108,8 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Install uv
         run: python -m pip install --upgrade uv
       - name: Install project (lowest-direct)
@@ -133,6 +139,8 @@ jobs:
           cache: pip
       - name: Install project
         run: pip install -e ".[dev]"
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Cache pre-commit hooks
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6
         with:
@@ -153,6 +161,8 @@ jobs:
           cache: pip
       - name: Install project
         run: pip install -e ".[dev]"
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Run notebooks (nbmake)
         run: pytest --nbmake notebooks/ --no-cov -q -W ignore::DeprecationWarning
 
@@ -167,8 +177,12 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Install build and twine
         run: python -m pip install build twine
+      - name: Prepare wheel inputs
+        run: python scripts/wheel_prep.py
       - name: Build wheel and sdist
         run: python -m build
         env:
@@ -228,7 +242,7 @@ jobs:
           name: sdist
           path: dist/*.tar.gz
           if-no-files-found: error
-      - name: Build wheel again and compare (reproducibility)
+      - name: Build wheel again and compare (reproducibility, SBOM excluded)
         id: wheel-reproducibility
         shell: bash
         run: |
@@ -237,16 +251,36 @@ jobs:
           SOURCE_DATE_EPOCH=0 python -m build --wheel --outdir dist2
           WHL_A=$(ls dist/*.whl | head -n1)
           WHL_B=$(ls dist2/*.whl | head -n1)
-          HASH_A=$(sha256sum "$WHL_A" | awk '{print $1}')
-          HASH_B=$(sha256sum "$WHL_B" | awk '{print $1}')
-          echo "first:  sha256=$HASH_A  file=$WHL_A"
-          echo "second: sha256=$HASH_B  file=$WHL_B"
+          # Reproducibility gate compares wheel PAYLOAD, excluding SBOM.
+          # The maturin-generated SBOM (agri-py.cyclonedx.json) embeds build-
+          # environment metadata that varies between CI runs even when the
+          # payload is identical. SBOM is documentation about the build, not
+          # part of what users install, so it is excluded from this gate.
+          # See CHANGELOG [0.1.5] "Note" for context. Payload (code, data,
+          # dist-info minus sboms/) must remain byte-identical.
+          rm -rf /tmp/whl_a /tmp/whl_b
+          mkdir -p /tmp/whl_a /tmp/whl_b
+          unzip -q "$WHL_A" -d /tmp/whl_a
+          unzip -q "$WHL_B" -d /tmp/whl_b
+          rm -rf /tmp/whl_a/*.dist-info/sboms /tmp/whl_b/*.dist-info/sboms
+          # RECORD references each file with hash+size. The SBOM entry in
+          # RECORD differs between builds (see previous comment), so strip
+          # only lines mentioning sboms/ from RECORD. All other RECORD
+          # entries (code, data, other metadata) stay intact and are
+          # compared, preserving the payload reproducibility gate.
+          sed -i '/sboms\//d' /tmp/whl_a/*.dist-info/RECORD /tmp/whl_b/*.dist-info/RECORD
+          HASH_A=$(cd /tmp/whl_a && find . -type f -print0 | sort -z \
+                    | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
+          HASH_B=$(cd /tmp/whl_b && find . -type f -print0 | sort -z \
+                    | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
+          echo "first  (payload, no SBOM): sha256=$HASH_A  file=$WHL_A"
+          echo "second (payload, no SBOM): sha256=$HASH_B  file=$WHL_B"
           if [ "$HASH_A" != "$HASH_B" ]; then
-            echo "::error::wheel is not reproducible: sha256 differs"
-            diff <(unzip -l "$WHL_A") <(unzip -l "$WHL_B") || true
+            echo "::error::wheel payload is not reproducible (SBOM excluded)"
+            diff -r /tmp/whl_a /tmp/whl_b || true
             exit 1
           fi
-          echo "OK: wheel reproducible (sha256=$HASH_A)"
+          echo "OK: wheel payload reproducible (SBOM excluded, sha256=$HASH_A)"
       - name: Upload second wheel on mismatch
         if: failure() && steps.wheel-reproducibility.outcome == 'failure'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
@@ -275,6 +309,8 @@ jobs:
         with:
           name: wheel
           path: ${{ runner.temp }}/wheel-dist
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Smoke test wheel artifact
         working-directory: ${{ runner.temp }}
         shell: bash
@@ -290,6 +326,8 @@ jobs:
           echo "$OUT" | grep -E '^pack: sample [0-9]+\.[0-9]+\.[0-9]+ \(sample\)$'
           ./venv-wheel/bin/agri-core lint-sources --pack sample
           ./venv-wheel/bin/python -c "from agri_core.models.dictionary import Dictionary; d = Dictionary.load_packaged(); print('dict:', d.version, '|', len(d.parameters), 'params')"
+      - name: Prepare source tree for local build
+        run: python scripts/wheel_prep.py
       - name: Smoke test source install
         working-directory: ${{ runner.temp }}
         shell: bash
@@ -340,6 +378,8 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Install from lock
         run: |
           pip install -r requirements.lock
@@ -359,6 +399,8 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Install project
         shell: bash
         run: pip install -e ".[dev]"
@@ -385,6 +427,8 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Install runtime dependencies in a clean venv
         shell: bash
         run: |
@@ -485,6 +529,8 @@ jobs:
         with:
           name: sdist
           path: ${{ runner.temp }}/sdist-dist
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Install build
         run: python -m pip install build
       - name: Build wheel from sdist and compare member lists
@@ -510,3 +556,13 @@ jobs:
               sys.exit(1)
           print("wheel members match:", len(members_a), "files")
           PY
+
+  native:
+    name: Native (Rust)
+    uses: ./.github/workflows/rust.yml
+    secrets: inherit
+
+  wheel:
+    name: Wheel (3 platforms)
+    uses: ./.github/workflows/wheel.yml
+    secrets: inherit

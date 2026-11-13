@@ -1,0 +1,79 @@
+name: Wheel
+
+# Triggered via ci.yml (workflow_call) or manual dispatch only.
+# Do NOT add push / pull_request here: CI already includes this workflow via
+# the `native`/`wheel` reusable jobs, and duplicate triggers cause concurrent
+# runs of the same PR branch (macOS runner often cancelled by concurrency).
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wheel-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-15
+            target: aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install maturin
+      - run: python scripts/wheel_prep.py
+      - name: maturin build
+        shell: bash
+        run: maturin build --release --locked --target ${{ matrix.target }} --out dist/
+      - name: install + smoke
+        shell: bash
+        run: |
+          python -m venv .venv-smoke
+          if [ -f .venv-smoke/bin/python ]; then PY=.venv-smoke/bin/python; else PY=.venv-smoke/Scripts/python.exe; fi
+          $PY -m pip install --upgrade pip
+          $PY -m pip install dist/*.whl
+          $PY -c "import agri_core; from agri_core import _native; print('version', agri_core.__version__); print('native', _native.__version__)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.target }}
+          path: dist/*.whl
+          if-no-files-found: error
+
+  sdist:
+    name: build sdist
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install maturin
+      - run: python scripts/wheel_prep.py
+      - run: maturin sdist --out dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
