@@ -39,13 +39,10 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            manylinux: auto
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            manylinux: ''
           - os: macos-14
             target: aarch64-apple-darwin
-            manylinux: ''
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -59,12 +56,7 @@ jobs:
       - run: python scripts/wheel_prep.py
       - name: maturin build
         shell: bash
-        run: |
-          if [ -n "${{ matrix.manylinux }}" ]; then
-            maturin build --release --locked --target ${{ matrix.target }} --manylinux ${{ matrix.manylinux }} --out dist/
-          else
-            maturin build --release --locked --target ${{ matrix.target }} --out dist/
-          fi
+        run: maturin build --release --locked --target ${{ matrix.target }} --out dist/
       - name: install + smoke
         shell: bash
         run: |
