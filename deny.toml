@@ -1,0 +1,28 @@
+[licenses]
+allow = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Zlib", "Unicode-3.0"]
+confidence-threshold = 0.93
+
+[bans]
+multiple-versions = "warn"
+deny = [
+  { name = "reqwest" },
+  { name = "hyper" },
+  { name = "tokio" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+
+[advisories]
+yanked = "deny"
+
+# Per-crate license exception (ADR-019 M20a).
+# `target-lexicon` is a build-dependency of `pyo3-build-config`.
+# Apache-2.0 WITH LLVM-exception is strictly more permissive than
+# Apache-2.0, which is already globally allowed. Scoped per-crate so that
+# future crates with the same license require review.
+[[licenses.exceptions]]
+name = "target-lexicon"
+allow = ["Apache-2.0 WITH LLVM-exception"]
