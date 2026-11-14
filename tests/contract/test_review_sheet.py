@@ -63,15 +63,31 @@ def test_columns_match_spec() -> None:
 
 def test_expected_columns_present() -> None:
     required_readonly = {
-        "fact_id", "taxon_id", "scientific_name", "parameter", "phase",
-        "value_pretty", "value_json", "unit", "scope", "evidence",
-        "status", "safety_class", "taxon_tier", "source_citation",
-        "source_url", "source_license", "current_reviewed_by",
+        "fact_id",
+        "taxon_id",
+        "scientific_name",
+        "parameter",
+        "phase",
+        "value_pretty",
+        "value_json",
+        "unit",
+        "scope",
+        "evidence",
+        "status",
+        "safety_class",
+        "taxon_tier",
+        "source_citation",
+        "source_url",
+        "source_license",
+        "current_reviewed_by",
     }
     assert set(READONLY_COLUMNS) == required_readonly
     assert set(FILLIN_COLUMNS) == {
-        "reviewer_id", "decision", "corrected_value_json",
-        "comment", "reviewed_on",
+        "reviewer_id",
+        "decision",
+        "corrected_value_json",
+        "comment",
+        "reviewed_on",
     }
 
 
@@ -94,16 +110,12 @@ def test_default_row_count(default_output: tuple[str, dict[str, Any]]) -> None:
 
 
 def test_approved_row_count(ks: Any, dictionary: Any) -> None:
-    _, manifest = generate_review_sheet(
-        ks, dictionary, ReviewSheetFilters(max_status="approved")
-    )
+    _, manifest = generate_review_sheet(ks, dictionary, ReviewSheetFilters(max_status="approved"))
     assert manifest["row_count"] == 62
 
 
 def test_draft_row_count(ks: Any, dictionary: Any) -> None:
-    _, manifest = generate_review_sheet(
-        ks, dictionary, ReviewSheetFilters(max_status="draft")
-    )
+    _, manifest = generate_review_sheet(ks, dictionary, ReviewSheetFilters(max_status="draft"))
     assert manifest["row_count"] == 0
 
 
@@ -118,12 +130,8 @@ def test_safety_critical_row_count(ks: Any, dictionary: Any) -> None:
 
 
 def test_determinism(ks: Any, dictionary: Any) -> None:
-    csv_a, manifest_a = generate_review_sheet(
-        ks, dictionary, ReviewSheetFilters()
-    )
-    csv_b, manifest_b = generate_review_sheet(
-        ks, dictionary, ReviewSheetFilters()
-    )
+    csv_a, manifest_a = generate_review_sheet(ks, dictionary, ReviewSheetFilters())
+    csv_b, manifest_b = generate_review_sheet(ks, dictionary, ReviewSheetFilters())
     assert csv_a == csv_b
     assert manifest_a == manifest_b
 
@@ -147,12 +155,8 @@ def test_utf8_lf_only(default_output: tuple[str, dict[str, Any]]) -> None:
 def test_quote_all(default_output: tuple[str, dict[str, Any]]) -> None:
     csv_text, _ = default_output
     for i, line in enumerate(csv_text.splitlines(), 1):
-        assert line.startswith('"'), (
-            f"line {i} does not start with a quote: {line[:60]!r}"
-        )
-        assert line.endswith('"'), (
-            f"line {i} does not end with a quote: {line[-60:]!r}"
-        )
+        assert line.startswith('"'), f"line {i} does not start with a quote: {line[:60]!r}"
+        assert line.endswith('"'), f"line {i} does not end with a quote: {line[-60:]!r}"
 
 
 def test_no_timestamp_columns() -> None:
@@ -229,11 +233,12 @@ def test_manifest_filters_echoed(ks: Any, dictionary: Any) -> None:
 def test_golden_csv_matches(default_output: tuple[str, dict[str, Any]]) -> None:
     assert GOLDEN_CSV.is_file(), (
         f"missing golden: {GOLDEN_CSV}. Regenerate with "
-        "`python -c \"from pathlib import Path; "
+        '`python -c "from pathlib import Path; '
         "from agri_core.pack import load_knowledge_set; "
         "from agri_core.pack.loader import _default_dictionary; "
         "from agri_core.export.review_sheet import write_review_sheet; "
-        "ks = load_knowledge_set(Path('src/agri_core/_samples/sample_pack'), allow_synthetic=True); "
+        "ks = load_knowledge_set(Path('src/agri_core/_samples/sample_pack'), "
+        "allow_synthetic=True); "
         "write_review_sheet(ks, _default_dictionary(), Path('tests/golden/exports'))\"`."
     )
     csv_text, _ = default_output

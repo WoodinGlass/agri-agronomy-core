@@ -42,22 +42,24 @@ EXPECTED_TOOLS = {
 }
 
 #: Keywords rejected by OpenAI strict or Anthropic strict tool-calling.
-FORBIDDEN_KEYWORDS = frozenset({
-    "oneOf",
-    "allOf",
-    "discriminator",
-    "minimum",
-    "maximum",
-    "exclusiveMinimum",
-    "exclusiveMaximum",
-    "minLength",
-    "maxLength",
-    "pattern",
-    "format",
-    "$ref",
-    "$defs",
-    "const",
-})
+FORBIDDEN_KEYWORDS = frozenset(
+    {
+        "oneOf",
+        "allOf",
+        "discriminator",
+        "minimum",
+        "maximum",
+        "exclusiveMinimum",
+        "exclusiveMaximum",
+        "minLength",
+        "maxLength",
+        "pattern",
+        "format",
+        "$ref",
+        "$defs",
+        "const",
+    }
+)
 
 #: Parameters the host injects; the LLM must not be able to set them.
 HOST_ONLY = frozenset({"pack", "min_status", "require_commercial"})
@@ -100,8 +102,7 @@ def test_version_matches_module(schema: dict[str, Any]) -> None:
 def test_exactly_expected_tools(schema: dict[str, Any]) -> None:
     names = {t["name"] for t in schema["tools"]}
     assert names == EXPECTED_TOOLS, (
-        f"tool set mismatch: missing={EXPECTED_TOOLS - names} "
-        f"extra={names - EXPECTED_TOOLS}"
+        f"tool set mismatch: missing={EXPECTED_TOOLS - names} extra={names - EXPECTED_TOOLS}"
     )
 
 
@@ -121,6 +122,7 @@ def test_every_tool_has_required_fields(schema: dict[str, Any]) -> None:
 
 def test_tool_names_match_regex(schema: dict[str, Any]) -> None:
     import re
+
     pattern = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
     for tool in schema["tools"]:
         assert pattern.match(tool["name"]), f"bad name: {tool['name']!r}"
@@ -140,9 +142,7 @@ def test_no_forbidden_keywords(schema: dict[str, Any]) -> None:
 def test_additional_properties_false(schema: dict[str, Any]) -> None:
     for tool in schema["tools"]:
         params = tool["parameters"]
-        assert params.get("type") == "object", (
-            f"{tool['name']}: parameters.type must be 'object'"
-        )
+        assert params.get("type") == "object", f"{tool['name']}: parameters.type must be 'object'"
         assert params.get("additionalProperties") is False, (
             f"{tool['name']}: additionalProperties must be false"
         )
@@ -163,13 +163,9 @@ def test_all_properties_have_description(schema: dict[str, Any]) -> None:
     for tool in schema["tools"]:
         props = tool["parameters"]["properties"]
         for prop_name, prop in props.items():
-            assert "description" in prop, (
-                f"{tool['name']}.{prop_name}: missing description"
-            )
+            assert "description" in prop, f"{tool['name']}.{prop_name}: missing description"
             assert isinstance(prop["description"], str)
-            assert prop["description"], (
-                f"{tool['name']}.{prop_name}: empty description"
-            )
+            assert prop["description"], f"{tool['name']}.{prop_name}: empty description"
 
 
 # ---- security: no host-only leaks ---------------------------------------
@@ -179,9 +175,7 @@ def test_no_host_only_parameters(schema: dict[str, Any]) -> None:
     for tool in schema["tools"]:
         props = set(tool["parameters"]["properties"].keys())
         leak = props & HOST_ONLY
-        assert not leak, (
-            f"{tool['name']}: leaks host-only parameters {sorted(leak)}"
-        )
+        assert not leak, f"{tool['name']}: leaks host-only parameters {sorted(leak)}"
 
 
 def test_gdd_has_no_taxon_specific_rates(schema: dict[str, Any]) -> None:
@@ -197,9 +191,7 @@ def test_no_status_enum_in_input(schema: dict[str, Any]) -> None:
     for tool in schema["tools"]:
         props = tool["parameters"]["properties"]
         if "status" in props:
-            raise AssertionError(
-                f"{tool['name']}: 'status' must not be an input parameter"
-            )
+            raise AssertionError(f"{tool['name']}: 'status' must not be an input parameter")
 
 
 # ---- JSON Schema 2020-12 validity ---------------------------------------
