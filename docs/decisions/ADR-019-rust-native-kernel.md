@@ -229,3 +229,80 @@ trade-off, not an oversight.
 The P2 rule (M20 byte-identical with Python), the RFC 8785 migration
 path (ADR-020, planned), the PyPI-last policy, and the "no `v0.2.x`
 until a real breaking change" rule are unchanged.
+
+## Amendment 2026-11-15: M21 preconditions
+
+Prasyarat teknis yang dikunci sebelum M21 mulai. Semua angka berasal
+dari spike 2026-11-15 di Colab.
+
+**Spike results** (diverifikasi):
+- `rusqlite` 0.42.0, `libsqlite3-sys` 0.40.0
+- SQLite bundled 3.54.1 (`sqlite_version_number = 3054001`)
+- `Connection::deserialize_read_exact(name, reader, size: usize, read_only: bool)` tersedia
+- Hash-while-read wrapper: `sha256(expected) == sha256(from_wrapper)` pada 8192 byte round-trip
+- `Connection: Send`, `Connection: !Sync`
+- Round-trip 3/3 stabil
+
+### 1. Kebijakan SQLite
+
+- Bundled SQLite, bukan system. Fitur `bundled` di `rusqlite`.
+- Minimum `sqlite_version_number >= 3054001` (SQLite 3.54.1), di-enforce via
+  `test_sqlite_version_minimum` di `crates/agri-kernel/tests/` dan
+  `tests/contract/test_sqlite_build.py`.
+- `sqlite_version` dicatat di built `pack.toml` (informational, tidak di-hash).
+- Pin crate per rilis; policy menetapkan minimum, Dependabot mengusulkan
+  bump, maintainer memutuskan.
+
+### 2. Kontrak parser
+
+CSV dan TOML strictness adalah kontrak, bukan kebiasaan Python.
+Lihat `docs/PACK_FORMAT.md` §CSV codec dan §TOML. Broken corpus di
+`tests/fixtures/broken_{csv,toml}/` adalah KAT: setiap file punya
+`expected_code` dan harus identik Python↔Rust.
+
+### 3. Sunset fallback Python
+
+Target rilis `v0.1.8` (M22). Setelah sunset:
+- `src/agri_core/pack/*.py` yang diporting pindah ke `tests/oracle/`.
+- Runtime tidak meng-import-nya.
+- `meta().backends` mencatat backend aktif per-fungsi.
+
+### 4. Perf gate relatif per phase
+
+- B: `hash_pack_files` ≤ 0.5× Python di 10k pack.
+- C: `build_pack` ≤ 0.5×.
+- G: `load_knowledge_set` ≤ 0.5× + RSS ≤ 2× baseline + full perf suite
+  (`resolve_fact` p95 ≤75 µs, `resolve_taxon` p95 ≤5 ms,
+  `batch_suitability` 5k, multi-scale 100k).
+- D/E/F: ≤ 0.5× masing-masing.
+- Target aspirational: ≤0.2×. Diukur nightly di CI, artefak tersimpan.
+- Gagal gate → fungsi tetap Python default, native di-gate per-fungsi
+  via `meta().backends`.
+
+### 5. Stop-loss berbasis kriteria
+
+- Phase A: KAT RFC 8785 ≠ Node oracle **atau** Hypothesis divergence >0
+  **atau** broken corpus mismatch → revert A2, tahan A1 default
+  `pre-rfc8785`.
+- Phase B/C/G/D/E/F: parity ≠ **atau** perf gate gagal **atau** RSS gate
+  gagal → fungsi tetap Python default.
+- Phase G spike: `deserialize_read_exact` tidak cocok → drop Rust `load`.
+- Phase H: smoke 3 OS × 4 Python gagal → postpone tag.
+- Prinsip: `v0.1.7` = subset M21 yang lulus gate. Tidak ada paksaan.
+
+### 6. Clippy lints
+
+`crates/agri-kernel/src/lib.rs` men-deny:
+`unwrap_used`, `expect_used`, `panic`, `indexing_slicing`.
+
+### 7. Backend per-fungsi
+
+`meta().backends` = `dict[fn_name, "native" | "python"]`.
+Bukan `meta().backend` tunggal.
+
+### 8. Divergensi TOCTOU test
+
+`test_stale_artifact` di-parametrisasi per backend:
+- Python: raise `PACK_STALE_ARTIFACT` (perilaku lama).
+- Native: immutable — ubah file setelah load → query tetap dari memori.
+Divergensi didokumentasikan di sini sampai sunset (poin 3).

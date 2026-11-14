@@ -32,9 +32,11 @@ fn py_float_repr(f: f64) -> String {
     // e-08 (not e-8), e+16 (not e16). Apply only when there is an exponent.
     if let Some(e_pos) = raw.find(['e', 'E']) {
         let (mantissa, exp_part) = raw.split_at(e_pos);
-        let exp_str = &exp_part[1..];
-        let (sign, digits) = if exp_str.starts_with('-') || exp_str.starts_with('+') {
-            (&exp_str[..1], &exp_str[1..])
+        let exp_str = exp_part.get(1..).unwrap_or("");
+        let (sign, digits) = if let Some(rest) = exp_str.strip_prefix('-') {
+            ("-", rest)
+        } else if let Some(rest) = exp_str.strip_prefix('+') {
+            ("+", rest)
         } else {
             ("+", exp_str)
         };
