@@ -1,0 +1,6 @@
+{
+  "max": 30.0,
+  "min": 15.0,
+  "shape": "range",
+  "unit": "degree_Celsius"
+}

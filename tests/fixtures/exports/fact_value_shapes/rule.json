@@ -1,0 +1,7 @@
+{
+  "data": {
+    "op": "gte",
+    "threshold": 6.0
+  },
+  "shape": "rule"
+}
