@@ -87,12 +87,12 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 Releases are distributed as git tags. Pin one:
 
 ```bash
-pip install "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.4"
-
-> **From v0.1.5 (M20), `agri_core._native` is a Rust extension.** Source installs require a Rust toolchain. Prebuilt `cp311-abi3` wheels for Linux x86_64, Windows x86_64 and macOS arm64 are attached to each GitHub Release from v0.1.5. v0.1.4 and earlier are pure Python.
+pip install "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.6"
 ```
 
-`v0.1.4` is the current tagged release; `v0.1.0` is the foundation release. `v0.1.1` remains available but does not enforce the license allowlist; use `v0.1.4` for new work. To track the development branch, replace `@v0.1.4` with `@main` (development only; not recommended for anything you deploy).
+> **From v0.1.5 (M20), `agri_core._native` is a Rust extension.** Source installs require a Rust toolchain. Prebuilt `cp311-abi3` wheels for Linux x86_64, Windows x86_64 and macOS arm64 are attached to each GitHub Release from v0.1.5. v0.1.4 and earlier are pure Python.
+
+`v0.1.6` is the current tagged release; `v0.1.0` is the foundation release. `v0.1.1` remains available but does not enforce the license allowlist; use `v0.1.6` for new work. To track the development branch, replace `@v0.1.6` with `@main` (development only; not recommended for anything you deploy).
 
 `v0.1.x` releases are distributed as git tags and GitHub Releases only; PyPI publication will begin at a later tag, announced in [CHANGELOG](CHANGELOG.md) when it is prepared.
 
