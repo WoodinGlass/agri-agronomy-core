@@ -27,6 +27,9 @@ htmlcov/
 .smoke-venv/
 *.whl
 
+# --- Exports (ephemeral; regenerated from a pack) ---
+/dist/exports/
+
 # --- Rust ---
 /target/
 **/*.rs.bk

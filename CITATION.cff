@@ -9,7 +9,7 @@ abstract: >-
 type: software
 authors:
   - name: "WoodinGlass and the agri-agronomy-core contributors"
-version: 0.1.5
+version: 0.1.6
 date-released: "2026-11-14"
 license: "Apache-2.0"
 repository-code: "https://github.com/WoodinGlass/agri-agronomy-core"

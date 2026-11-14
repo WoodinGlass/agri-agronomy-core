@@ -7,6 +7,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-11-14
+
+### Added
+
+- **Exports (M16).** `agri_core.export.tool_schemas` generates fourteen
+  input-only function-calling tools from the same Pydantic models as the
+  library. Strict-compatible with the OpenAI and Anthropic tool-calling
+  APIs: basic types, `enum`, `anyOf`, every property `required`,
+  `additionalProperties: false`, and no `oneOf` / `allOf` /
+  `discriminator` / `$ref` / `$defs` / `const` / `minimum` / `maximum` /
+  `minLength` / `maxLength` / `pattern` / `format`. Range and length
+  information lives in each property `description` as prose. Every tool
+  description ends with a two-sentence refusal contract: a non-`ok`
+  status is reported verbatim, the model does not invent a number or a
+  category, and results are advisory, not for direct actuation. See
+  ADR-021 and `docs/EXPORTS.md`.
+- **Review sheet (M16).** `agri_core.export.review_sheet` generates
+  `review_sheet.csv` (one row per live fact; 17 read-only + 5 fill-in
+  columns) plus a sidecar `review_sheet.manifest.json` carrying
+  `pack_hash`, `csv_sha256`, `sheet_schema_version`, `synthetic`,
+  `row_count` and the filters used. Filters: `--max-status`
+  (default `reviewed`), `--tier`, `--taxon`, `--safety-critical`. The
+  CSV writer uses UTF-8 with LF line endings and `QUOTE_ALL`, and any
+  cell whose first character is `=`, `+`, `-`, `@`, tab, CR or LF is
+  prefixed with a tab; the ingest side strips one leading tab and
+  rejects any remaining dangerous first character.
+- **`agri-core export` CLI.** One command with `--pack`, `--out`,
+  `--format {tool_schemas,review_sheet,both}`, the filters above, and
+  `--json` for machine output. `make exports` is the only other entry
+  point; both call the same generator.
+- **Committed tool schemas.** `schema/tool_schemas.json`, drift-tested
+  by `tests/contract/test_tool_schemas.py` (strict subset, no host-only
+  parameters, every property described, tool names matching
+  `^[a-z][a-z0-9_]{0,62}$`, `Draft202012Validator.check_schema` clean).
+- **Golden review sheet.** `tests/golden/exports/review_sheet.csv` and
+  `review_sheet.manifest.json`, byte-identical oracle for the eventual
+  Rust port; `tests/contract/test_review_sheet.py` asserts it.
+- **CSV injection tests.** `tests/unit/test_review_sheet_sanitize.py`
+  covers formula, tab, CR and LF injection plus the ingest-side
+  round-trip.
+- **Documentation.** `docs/EXPORTS.md` (operator reference: tools,
+  review-sheet format, threat model, version policy, regeneration).
+  ADR-021 records the design decisions behind both artifacts.
+- **Release workflow.** The `artifacts` job now runs `agri-core export`
+  in an isolated venv, compares `tool_schemas.json` to the committed
+  copy and `review_sheet.csv` to the golden, and attaches all three
+  generated files (`tool_schemas.json`, `review_sheet.csv`,
+  `review_sheet.manifest.json`) to the draft release. The three files
+  join `SHA256SUMS`, attestation and `gh release create`.
+
+### Changed
+
+- `README.md` section Exports rewritten to describe the two shipped
+  artifacts (`tool_schemas.json`, `review_sheet.csv`) and to link
+  `docs/EXPORTS.md`. `bundle.json` is removed from the M16 scope: it
+  would duplicate the pack and carry the same attribution obligations
+  without a consumer, and it is deferred.
+- Feature table row #10 and milestone M16 are marked `Done`.
+- No change to the engine's public API: `Outcome`, the JSON Schemas,
+  the dictionary and its lock, the pack format, the resolution policy,
+  and `RESOLUTION_POLICY_VERSION` are unchanged.
+
+### Fixed
+
+- Nothing.
+
+### Note
+
+- `tool_schemas_version` (in `schema/tool_schemas.json`) and
+  `sheet_schema_version` (in `review_sheet.manifest.json`) are
+  independent SemVer contracts. Neither is tied to the engine version,
+  `dictionary_version`, or `RESOLUTION_POLICY_VERSION`.
+- `schema/tool_schemas.json` is committed and drift-tested;
+  `review_sheet.csv` and its manifest are ephemeral, written under
+  `dist/exports/` at release time and never committed.
+- The following parameters are host-injected and never appear in a tool
+  schema, so the model cannot lower the status floor or skip the license
+  gate: `pack`, `min_status`, `require_commercial`. A test enforces
+  this boundary.
+- Prompt injection from pack text (the `reason`, `label` and `note`
+  fields reach the review sheet, and an LLM may read the sheet) remains
+  a residual risk. Tool descriptions state the refusal contract as a
+  partial mitigation. A full mitigation requires length and character
+  bounds on those fields in the pack validator and is tracked as a
+  separate issue; it is not part of M16.
+- PyPI publication still begins only when the whole repository is
+  judged mature. `v0.1.6` is a git tag and GitHub Release only.
+
 ## [0.1.5] - 2026-11-14
 
 ### Added
