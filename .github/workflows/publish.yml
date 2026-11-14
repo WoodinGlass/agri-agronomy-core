@@ -59,6 +59,6 @@ jobs:
           name: dist
           path: dist/
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@9cebe9a0ed95397bd2d0e617cd79e8ab1961d7c5  # v1
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086  # v1
         with:
           print-hash: true
