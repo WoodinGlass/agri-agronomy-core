@@ -44,7 +44,7 @@ _VECTOR_CASES = json.loads(VECTORS.read_text(encoding="utf-8"))
 def test_vector_match(case: dict) -> None:
     """Canonical bytes match Node's JSON.stringify on this input."""
     actual = canonical_json_rfc8785(case["input"])
-    expected = case["expected"].encode("utf-8")
+    expected = case["expected"].encode()
     assert actual == expected, f"case {case['input']!r}"
 
 
@@ -234,9 +234,9 @@ def test_quote_and_backslash_escaped() -> None:
 
 
 def test_non_ascii_literal() -> None:
-    assert canonical_json_rfc8785({"v": "caf\u00e9"}) == '{"v":"caf\u00e9"}'.encode("utf-8")
-    assert canonical_json_rfc8785({"v": "\u4f60\u597d"}) == '{"v":"\u4f60\u597d"}'.encode("utf-8")
+    assert canonical_json_rfc8785({"v": "caf\u00e9"}) == '{"v":"caf\u00e9"}'.encode()
+    assert canonical_json_rfc8785({"v": "\u4f60\u597d"}) == '{"v":"\u4f60\u597d"}'.encode()
 
 
 def test_surrogate_pair_emoji() -> None:
-    assert canonical_json_rfc8785({"v": "\U0001f600"}) == '{"v":"\U0001f600"}'.encode("utf-8")
+    assert canonical_json_rfc8785({"v": "\U0001f600"}) == '{"v":"\U0001f600"}'.encode()
