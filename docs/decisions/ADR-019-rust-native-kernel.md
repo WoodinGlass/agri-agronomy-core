@@ -122,7 +122,7 @@ current Python behavior**:
   RFC 8785. This is a `description`-only change: `classify_change`
   returns `PATCH`.
 - Migration to full RFC 8785 compliance is **out of scope** for M20 and
-  is tracked as **ADR-020 (planned)**. That ADR will define the new
+  is tracked as **ADR-020**. That ADR will define the new
   canonical form, add `dictionary` `v1.3.0` with a new `contract_hash`,
   re-tag packs, and set a migration window. It will be a breaking change
   and requires explicit approval.
