@@ -57,7 +57,7 @@ def _make_pack(
     (root / "sources.csv").write_bytes(sources_content)
     # ADR-011: empty ids.lock is valid for a 0-taxa pack.
     (root / "ids.lock").write_text("", encoding="utf-8")
-    digest = compute_pack_hash(root)
+    digest = compute_pack_hash(root, hash_alg="pre-rfc8785")
     (root / "pack.toml").write_text(body + f'content_hash = "{digest}"\n', encoding="utf-8")
     return root
 

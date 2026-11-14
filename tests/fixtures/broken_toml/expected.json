@@ -1,0 +1,20 @@
+{
+  "bad_syntax.toml": {
+    "match": "not valid TOML"
+  },
+  "bad_value.toml": {
+    "match": "not valid TOML"
+  },
+  "duplicate_key.toml": {
+    "match": "not valid TOML"
+  },
+  "invalid_utf8.toml": {
+    "match": "not valid UTF-8"
+  },
+  "no_equals.toml": {
+    "match": "not valid TOML"
+  },
+  "unclosed_string.toml": {
+    "match": "not valid TOML"
+  }
+}

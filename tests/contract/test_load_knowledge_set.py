@@ -160,7 +160,7 @@ def _write_pack(
         (root / "advisories.csv").write_bytes(advisories)
 
     if with_hash:
-        digest = compute_pack_hash(root)
+        digest = compute_pack_hash(root, hash_alg="pre-rfc8785")
         current = (root / "pack.toml").read_text(encoding="utf-8")
         if "content_hash" not in current:
             (root / "pack.toml").write_text(
@@ -274,7 +274,7 @@ def test_hash_mismatch_raises(tmp_path: Path) -> None:
 
 def test_expected_hash_match_verified_true(tmp_path: Path) -> None:
     _write_pack(tmp_path, taxa=[_taxon()], sources=[_source()], facts=[_fact()])
-    digest = compute_pack_hash(tmp_path)
+    digest = compute_pack_hash(tmp_path, hash_alg="pre-rfc8785")
     ks = load_knowledge_set(tmp_path, expected_hash=digest, dictionary=_DICT)
     assert ks.verified is True
 

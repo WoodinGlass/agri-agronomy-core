@@ -57,8 +57,10 @@ def render_source_manifest(manifest: PackManifest, content_hash: str) -> bytes:
         f"engine_min = {json.dumps(manifest.engine_min)}",
         f"dictionary_min = {json.dumps(manifest.dictionary_min)}",
         f"synthetic = {'true' if manifest.synthetic else 'false'}",
-        f"content_hash = {json.dumps(content_hash)}",
     ]
+    if manifest.hash_alg is not None:
+        lines.append(f"hash_alg = {json.dumps(manifest.hash_alg)}")
+    lines.append(f"content_hash = {json.dumps(content_hash)}")
     return ("\n".join(lines) + "\n").encode("utf-8")
 
 
@@ -80,7 +82,8 @@ def sync_source_hash(
     ``"unchanged"``, ``"updated"``, or ``"normalized"``. Raises
     ``OSError`` if the atomic write fails (``.tmp`` is cleaned up).
     """
-    computed = hash_pack_files(files)
+    hash_alg = manifest.hash_alg or "pre-rfc8785"
+    computed = hash_pack_files(files, hash_alg=hash_alg)
     fresh_bytes = render_source_manifest(manifest, computed)
     if manifest.content_hash == computed and files["pack.toml"] == fresh_bytes:
         return "unchanged", dict(files)

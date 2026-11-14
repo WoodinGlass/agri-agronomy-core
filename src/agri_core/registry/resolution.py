@@ -700,6 +700,8 @@ class MetaInfo(BaseModel):
     synthetic: bool
     verified: bool
     engine_min: str
+    hash_alg: str
+    backends: dict[str, str] = Field(default_factory=dict)
 
 
 FactOutcome = Annotated[
@@ -734,4 +736,16 @@ def meta(pack: KnowledgeSet) -> MetaInfo:
         synthetic=pack.manifest.synthetic,
         verified=pack.verified,
         engine_min=pack.manifest.engine_min,
+        hash_alg=pack.manifest.hash_alg or "pre-rfc8785",
+        backends={
+            # Phase B/C/D/E/F/G will flip individual entries to "native"
+            # once the native implementation passes its perf gate.
+            # A1: all Python (Rust hash_pack_files etc. not yet written).
+            "hash_pack_files": "python",
+            "build_pack": "python",
+            "load_knowledge_set": "python",
+            "validate_pack": "python",
+            "diff_packs": "python",
+            "derive_all_tiers": "python",
+        },
     )

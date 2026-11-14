@@ -245,7 +245,8 @@ def _build_sqlite_and_hash(files: Mapping[str, bytes]) -> tuple[bytes, str]:
             "(artifact_sha256 / sqlite_schema_version / built_by)"
         )
 
-    content_hash = hash_pack_files(files)
+    hash_alg = source_manifest.hash_alg or "pre-rfc8785"
+    content_hash = hash_pack_files(files, hash_alg=hash_alg)
     if source_manifest.content_hash is not None and source_manifest.content_hash != content_hash:
         raise PackHashMismatchError(
             f"content_hash mismatch: manifest={source_manifest.content_hash} "

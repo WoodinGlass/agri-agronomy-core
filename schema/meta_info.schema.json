@@ -13,6 +13,13 @@
       ],
       "title": "Artifact Sha256"
     },
+    "backends": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Backends",
+      "type": "object"
+    },
     "content_hash": {
       "title": "Content Hash",
       "type": "string"
@@ -27,6 +34,10 @@
     },
     "engine_version": {
       "title": "Engine Version",
+      "type": "string"
+    },
+    "hash_alg": {
+      "title": "Hash Alg",
       "type": "string"
     },
     "pack_version": {
@@ -60,7 +71,8 @@
     "artifact_sha256",
     "synthetic",
     "verified",
-    "engine_min"
+    "engine_min",
+    "hash_alg"
   ],
   "title": "MetaInfo",
   "type": "object"

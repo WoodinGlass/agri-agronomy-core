@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Literal
 
 from packaging.version import InvalidVersion, Version
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -39,6 +40,7 @@ class PackManifest(BaseModel):
     artifact_sha256: str | None = None
     sqlite_schema_version: int | None = Field(default=None, strict=True, ge=1)
     built_by: str | None = Field(default=None, min_length=1)
+    hash_alg: Literal["pre-rfc8785", "rfc8785"] | None = None
 
     @field_validator("name")
     @classmethod

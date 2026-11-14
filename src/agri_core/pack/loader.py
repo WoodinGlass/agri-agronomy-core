@@ -501,7 +501,8 @@ def load_knowledge_set_from_files(
             "pack.toml onto a source tree?"
         )
 
-    actual = hash_pack_files(files)
+    hash_alg = manifest.hash_alg or "pre-rfc8785"
+    actual = hash_pack_files(files, hash_alg=hash_alg)
     if manifest.content_hash is not None and manifest.content_hash != actual:
         raise PackHashMismatchError(
             f"content_hash mismatch: manifest={manifest.content_hash} "

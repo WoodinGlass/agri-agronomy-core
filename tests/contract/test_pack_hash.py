@@ -92,23 +92,25 @@ def _manifest(content_hash: str | None) -> PackManifest:
 
 
 def test_hash_returns_sha256_prefix() -> None:
-    h = hash_pack_files(_GOLDEN_FILES)
+    h = hash_pack_files(_GOLDEN_FILES, hash_alg="pre-rfc8785")
     assert h.startswith("sha256:")
     assert len(h) == len("sha256:") + 64
 
 
 def test_hash_deterministic() -> None:
-    assert hash_pack_files(_GOLDEN_FILES) == hash_pack_files(_GOLDEN_FILES)
+    assert hash_pack_files(_GOLDEN_FILES, hash_alg="pre-rfc8785") == hash_pack_files(
+        _GOLDEN_FILES, hash_alg="pre-rfc8785"
+    )
 
 
 def test_hash_order_independent() -> None:
     a = {"pack.toml": _GOLDEN_FILES["pack.toml"], "sources.csv": _GOLDEN_FILES["sources.csv"]}
     b = {"sources.csv": _GOLDEN_FILES["sources.csv"], "pack.toml": _GOLDEN_FILES["pack.toml"]}
-    assert hash_pack_files(a) == hash_pack_files(b)
+    assert hash_pack_files(a, hash_alg="pre-rfc8785") == hash_pack_files(b, hash_alg="pre-rfc8785")
 
 
 def test_hash_golden_vector() -> None:
-    assert hash_pack_files(_GOLDEN_FILES) == _GOLDEN_HASH
+    assert hash_pack_files(_GOLDEN_FILES, hash_alg="pre-rfc8785") == _GOLDEN_HASH
 
 
 # ---- hash_pack_files: line ending normalization -----------------------
@@ -117,13 +119,13 @@ def test_hash_golden_vector() -> None:
 def test_hash_crlf_equals_lf() -> None:
     a = {"pack.toml": _MINIMAL_TOML, "sources.csv": b"a\nb\n"}
     b = {"pack.toml": _MINIMAL_TOML, "sources.csv": b"a\r\nb\r\n"}
-    assert hash_pack_files(a) == hash_pack_files(b)
+    assert hash_pack_files(a, hash_alg="pre-rfc8785") == hash_pack_files(b, hash_alg="pre-rfc8785")
 
 
 def test_hash_bare_cr_equals_lf() -> None:
     a = {"pack.toml": _MINIMAL_TOML, "sources.csv": b"a\nb\n"}
     b = {"pack.toml": _MINIMAL_TOML, "sources.csv": b"a\rb\r"}
-    assert hash_pack_files(a) == hash_pack_files(b)
+    assert hash_pack_files(a, hash_alg="pre-rfc8785") == hash_pack_files(b, hash_alg="pre-rfc8785")
 
 
 # ---- hash_pack_files: pack.toml canonicalization ----------------------
@@ -132,19 +134,19 @@ def test_hash_bare_cr_equals_lf() -> None:
 def test_hash_pack_toml_key_order_invariant() -> None:
     a = {"pack.toml": b'name = "x"\nversion = "1.0.0"\nschema_version = 1\nengine_min = "0.0.0"\n'}
     b = {"pack.toml": b'engine_min = "0.0.0"\nschema_version = 1\nversion = "1.0.0"\nname = "x"\n'}
-    assert hash_pack_files(a) == hash_pack_files(b)
+    assert hash_pack_files(a, hash_alg="pre-rfc8785") == hash_pack_files(b, hash_alg="pre-rfc8785")
 
 
 def test_hash_pack_toml_comment_invariant() -> None:
     a = {"pack.toml": _MINIMAL_TOML}
     b = {"pack.toml": b"# leading comment\n" + _MINIMAL_TOML}
-    assert hash_pack_files(a) == hash_pack_files(b)
+    assert hash_pack_files(a, hash_alg="pre-rfc8785") == hash_pack_files(b, hash_alg="pre-rfc8785")
 
 
 def test_hash_pack_toml_ignores_content_hash() -> None:
     a = {"pack.toml": _MINIMAL_TOML}
     b = {"pack.toml": _MINIMAL_TOML + b'content_hash = "sha256:' + b"0" * 64 + b'"\n'}
-    assert hash_pack_files(a) == hash_pack_files(b)
+    assert hash_pack_files(a, hash_alg="pre-rfc8785") == hash_pack_files(b, hash_alg="pre-rfc8785")
 
 
 # ---- hash_pack_files: sensitivity -------------------------------------
@@ -153,23 +155,23 @@ def test_hash_pack_toml_ignores_content_hash() -> None:
 def test_hash_single_byte_change() -> None:
     a = {"pack.toml": _MINIMAL_TOML, "sources.csv": b"hello"}
     b = {"pack.toml": _MINIMAL_TOML, "sources.csv": b"hellp"}
-    assert hash_pack_files(a) != hash_pack_files(b)
+    assert hash_pack_files(a, hash_alg="pre-rfc8785") != hash_pack_files(b, hash_alg="pre-rfc8785")
 
 
 def test_hash_boundary_shift() -> None:
     a = {"pack.toml": _MINIMAL_TOML, "a.csv": b"ab", "b.csv": b"cdef"}
     b = {"pack.toml": _MINIMAL_TOML, "a.csv": b"abc", "b.csv": b"def"}
-    assert hash_pack_files(a) != hash_pack_files(b)
+    assert hash_pack_files(a, hash_alg="pre-rfc8785") != hash_pack_files(b, hash_alg="pre-rfc8785")
 
 
 def test_hash_requires_pack_toml() -> None:
     with pytest.raises(PackTableInvalidError, match=r"pack\.toml"):
-        hash_pack_files({"sources.csv": b"x"})
+        hash_pack_files({"sources.csv": b"x"}, hash_alg="pre-rfc8785")
 
 
 def test_hash_invalid_toml_raises() -> None:
     with pytest.raises(PackTableInvalidError, match="not valid TOML"):
-        hash_pack_files({"pack.toml": b"= bad =\n"})
+        hash_pack_files({"pack.toml": b"= bad =\n"}, hash_alg="pre-rfc8785")
 
 
 # ---- compute_pack_hash: allowlist via read_pack_bytes -----------------
@@ -177,17 +179,19 @@ def test_hash_invalid_toml_raises() -> None:
 
 def test_compute_pack_hash_uses_allowlist(tmp_path: Path) -> None:
     _write_pack(tmp_path)
-    h1 = compute_pack_hash(tmp_path)
+    h1 = compute_pack_hash(tmp_path, hash_alg="pre-rfc8785")
     (tmp_path / "README.md").write_text("ignored\n", encoding="utf-8")
     (tmp_path / "custom.json").write_text("{}\n", encoding="utf-8")
-    h2 = compute_pack_hash(tmp_path)
+    h2 = compute_pack_hash(tmp_path, hash_alg="pre-rfc8785")
     assert h1 == h2
 
 
 def test_compute_pack_hash_matches_hash_pack_files(tmp_path: Path) -> None:
     _write_pack(tmp_path)
     files = read_pack_bytes(tmp_path)
-    assert compute_pack_hash(tmp_path) == hash_pack_files(files)
+    assert compute_pack_hash(tmp_path, hash_alg="pre-rfc8785") == hash_pack_files(
+        files, hash_alg="pre-rfc8785"
+    )
 
 
 # ---- verify_pack_hash: legacy strict ----------------------------------
@@ -195,7 +199,7 @@ def test_compute_pack_hash_matches_hash_pack_files(tmp_path: Path) -> None:
 
 def test_verify_legacy_passes_on_match(tmp_path: Path) -> None:
     _write_pack(tmp_path)
-    digest = compute_pack_hash(tmp_path)
+    digest = compute_pack_hash(tmp_path, hash_alg="pre-rfc8785")
     _write_pack(tmp_path, content_hash=digest)
     verify_pack_hash(tmp_path, _manifest(digest))
 
@@ -221,12 +225,12 @@ def test_verify_full_no_sources_unverified(tmp_path: Path) -> None:
     verified, actual = verify_pack_hash_full(tmp_path, _manifest(None))
     assert verified is False
     assert actual.startswith("sha256:")
-    assert actual == compute_pack_hash(tmp_path)
+    assert actual == compute_pack_hash(tmp_path, hash_alg="pre-rfc8785")
 
 
 def test_verify_full_manifest_match_verified(tmp_path: Path) -> None:
     _write_pack(tmp_path)
-    digest = compute_pack_hash(tmp_path)
+    digest = compute_pack_hash(tmp_path, hash_alg="pre-rfc8785")
     _write_pack(tmp_path, content_hash=digest)
     verified, actual = verify_pack_hash_full(tmp_path, _manifest(digest))
     assert verified is True
@@ -243,7 +247,7 @@ def test_verify_full_manifest_mismatch_has_lock_hint(tmp_path: Path) -> None:
 
 def test_verify_full_expected_hash_match_verified(tmp_path: Path) -> None:
     _write_pack(tmp_path)
-    digest = compute_pack_hash(tmp_path)
+    digest = compute_pack_hash(tmp_path, hash_alg="pre-rfc8785")
     verified, actual = verify_pack_hash_full(tmp_path, _manifest(None), expected_hash=digest)
     assert verified is True
     assert actual == digest
@@ -261,7 +265,7 @@ def test_verify_full_expected_hash_mismatch_no_lock_hint(tmp_path: Path) -> None
 
 def test_verify_full_both_match_verified(tmp_path: Path) -> None:
     _write_pack(tmp_path)
-    digest = compute_pack_hash(tmp_path)
+    digest = compute_pack_hash(tmp_path, hash_alg="pre-rfc8785")
     _write_pack(tmp_path, content_hash=digest)
     verified, actual = verify_pack_hash_full(tmp_path, _manifest(digest), expected_hash=digest)
     assert verified is True
