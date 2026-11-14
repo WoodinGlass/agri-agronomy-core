@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Dependency floor.** Raise the `tornado` dev-extra floor from
+  `>=6.6` to `>=6.6.1` to exclude the 6.6.0 build flagged by
+  CVE-2026-126347. `requirements.lock` already pins
+  `tornado==6.6.1` (PR #193); this closes the floor-vs-lock gap
+  for installs that resolve from `pyproject.toml` without the
+  lockfile.
+
 ## [0.1.6] - 2026-11-14
 
 ### Added
