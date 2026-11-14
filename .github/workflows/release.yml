@@ -146,6 +146,16 @@ jobs:
         with:
           name: sdist
           path: dist/sdist
+      - name: Download macOS wheel
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8
+        with:
+          name: wheel-aarch64-apple-darwin
+          path: dist/wheel
+      - name: Download Windows wheel
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8
+        with:
+          name: wheel-x86_64-pc-windows-msvc
+          path: dist/wheel
       - name: Download release body
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8
         with:
@@ -287,11 +297,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          FILES=(dist/wheel/*.whl dist/sdist/*.tar.gz sample_pack.zip sbom.cdx.json dist/exports/*)
-          if [ -f built-pack.zip ]; then FILES+=(built-pack.zip); fi
-          sha256sum "${FILES[@]}" > SHA256SUMS
+          # Hash each file from its own directory so SHA256SUMS carries
+          # basenames only. `gh release download` strips directories on
+          # extract, so a prefixed path would make `sha256sum --check` fail.
+          SUMFILE="$PWD/SHA256SUMS"
+          : > "$SUMFILE"
+          for dir in dist/wheel dist/sdist dist/exports; do
+            if [ -d "$dir" ]; then
+              (cd "$dir" && find . -maxdepth 1 -type f -exec sha256sum {} \; \
+                | sed 's|  \./|  |' >> "$SUMFILE")
+            fi
+          done
+          sha256sum sample_pack.zip sbom.cdx.json >> "$SUMFILE"
+          if [ -f built-pack.zip ]; then
+            sha256sum built-pack.zip >> "$SUMFILE"
+          fi
+          sort -k2 "$SUMFILE" -o "$SUMFILE"
           echo "----- SHA256SUMS -----"
-          cat SHA256SUMS
+          cat "$SUMFILE"
       - name: Attest build provenance
         if: needs.validate.outputs.publish == 'true'
         uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018  # v1
