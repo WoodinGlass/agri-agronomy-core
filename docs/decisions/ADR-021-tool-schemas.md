@@ -5,7 +5,7 @@
 - **Deciders:** WoodinGlass (maintainer)
 - **Related:** ADR-005 (license allowlist), ADR-006 (categorical outcome),
   ADR-007 (plant-protection scope), ADR-019 (native Rust kernel),
-  ADR-020 (RFC 8785 migration, planned)
+  ADR-020 (RFC 8785 migration)
 - **Supersedes:** none
 - **Superseded by:** none
 
