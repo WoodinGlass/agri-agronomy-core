@@ -128,9 +128,17 @@ fn compute_request_id(
     .map_err(pyo3::exceptions::PyValueError::new_err)
 }
 
+#[pyfunction]
+fn canonical_json_rfc8785(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
+    let value = py_to_json_value(py, obj)?;
+    agri_kernel::canonical::canonical_json_rfc8785(&value)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("{e}")))
+}
+
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(canonical_json, m)?)?;
+    m.add_function(wrap_pyfunction!(canonical_json_rfc8785, m)?)?;
     m.add_function(wrap_pyfunction!(sha256_hex, m)?)?;
     m.add_function(wrap_pyfunction!(compute_request_id, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
