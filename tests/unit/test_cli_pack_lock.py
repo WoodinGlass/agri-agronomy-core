@@ -34,7 +34,7 @@ def _make_pack(root: Path, *, with_hash: bool = False) -> None:
     # ADR-011: empty ids.lock is valid for a 0-taxa pack.
     (root / "ids.lock").write_text("", encoding="utf-8")
     if with_hash:
-        digest = compute_pack_hash(root)
+        digest = compute_pack_hash(root, hash_alg="pre-rfc8785")
         (root / "pack.toml").write_text(toml + f'content_hash = "{digest}"\n', encoding="utf-8")
 
 
@@ -56,7 +56,7 @@ def test_pack_lock_writes_valid_hash(tmp_path: Path) -> None:
     result = CliRunner().invoke(app, ["pack", "lock", "--pack", str(root)])
     assert result.exit_code == 0, result.stdout + result.stderr
     assert "wrote content_hash" in result.stdout
-    assert _read_hash(root) == compute_pack_hash(root)
+    assert _read_hash(root) == compute_pack_hash(root, hash_alg="pre-rfc8785")
 
 
 def test_pack_lock_idempotent(tmp_path: Path) -> None:
@@ -208,10 +208,10 @@ def test_pack_lock_repairs_stale_hash(tmp_path: Path) -> None:
         toml_path.read_text(encoding="utf-8").replace('name = "test"', 'name = "test2"'),
         encoding="utf-8",
     )
-    assert _read_hash(root) != compute_pack_hash(root)
+    assert _read_hash(root) != compute_pack_hash(root, hash_alg="pre-rfc8785")
 
     result = CliRunner().invoke(app, ["pack", "lock", "--pack", str(root)])
 
     assert result.exit_code == 0, result.stdout + result.stderr
     assert "wrote content_hash" in result.stdout
-    assert _read_hash(root) == compute_pack_hash(root)
+    assert _read_hash(root) == compute_pack_hash(root, hash_alg="pre-rfc8785")

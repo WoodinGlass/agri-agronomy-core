@@ -186,7 +186,7 @@ def test_update_source_hash_rewrites_when_stale(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.stdout + result.stderr
     assert "source_hash: updated" in result.stdout
     data = tomllib.loads((src / "pack.toml").read_text(encoding="utf-8"))
-    assert data["content_hash"] == compute_pack_hash(src)
+    assert data["content_hash"] == compute_pack_hash(src, hash_alg="pre-rfc8785")
 
 
 def test_update_source_hash_noop_when_current(tmp_path: Path) -> None:

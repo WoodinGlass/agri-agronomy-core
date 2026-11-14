@@ -1,0 +1,50 @@
+{
+  "bare_cr.csv": {
+    "exception": "PackTableInvalidError",
+    "match": "bare CR not allowed"
+  },
+  "bidi_control.csv": {
+    "exception": "PackTableInvalidError",
+    "match": "bidi-control character U+202A not allowed"
+  },
+  "bom.csv": {
+    "exception": "PackTableInvalidError",
+    "match": "BOM not allowed"
+  },
+  "control_char.csv": {
+    "exception": "PackTableInvalidError",
+    "match": "control character U+0001 not allowed"
+  },
+  "header_mismatch.csv": {
+    "exception": "PackTableInvalidError",
+    "match": "header mismatch"
+  },
+  "invalid_utf8.csv": {
+    "exception": "PackTableInvalidError",
+    "match": "invalid UTF-8"
+  },
+  "multiline.csv": {
+    "exception": "PackTableInvalidError",
+    "match": "multiline cell not allowed"
+  },
+  "nul_byte.csv": {
+    "exception": "PackTableInvalidError",
+    "match": "NUL byte not allowed"
+  },
+  "oversized_field.csv": {
+    "exception": "PackFieldTooLargeError",
+    "match": "cell exceeds 16384 bytes"
+  },
+  "oversized_row.csv": {
+    "exception": "PackRowTooLargeError",
+    "match": "row exceeds 65536 bytes"
+  },
+  "wrong_field_count.csv": {
+    "exception": "PackTableInvalidError",
+    "match": "row has 3 fields, expected 6"
+  },
+  "zero_width.csv": {
+    "exception": "PackTableInvalidError",
+    "match": "zero-width character U+200B not allowed"
+  }
+}

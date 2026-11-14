@@ -47,6 +47,22 @@
       "title": "Engine Min",
       "type": "string"
     },
+    "hash_alg": {
+      "anyOf": [
+        {
+          "enum": [
+            "pre-rfc8785",
+            "rfc8785"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Hash Alg"
+    },
     "name": {
       "title": "Name",
       "type": "string"

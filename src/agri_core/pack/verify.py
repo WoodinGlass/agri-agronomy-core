@@ -7,7 +7,7 @@ import tomllib
 from collections.abc import Mapping
 from pathlib import Path
 
-from agri_core.models.canonical import canonical_json
+from agri_core.models.canonical import canonical_json, canonical_json_rfc8785
 from agri_core.pack.errors import (
     InvalidPackError,
     PackHashMismatchError,
@@ -32,7 +32,7 @@ def _normalize_lf(data: bytes) -> bytes:
     return data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
 
 
-def _pack_toml_content(data: bytes) -> bytes:
+def _pack_toml_content(data: bytes, *, hash_alg: str) -> bytes:
     try:
         text = data.decode("utf-8")
     except UnicodeDecodeError as exc:
@@ -46,16 +46,28 @@ def _pack_toml_content(data: bytes) -> bytes:
             f"pack.toml is not valid TOML: {exc}", file="pack.toml"
         ) from exc
     parsed.pop("content_hash", None)
-    return canonical_json(parsed)
+    # K3=A: hash_alg is metadata about the hash algorithm, not input.
+    # Stripping it keeps content_hash byte-identical for legacy packs
+    # that add the field but keep the legacy algorithm.
+    parsed.pop("hash_alg", None)
+    if hash_alg == "pre-rfc8785":
+        return canonical_json(parsed)
+    if hash_alg == "rfc8785":
+        return canonical_json_rfc8785(parsed)
+    raise ValueError(f"unknown hash_alg: {hash_alg!r}")
 
 
-def _content_bytes(relpath: str, data: bytes) -> bytes:
+def _content_bytes(relpath: str, data: bytes, *, hash_alg: str) -> bytes:
     if relpath == "pack.toml":
-        return _pack_toml_content(data)
+        return _pack_toml_content(data, hash_alg=hash_alg)
     return _normalize_lf(data)
 
 
-def hash_pack_files(files: Mapping[str, bytes]) -> str:
+def hash_pack_files(
+    files: Mapping[str, bytes],
+    *,
+    hash_alg: str,
+) -> str:
     """Return ``sha256:<hex>`` over *files* in canonical form (P1).
 
     Algorithm::
@@ -74,21 +86,31 @@ def hash_pack_files(files: Mapping[str, bytes]) -> str:
     Raises ``PackTableInvalidError(file="pack.toml")`` if *files* lacks
     ``pack.toml`` or if its content is not valid TOML.
     """
+    if hash_alg not in ("pre-rfc8785", "rfc8785"):
+        raise ValueError(f"hash_alg must be 'pre-rfc8785' or 'rfc8785', got {hash_alg!r}")
     if "pack.toml" not in files:
         raise PackTableInvalidError("pack.toml missing from files mapping", file="pack.toml")
     digest = hashlib.sha256()
     digest.update(_HASH_DOMAIN)
     for relpath in sorted(files):
-        content = _content_bytes(relpath, files[relpath])
+        content = _content_bytes(relpath, files[relpath], hash_alg=hash_alg)
         content_hex = hashlib.sha256(content).hexdigest()
         digest.update(f"{content_hex}  {relpath}\n".encode())
     return "sha256:" + digest.hexdigest()
 
 
-def compute_pack_hash(root: Path, *, max_bytes: int = DEFAULT_MAX_BYTES) -> str:
-    """Read allowlisted files under *root* and return ``hash_pack_files(files)``."""
+def compute_pack_hash(
+    root: Path,
+    *,
+    hash_alg: str,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+) -> str:
+    """Read allowlisted files under *root* and return ``hash_pack_files(files)``.
+
+    *hash_alg* is required; callers select the canonicalizer explicitly.
+    """
     files = read_pack_bytes(Path(root), max_bytes=max_bytes)
-    return hash_pack_files(files)
+    return hash_pack_files(files, hash_alg=hash_alg)
 
 
 def compute_file_sha256(path: Path) -> str:
@@ -119,7 +141,8 @@ def verify_pack_hash(root: Path, manifest: PackManifest) -> None:
             "pack.toml is missing content_hash; refusing to load",
             file="pack.toml",
         )
-    actual = compute_pack_hash(Path(root))
+    hash_alg = manifest.hash_alg or "pre-rfc8785"
+    actual = compute_pack_hash(Path(root), hash_alg=hash_alg)
     if actual != manifest.content_hash:
         raise PackHashMismatchError(
             f"content_hash mismatch: manifest={manifest.content_hash} "
@@ -148,7 +171,8 @@ def verify_pack_hash_full(
       ``PackHashMismatchError`` **without** the pack-lock hint, because
       the caller's pin is the authority, not the pack.
     """
-    actual = compute_pack_hash(Path(root), max_bytes=max_bytes)
+    hash_alg = manifest.hash_alg or "pre-rfc8785"
+    actual = compute_pack_hash(Path(root), hash_alg=hash_alg, max_bytes=max_bytes)
 
     if manifest.content_hash is not None and manifest.content_hash != actual:
         raise PackHashMismatchError(

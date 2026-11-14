@@ -110,6 +110,28 @@ Behavior:
 absent, `verify_pack_hash_full()` returns `verified=False`; the CLI
 prints `PACK_UNVERIFIED` on stderr but still loads.
 
+## `hash_alg`
+
+`pack.toml` may declare `hash_alg = "pre-rfc8785"` or
+`hash_alg = "rfc8785"`. The field is optional; when absent it defaults
+to `"pre-rfc8785"` (packs released before `v0.1.7`).
+
+| Value | Canonical form | Notes |
+|---|---|---|
+| `"pre-rfc8785"` | Legacy `canonical_json` | Python `json.dumps` with sorted keys, compact separators, `-0.0` to `0.0`. Not RFC 8785 compliant. Default for packs released before `v0.1.7`. |
+| `"rfc8785"` | RFC 8785 (JCS) | Number formatting per ECMA-262 §7.1.12.1, UTF-16 key sort, minimal escaping. See ADR-020. |
+
+`hash_alg` is **stripped** before hashing: it is metadata about the
+algorithm, not hash input. Adding or removing the field does not change
+`content_hash`; only the declared algorithm does.
+
+**Migration.** `agri-core pack migrate --pack PATH` adds
+`hash_alg = "rfc8785"` (if not already set) and recomputes
+`content_hash` with the RFC 8785 canonicalizer. The command is
+idempotent: a pack already declaring `hash_alg = "rfc8785"` is left
+unchanged. `agri-core pack lock` respects the declared `hash_alg` and
+does not downgrade a migrated pack.
+
 ## Load order
 
 `load_knowledge_set(path)` and `load_knowledge_set_from_files(files)`
@@ -159,6 +181,24 @@ up to 20 before raising.
 - **`json` and `dict_str_str` cells:** canonical JSON (sorted keys,
   compact separators). Duplicate JSON keys and non-finite numbers
   (`NaN`, `Infinity`) rejected -> `PACK_TABLE_INVALID`.
+
+## TOML strictness
+
+`pack.toml` is parsed with Python's standard-library `tomllib`. The
+following are rejected with `PACK_TABLE_INVALID`:
+
+- **BOM at the start of the file.**
+- **Invalid UTF-8 bytes.**
+- **TOML syntax errors**: unclosed strings, missing `=`, bad escapes,
+  invalid value expressions.
+- **Duplicate keys**: e.g. `name = "a"` followed by `name = "b"`.
+
+Floats outside the IEEE 754 range (`inf`, `nan`) are rejected upstream
+by `canonical_json` / `canonical_json_rfc8785`, not by `tomllib`.
+
+Broken-corpus fixtures live in `tests/fixtures/broken_toml/`; each file
+has an expected match string in `expected.json`. Rust parity for these
+cases ships with Phase B (validate port).
 
 ## Tables
 

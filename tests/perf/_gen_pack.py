@@ -286,7 +286,7 @@ def generate_perf_pack(dest: Path, *, n_taxa: int = 10_000) -> Path:
         'content_hash = "sha256:' + "0" * 64 + '"\n',
         encoding="utf-8",
     )
-    new_hash = compute_pack_hash(dest)
+    new_hash = compute_pack_hash(dest, hash_alg="pre-rfc8785")
     text = (dest / "pack.toml").read_text(encoding="utf-8")
     (dest / "pack.toml").write_text(
         re.sub(r'content_hash = "sha256:[0-9a-f]+"', f'content_hash = "{new_hash}"', text),

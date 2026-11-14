@@ -87,7 +87,7 @@ def test_sample_pack_hash_valid() -> None:
     manifest_dict = tomllib.loads((SAMPLE / "pack.toml").read_text(encoding="utf-8"))
     expected = manifest_dict["content_hash"]
     assert expected.startswith("sha256:")
-    assert compute_pack_hash(SAMPLE) == expected
+    assert compute_pack_hash(SAMPLE, hash_alg="pre-rfc8785") == expected
 
 
 def test_sample_pack_sources_example_org() -> None:
@@ -191,7 +191,7 @@ def test_sample_pack_content_hash_kat() -> None:
     """
     manifest = tomllib.loads((SAMPLE / "pack.toml").read_text(encoding="utf-8"))
     assert manifest["content_hash"] == SAMPLE_PACK_CONTENT_HASH
-    assert compute_pack_hash(SAMPLE) == SAMPLE_PACK_CONTENT_HASH
+    assert compute_pack_hash(SAMPLE, hash_alg="pre-rfc8785") == SAMPLE_PACK_CONTENT_HASH
 
 
 def test_load_source_equals_load_built(tmp_path: Path) -> None:

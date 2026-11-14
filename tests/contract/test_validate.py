@@ -130,7 +130,7 @@ def test_validate_pack_idempotent_hash(tmp_path: Path) -> None:
 def test_validate_pack_expected_hash_match(tmp_path: Path) -> None:
     src = _sample_source(tmp_path)
     files = _load_files(src)
-    expected = hash_pack_files(files)
+    expected = hash_pack_files(files, hash_alg="pre-rfc8785")
     ks = validate_pack(files, allow_synthetic=True, expected_hash=expected)
     assert ks.pack_hash == expected
 

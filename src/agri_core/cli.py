@@ -379,7 +379,8 @@ def pack_lock(
     content_without_hash = render_source_manifest(manifest, "")
     files_with_new_toml = dict(files)
     files_with_new_toml["pack.toml"] = content_without_hash
-    new_hash = hash_pack_files(files_with_new_toml)
+    hash_alg = manifest.hash_alg or "pre-rfc8785"
+    new_hash = hash_pack_files(files_with_new_toml, hash_alg=hash_alg)
     content = render_source_manifest(manifest, new_hash)
 
     target = path / "pack.toml"
@@ -393,7 +394,7 @@ def pack_lock(
             tmp.unlink(missing_ok=True)
         raise typer.Exit(EXIT_UNEXPECTED) from exc
 
-    verify_hash = compute_pack_hash(path)
+    verify_hash = compute_pack_hash(path, hash_alg=hash_alg)
     if verify_hash != new_hash:
         typer.echo(
             f"error: post-write hash mismatch: expected {new_hash}, got {verify_hash}",
@@ -402,6 +403,82 @@ def pack_lock(
         raise typer.Exit(EXIT_UNEXPECTED)
 
     typer.echo(f"wrote content_hash = {new_hash}")
+
+
+@pack_app.command(name="migrate")
+def pack_migrate(
+    pack: Annotated[
+        str,
+        typer.Option(
+            "--pack",
+            help="Path to a source pack directory (explicit path only; 'sample' is rejected).",
+        ),
+    ],
+) -> None:
+    """Migrate a source pack to hash_alg='rfc8785'.
+
+    Sets hash_alg to 'rfc8785' (if not already), recomputes content_hash
+    with the RFC 8785 canonicalizer, and rewrites pack.toml atomically.
+    Does not bump schema_version or engine_min; see PACK_FORMAT.md
+    section "hash_alg" for policy.
+
+    Idempotent: a pack that already declares hash_alg='rfc8785' is left
+    unchanged (status message only).
+    """
+    if pack == "sample":
+        typer.echo(
+            "error: pack migrate requires an explicit path; 'sample' is not "
+            "allowed. Pass the path, e.g. src/agri_core/_samples/sample_pack.",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
+
+    path = Path(pack)
+    try:
+        files = read_pack_bytes(path)
+        manifest = parse_manifest_bytes(files["pack.toml"])
+        stripped = {**files, "pack.toml": strip_content_hash(files["pack.toml"])}
+        validate_pack(stripped, allow_synthetic=True)
+    except PackError as exc:
+        typer.echo(f"error: {exc.code}: {exc}", err=True)
+        for finding in getattr(exc, "findings", ()):
+            loc = f"{finding.file}:{finding.line}" if getattr(finding, "file", None) else "-"
+            typer.echo(f"  {finding.code} {loc}: {finding}", err=True)
+        raise typer.Exit(EXIT_PACK) from exc
+
+    if manifest.hash_alg == "rfc8785":
+        typer.echo("already migrated: hash_alg=rfc8785")
+        return
+
+    # Build migrated manifest without triggering Pydantic validators on
+    # the intermediate content_hash.
+    migrated = manifest.model_copy(update={"hash_alg": "rfc8785", "content_hash": None})
+    content_without_hash = render_source_manifest(migrated, "")
+    files_with_new_toml = dict(files)
+    files_with_new_toml["pack.toml"] = content_without_hash
+    new_hash = hash_pack_files(files_with_new_toml, hash_alg="rfc8785")
+    content = render_source_manifest(migrated, new_hash)
+
+    target = path / "pack.toml"
+    tmp = path / "pack.toml.tmp"
+    try:
+        tmp.write_bytes(content)
+        os.replace(tmp, target)
+    except OSError as exc:
+        typer.echo(f"error: OSError: {exc}", err=True)
+        with contextlib.suppress(OSError):
+            tmp.unlink(missing_ok=True)
+        raise typer.Exit(EXIT_UNEXPECTED) from exc
+
+    verify_hash = compute_pack_hash(path, hash_alg="rfc8785")
+    if verify_hash != new_hash:
+        typer.echo(
+            f"error: post-write hash mismatch: expected {new_hash}, got {verify_hash}",
+            err=True,
+        )
+        raise typer.Exit(EXIT_UNEXPECTED)
+
+    typer.echo(f"migrated: hash_alg=rfc8785, content_hash={new_hash}")
 
 
 def _reject_existing_artifacts(out_dir: Path) -> None:

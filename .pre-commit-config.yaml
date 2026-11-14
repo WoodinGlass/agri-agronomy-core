@@ -1,4 +1,9 @@
 default_install_hook_types: [pre-commit]
+# Broken-corpus fixtures intentionally contain malformed CSV/TOML
+# (bare CR, BOM, NUL, invalid UTF-8, etc.). Line-ending and whitespace
+# fixers would corrupt them; these files are only read by
+# tests/unit/test_broken_corpus.py.
+exclude: ^tests/fixtures/broken_(csv|toml)/
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0

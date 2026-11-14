@@ -414,7 +414,7 @@ def test_write_built_pack_artifact_and_content_hash_match(tmp_path: Path) -> Non
     sqlite_bytes = (out / "pack.sqlite").read_bytes()
     expected_artifact = "sha256:" + hashlib.sha256(sqlite_bytes).hexdigest()
     assert parsed["artifact_sha256"] == expected_artifact
-    assert parsed["content_hash"] == compute_pack_hash(_SAMPLE)
+    assert parsed["content_hash"] == compute_pack_hash(_SAMPLE, hash_alg="pre-rfc8785")
 
 
 def test_write_built_pack_rejects_out_dir_with_taxa_csv(tmp_path: Path) -> None:
