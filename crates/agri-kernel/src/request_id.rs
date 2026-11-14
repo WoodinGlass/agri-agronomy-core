@@ -18,5 +18,5 @@ pub fn compute_request_id(
     });
     let bytes = canonical_json(&payload).map_err(|e| format!("{e}"))?;
     let hex = sha256_hex(&bytes);
-    Ok(format!("req_{}", &hex[..32]))
+    Ok(format!("req_{}", hex.get(..32).unwrap_or("")))
 }
