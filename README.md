@@ -5,7 +5,7 @@ Every crop-specific value comes from a verified knowledge pack, never from a lan
 
 <p align="center">
   <a href="https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml"><img src="https://github.com/WoodinGlass/agri-agronomy-core/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/status-0.1.4--M15-blue" alt="Status">
+  <img src="https://img.shields.io/badge/status-0.1.6--M16-blue" alt="Status">
   <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue" alt="Python">
   <img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License">
   <img src="https://img.shields.io/badge/mypy-strict-blue" alt="mypy">
@@ -103,7 +103,7 @@ Requires Python 3.11 or newer (tested on 3.11, 3.12, 3.13 and 3.14 on Ubuntu-lat
 Install in any Colab cell:
 
 ```python
-!pip install -q "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.4"
+!pip install -q "git+https://github.com/WoodinGlass/agri-agronomy-core@v0.1.6"
 ```
 
 No API key or GPU is needed. Pure Python, CPU only.
