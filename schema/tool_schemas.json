@@ -1,0 +1,739 @@
+{
+  "tool_schemas_version": "1.0.0",
+  "tools": [
+    {
+      "description": "Resolve a taxon name (scientific, common or alias) to the canonical taxon_id used elsewhere. Prefer to call this first and reuse the returned taxon_id in later calls. Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "resolve_taxon",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional BCP-47 language tag (e.g. 'id', 'en') to narrow alias matching. Null means any language."
+          },
+          "name": {
+            "description": "Taxon name to resolve. Up to 200 characters.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "language"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Read one fact (a single agronomic value) for a taxon from the loaded knowledge pack. Returns the value at the highest-priority scope that matches the caller's context, with provenance. Values at or below the effective status floor are refused. Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "resolve_fact",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional ISO 3166-1 alpha-2 country code to constrain the scope. Null means any scope."
+          },
+          "parameter": {
+            "description": "Dictionary key, e.g. 'soil_ph', 'gdd_base', 'kc', 'n_fertilizer_rate'. Must exist in the pack's dictionary.",
+            "type": "string"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional growth phase. Only set for parameters whose phase_set is 'biological' or 'kc'. Null when the parameter is not phased."
+          },
+          "system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional growing system ('field', 'container', 'paddy'). Null means any system."
+          },
+          "taxon_id": {
+            "description": "Opaque taxon_id from resolve_taxon.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "taxon_id",
+          "parameter",
+          "phase",
+          "country",
+          "system"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Classify a numeric value (temperature, pH, EC, etc.) against the trapezoid thresholds recorded for a parameter and a taxon. Returns 'optimal', 'suboptimal' or 'critical' with the breakpoints used. Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "threshold_check",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "parameter": {
+            "description": "Dictionary key for the trapezoid, e.g. 'soil_ph', 'air_temp_day'.",
+            "type": "string"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional growth phase. Null when the parameter is not phased."
+          },
+          "taxon_id": {
+            "description": "Opaque taxon_id from resolve_taxon.",
+            "type": "string"
+          },
+          "unit": {
+            "description": "Unit of 'value'. Must match the parameter's dictionary unit.",
+            "type": "string"
+          },
+          "value": {
+            "description": "The value to classify, in the parameter's unit.",
+            "type": "number"
+          }
+        },
+        "required": [
+          "taxon_id",
+          "parameter",
+          "value",
+          "unit",
+          "phase"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Determine the current growth stage of a taxon. Requires the caller to pick a mode and fill only the mode-specific fields; the host validates that the combination is consistent. Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "stage_resolve",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "age_days": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required when mode='age'. Days since the reference date. Must be >= 0. Ignored otherwise."
+          },
+          "events": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required when mode='events'. Comma-separated list of observed event codes, e.g. 'budbreak,flowering'. Ignored otherwise."
+          },
+          "mode": {
+            "description": "How the stage is determined. 'age' = days since sowing or transplant; 'thermal' = accumulated thermal time; 'events' = caller-supplied event log (perennial).",
+            "enum": [
+              "age",
+              "thermal",
+              "events"
+            ],
+            "type": "string"
+          },
+          "taxon_id": {
+            "description": "Opaque taxon_id from resolve_taxon.",
+            "type": "string"
+          },
+          "thermal_time": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required when mode='thermal'. Accumulated thermal time in degree-days. Ignored otherwise."
+          }
+        },
+        "required": [
+          "taxon_id",
+          "mode",
+          "age_days",
+          "thermal_time",
+          "events"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Evaluate whether a site (soil pH, EC, air temperature, relative humidity, VPD, DLI) is suitable for a taxon at a given phase. Returns 'suitable', 'marginal' or 'unsuitable' with per-factor reasons. Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "site_suitability",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "air_rh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Relative humidity in percent (0-100)."
+          },
+          "air_temp_day": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytime air temperature in Celsius."
+          },
+          "air_temp_night": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nighttime air temperature in Celsius."
+          },
+          "dli": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daily light integral in mol/m^2/day."
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional growth phase. Null evaluates against any phase the taxon carries."
+          },
+          "soil_ec": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Soil EC in dS/m. Null if unknown."
+          },
+          "soil_ph": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Soil pH. Null if unknown."
+          },
+          "taxon_id": {
+            "description": "Opaque taxon_id from resolve_taxon.",
+            "type": "string"
+          },
+          "vpd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Vapour pressure deficit in kPa."
+          }
+        },
+        "required": [
+          "taxon_id",
+          "phase",
+          "soil_ph",
+          "soil_ec",
+          "air_temp_day",
+          "air_temp_night",
+          "air_rh",
+          "vpd",
+          "dli"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Compute net irrigation depth for a field crop using the ETc method (ET0 x Kc). Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "irrigation_field_etc",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "et0_mm_day": {
+            "description": "Reference evapotranspiration, mm/day.",
+            "type": "number"
+          },
+          "kc_override": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional Kc override. Leave null to use the pack's Kc for the taxon and phase. When set, must be > 0."
+          },
+          "phase": {
+            "description": "Growth phase. Determines which Kc value is used.",
+            "type": "string"
+          },
+          "taxon_id": {
+            "description": "Opaque taxon_id from resolve_taxon.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "taxon_id",
+          "phase",
+          "et0_mm_day",
+          "kc_override"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Compute irrigation depth for a paddy under alternate wetting and drying. Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "irrigation_paddy_awd",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "et0_mm_day": {
+            "description": "Reference evapotranspiration, mm/day.",
+            "type": "number"
+          },
+          "kc_override": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional Kc override. Leave null to use the pack's Kc for the taxon and phase. When set, must be > 0."
+          },
+          "phase": {
+            "description": "Growth phase. Determines which Kc value is used.",
+            "type": "string"
+          },
+          "taxon_id": {
+            "description": "Opaque taxon_id from resolve_taxon.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "taxon_id",
+          "phase",
+          "et0_mm_day",
+          "kc_override"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Compute irrigation depth for a container or band-grown crop. Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "irrigation_container_band",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "et0_mm_day": {
+            "description": "Reference evapotranspiration, mm/day.",
+            "type": "number"
+          },
+          "kc_override": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional Kc override. Leave null to use the pack's Kc for the taxon and phase. When set, must be > 0."
+          },
+          "phase": {
+            "description": "Growth phase. Determines which Kc value is used.",
+            "type": "string"
+          },
+          "taxon_id": {
+            "description": "Opaque taxon_id from resolve_taxon.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "taxon_id",
+          "phase",
+          "et0_mm_day",
+          "kc_override"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Convert a recommended element rate (N, P2O5 or K2O) to a product amount, applying the pack's per-application dose cap. The 'capped' flag in the result is true when the cap limited the answer. Pesticide questions are refused as 'refer_to_label'. Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "fertilizer",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "application_area_ha": {
+            "description": "Area to treat, in hectares. Must be > 0.",
+            "type": "number"
+          },
+          "element": {
+            "description": "Which nutrient the rate refers to.",
+            "enum": [
+              "N",
+              "P2O5",
+              "K2O"
+            ],
+            "type": "string"
+          },
+          "element_rate": {
+            "description": "Recommended element rate, in kg/hectare of the element.",
+            "type": "number"
+          },
+          "product_concentration": {
+            "description": "Concentration of the element in the product, in percent (e.g. 46 for urea as N). Must be > 0 and <= 100.",
+            "type": "number"
+          },
+          "taxon_id": {
+            "description": "Opaque taxon_id from resolve_taxon.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "taxon_id",
+          "element",
+          "element_rate",
+          "product_concentration",
+          "application_area_ha"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Evaluate irrigation water against the pack's limits: EC, pH, SAR, RSC. Returns 'ok' or a refusal per parameter. Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "water_quality",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "ca": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Calcium, mmol(+)/L."
+          },
+          "co3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Carbonate, mmol(-)/L."
+          },
+          "hco3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Bicarbonate, mmol(-)/L."
+          },
+          "mg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Magnesium, mmol(+)/L."
+          },
+          "na": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sodium, mmol(+)/L."
+          },
+          "taxon_id": {
+            "description": "Opaque taxon_id from resolve_taxon.",
+            "type": "string"
+          },
+          "water_ec": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Water EC in dS/m."
+          },
+          "water_ph": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Water pH."
+          }
+        },
+        "required": [
+          "taxon_id",
+          "water_ec",
+          "water_ph",
+          "na",
+          "ca",
+          "mg",
+          "hco3",
+          "co3"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Build a dated propagation plan (seed, cutting, grafting, layering, tissue culture) for a taxon starting from a given date. Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "propagation_plan",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "method": {
+            "description": "Propagation method, e.g. 'seed', 'stem_cutting', 'grafting', 'air_layering'. Must be a method the taxon supports.",
+            "type": "string"
+          },
+          "start_date": {
+            "description": "Start date, ISO 8601 'YYYY-MM-DD'. Future dates are allowed.",
+            "type": "string"
+          },
+          "taxon_id": {
+            "description": "Opaque taxon_id from resolve_taxon.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "taxon_id",
+          "start_date",
+          "method"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Compute reference evapotranspiration (ET0) by Penman-Monteith with a Hargreaves-Samani fallback when wind or humidity are unavailable. Returns mm/day. Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "et0",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "day_of_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Day of year, 1-366. Required if solar_mj_m2_day is null."
+          },
+          "latitude_deg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Site latitude, degrees (North positive). Required if solar_mj_m2_day is null."
+          },
+          "rh_mean_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mean daily relative humidity, percent. Required for Penman-Monteith. If null, Hargreaves-Samani is used."
+          },
+          "solar_mj_m2_day": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Solar radiation, MJ/m^2/day. If null, the host computes it from latitude and day of year."
+          },
+          "temp_max_c": {
+            "description": "Daily maximum air temperature, Celsius.",
+            "type": "number"
+          },
+          "temp_min_c": {
+            "description": "Daily minimum air temperature, Celsius.",
+            "type": "number"
+          },
+          "wind_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mean wind speed at 2 m, m/s. Required for Penman-Monteith. If null, Hargreaves-Samani is used."
+          }
+        },
+        "required": [
+          "temp_max_c",
+          "temp_min_c",
+          "rh_mean_pct",
+          "wind_ms",
+          "solar_mj_m2_day",
+          "latitude_deg",
+          "day_of_year"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Compute vapour pressure deficit (VPD) from air temperature and relative humidity. Returns kPa. Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "vpd",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "rh_pct": {
+            "description": "Relative humidity, percent. Must be > 0 and <= 100.",
+            "type": "number"
+          },
+          "temp_c": {
+            "description": "Air temperature, Celsius.",
+            "type": "number"
+          }
+        },
+        "required": [
+          "temp_c",
+          "rh_pct"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Compute growing degree days (GDD) for one day from daily max and min temperatures. The base and upper temperatures come from the pack for the given taxon; the LLM must not supply them. Returns degree-days. Returns one of the library's canonical outcomes (see schema/outcome.schema.json in the engine repository). If the status is not 'ok' or 'ok_category' (e.g. 'unknown', 'insufficient_input', 'not_applicable', 'refer_to_label', 'refer_to_authority', 'ambiguous'), report it to the user verbatim. Do not invent a number or a category. Results are advisory, not for direct actuation.",
+      "name": "gdd",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "method": {
+            "description": "GDD method. '1' = simple average minus base; '2' = McMaster & Wilhelm (1997).",
+            "enum": [
+              "1",
+              "2"
+            ],
+            "type": "string"
+          },
+          "taxon_id": {
+            "description": "Opaque taxon_id from resolve_taxon.",
+            "type": "string"
+          },
+          "temp_max_c": {
+            "description": "Daily maximum air temperature, Celsius.",
+            "type": "number"
+          },
+          "temp_min_c": {
+            "description": "Daily minimum air temperature, Celsius.",
+            "type": "number"
+          }
+        },
+        "required": [
+          "taxon_id",
+          "temp_max_c",
+          "temp_min_c",
+          "method"
+        ],
+        "type": "object"
+      }
+    }
+  ]
+}

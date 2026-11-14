@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "agri-agronomy-core"
-version = "0.1.5"
+version = "0.1.6"
 description = "Offline, deterministic data contract and resolution engine for cultivation knowledge."
 readme = "README.md"
 requires-python = ">=3.11"

@@ -1,0 +1,15 @@
+{
+  "csv_sha256": "b452dc193e181d8b7275488bbecd511df1e0620355075aed1ddcc7bc75d799d7",
+  "filters": {
+    "max_status": "reviewed",
+    "safety_critical_only": false,
+    "taxon_ids": null,
+    "tiers": null
+  },
+  "pack_hash": "sha256:4ca67c008ae0abbc1218b16f570770bdc00069a686d5dee2c0154e03b08204f1",
+  "pack_name": "sample",
+  "pack_version": "0.1.0",
+  "row_count": 6,
+  "sheet_schema_version": "1.0.0",
+  "synthetic": true
+}

@@ -1,4 +1,4 @@
-.PHONY: install install-dev lock lint format typecheck test coverage perf check precommit audit build smoke clean wheel-prep wheel cargo-check rust-test rust-lint
+.PHONY: install install-dev lock lint format typecheck test coverage perf check precommit audit build smoke clean wheel-prep wheel exports cargo-check rust-test rust-lint
 
 install:
 	pip install -e .
@@ -70,3 +70,6 @@ rust-lint:
 
 wheel: wheel-prep
 	maturin build --release --locked --out dist/
+
+exports:
+	python -m agri_core.cli export --pack sample --out dist/exports

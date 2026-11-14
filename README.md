@@ -73,7 +73,7 @@ It runs fully offline: no network access, database server, API key or GPU. The p
 | 7 | Thresholds and stages | Four-point trapezoid checks that return `optimal`, `suboptimal` or `critical`. Stage resolver from annual age, annual thermal time (GDD), or perennial caller-supplied events. Photothermal-unit staging is deferred (needs a `phase_photothermal_time` parameter in the dictionary). Threshold and stage values come only from the pack. | M13 | Done |
 | 8 | Irrigation, fertilizer, media and water | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), crop evapotranspiration (ETc) from a stage-wise Kc curve, nutrient-to-product conversion with safety caps, water-quality limits and indices (SAR, RSC). Every mode declares the parameters it requires; missing → `unknown` or `insufficient_input`. Kc values come only from the pack. | M14 | Done |
 | 9 | Suitability and propagation | Single and batch site suitability with `suitable`/`marginal`/`unsuitable` and per-factor reasons; dated propagation plans. | M15 | Done |
-| 10 | Exports | `tool_schemas.json` (function-calling schemas with `taxon_id`, `country`, `system`), `review_sheet.csv` per tier. | M16 | Not started |
+| 10 | Exports | `tool_schemas.json` (fourteen input-only function-calling schemas, strict-compatible), `review_sheet.csv` with tier filter and CSV-injection-safe cells. | M16 | Done |
 | 11 | Soil water balance | Pedotransfer estimates of field capacity, wilting point and available water from texture and organic matter; a daily soil-water balance with depletion and a water-stress coefficient (Ks) that feeds the `field_etc` irrigation mode. Depletion fractions and other crop values come only from the pack. | M17 | Not started |
 | 12 | Drought and season indices | Standardized Precipitation Index (SPI) with a minimum-record check, an aridity index (precipitation over ET0), and rainy-season onset and cessation from a registry of documented, configurable definitions. | M18 | Not started |
 | 13 | Vegetation-index band math | Band-ratio indices computed from caller-supplied reflectance values: NDVI, EVI, SAVI, GNDVI, NDRE, NGRDI and PSRI, plus two water indices kept apart by name (`ndwi_mcfeeters` from green and NIR, `ndmi` from NIR and SWIR). No raster I/O and no imagery in this repository. LAI, FAPAR and canopy cover are inputs, not computed. | M19 | Not started |
@@ -374,11 +374,29 @@ Planned next: maize, chili pepper, broccoli, potato, lettuce, grape, apple, wate
 
 ## Exports (M16)
 
-- `bundle.json`: all profiles, the sources table (including license, `commercial_use` and attribution text) and metadata in one versioned file.
-- `tool_schemas.json`: function-calling schemas for LLM agents, generated from the same Pydantic models as the library so tools and code cannot drift apart.
-- `review_sheet.csv`: one row per value, so domain experts can review in a spreadsheet without using GitHub.
+Two artifacts are produced by `agri-core export` from the same Pydantic
+models as the library, so tools and code cannot drift apart. See
+[`docs/EXPORTS.md`](docs/EXPORTS.md) for the format, threat model and
+regeneration steps.
 
-Every export carries the license and the attribution text of the sources behind its values.
+- `tool_schemas.json`: fourteen input-only function-calling tools for
+  LLM agents. Strict-compatible with the OpenAI and Anthropic tool-calling
+  APIs (basic types, `enum`, `anyOf`, every property required,
+  `additionalProperties: false`). Each tool description carries a
+  two-sentence refusal contract: a non-`ok` status is reported verbatim,
+  no number is invented, and results are advisory, not for direct
+  actuation. Committed under `schema/tool_schemas.json`; a drift test
+  rejects any mismatch with the generator.
+- `review_sheet.csv` plus `review_sheet.manifest.json`: one row per live
+  fact, with a tier filter and a status ceiling (default: below
+  `approved`). Read-only columns carry the fact value, unit, scope,
+  evidence, status, safety class, source citation, URL and license, and
+  current reviewers, so an expert can review in a spreadsheet without
+  using GitHub. Cells are CSV-injection-safe. Ephemeral: written to
+  `dist/exports/` at release time and never committed.
+
+Every export carries the license and the attribution text of the sources
+behind its values.
 
 ## Safety and limitations
 
@@ -540,6 +558,7 @@ Architectural decisions are recorded as ADRs under
 - [ADR-017](docs/decisions/ADR-017-no-edge-thresholds.md) — No `edge_thresholds.json`: device-facing thresholds conflict with the 'not a controller' scope.
 - [ADR-018](docs/decisions/ADR-018-safety-reserved.md) — `regulatory` and `toxicity_limit` are reserved; `dose_cap` is the only active safety-critical class.
 - [ADR-019](docs/decisions/ADR-019-rust-native-kernel.md) — Native Rust kernel behind `agri_core._native`; one implementation per behaviour; byte-identical in M20 with the RFC 8785 migration deferred to ADR-020.
+- [ADR-021](docs/decisions/ADR-021-tool-schemas.md) — Tool schemas and review sheet exports: input-only strict subset, host-only parameters, CSV-injection-safe cells, version policy.
 
 ADR-008 is intentionally reserved (plant-protection data model, after M15) and
 will be written as its own ADR when that work starts.
@@ -564,7 +583,7 @@ will be written as its own ADR when that work starts.
 | **M13** Thresholds and stages | Update | Four-point trapezoid threshold checks and the stage resolver (annual age, annual thermal, perennial caller-supplied events). First milestone to use `CategoricalResult` (`status="ok_category"`) for engine outputs. Photothermal-unit staging is deferred (needs a `phase_photothermal_time` parameter). Threshold and stage values are read from the pack only. | Phases resolve per archetype; perennials use caller-supplied events; threshold and stage values are read from the pack only. |
 | **M14** Irrigation, fertilizer, media and water | Done | Three irrigation modes (`field_etc`, `paddy_awd`, `container_band`), ETc from a stage-wise Kc curve (Kc values from the pack only), nutrient-to-product conversion with per-application dose caps enforced in-function and a refusal when the cap is missing, and water-quality limits and indices (SAR, RSC, `check_water_quality`). | Sample-pack unit, contract and golden tests pass; irrigation, fertilizer and media results match inline vectors. Scenario fixtures and pinned `agri-knowledge` integration will follow the first full `agri-knowledge` data pack (milestone K5, `v0.1.5`). |
 | **M15** Suitability and propagation | Update | Single and batch site suitability, per-factor reasons, hazard flags, dated propagation plans. | Batch mode within the performance budget; scenario tests including an `unsuitable` case. |
-| **M16** Exports and documentation | Not started | `tool_schemas.json`, `review_sheet.csv` per tier, quickstart notebook, `docs/`. | A release tag includes exports, generated from the same Pydantic models as the library, with a stable contract test. |
+| **M16** Exports and documentation | Done | `tool_schemas.json`, `review_sheet.csv` (with tier filter), quickstart notebook, `docs/EXPORTS.md`. | A release tag includes exports, generated from the same Pydantic models as the library, with a stable contract test. |
 | **M17** Soil water balance | Not started | Pedotransfer estimates of field capacity, wilting point and available water; a daily soil-water balance with depletion and a water-stress coefficient (Ks) feeding the `field_etc` mode. | Golden tests pass; depletion fractions and other crop values are read from the pack only; a missing value gives `unknown` or `insufficient_input`. |
 | **M18** Drought and season indices | Not started | SPI with a minimum-record check, an aridity index (precipitation over ET0), rainy-season onset and cessation from a registry of documented, configurable definitions. | Golden tests pass; a record shorter than the documented minimum gives `insufficient_input`; every definition in the registry carries a reference. |
 | **M19** Vegetation-index band math | Not started | NDVI, EVI, SAVI, GNDVI, NDRE, NGRDI and PSRI from caller-supplied reflectance, with `ndwi_mcfeeters` and `ndmi` kept apart by name. No raster I/O and no imagery in this repository. | Golden tests pass; each index documents its bands and coefficients; LAI, FAPAR and canopy cover remain inputs. |

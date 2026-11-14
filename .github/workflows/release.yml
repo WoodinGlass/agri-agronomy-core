@@ -258,11 +258,36 @@ jobs:
               print(f"  - {c.get('name')} {c.get('version')}")
           PY
 
+      - name: Generate exports
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv .exports-venv
+          .exports-venv/bin/pip install --upgrade pip
+          .exports-venv/bin/pip install dist/wheel/*.whl
+          mkdir -p dist/exports
+          .exports-venv/bin/agri-core export \
+            --pack sample \
+            --out dist/exports \
+            --format both
+          echo "----- generated exports -----"
+          ls -la dist/exports/
+          test -f dist/exports/tool_schemas.json
+          test -f dist/exports/review_sheet.csv
+          test -f dist/exports/review_sheet.manifest.json
+          echo "----- verify tool_schemas.json byte-identical to committed -----"
+          cmp -s dist/exports/tool_schemas.json schema/tool_schemas.json && \
+            echo "OK: tool_schemas.json matches committed" || \
+            (echo "::error::tool_schemas.json differs from committed" && exit 1)
+          echo "----- verify review_sheet.csv byte-identical to golden -----"
+          cmp -s dist/exports/review_sheet.csv tests/golden/exports/review_sheet.csv && \
+            echo "OK: review_sheet.csv matches golden" || \
+            (echo "::error::review_sheet.csv differs from golden" && exit 1)
       - name: Build SHA256SUMS
         shell: bash
         run: |
           set -euo pipefail
-          FILES=(dist/wheel/*.whl dist/sdist/*.tar.gz sample_pack.zip sbom.cdx.json)
+          FILES=(dist/wheel/*.whl dist/sdist/*.tar.gz sample_pack.zip sbom.cdx.json dist/exports/*)
           if [ -f built-pack.zip ]; then FILES+=(built-pack.zip); fi
           sha256sum "${FILES[@]}" > SHA256SUMS
           echo "----- SHA256SUMS -----"
@@ -277,6 +302,7 @@ jobs:
             sample_pack.zip
             SHA256SUMS
             sbom.cdx.json
+            dist/exports/*
       - name: Upload release-assets
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
@@ -289,6 +315,7 @@ jobs:
             built-pack.zip
             release-body.md
             sbom.cdx.json
+            dist/exports/*
           if-no-files-found: warn
 
   release:
@@ -330,7 +357,7 @@ jobs:
             --title "$TAG" \
             --notes-file release-body.md \
             --verify-tag \
-            dist/wheel/*.whl dist/sdist/*.tar.gz sample_pack.zip SHA256SUMS sbom.cdx.json
+            dist/wheel/*.whl dist/sdist/*.tar.gz sample_pack.zip SHA256SUMS sbom.cdx.json dist/exports/*
 
           if [ -f built-pack.zip ]; then
             gh release upload "$TAG" built-pack.zip --repo "$GITHUB_REPOSITORY"
