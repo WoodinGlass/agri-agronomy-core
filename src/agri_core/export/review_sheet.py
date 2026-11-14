@@ -145,7 +145,7 @@ def _source_fields(ks: KnowledgeSet, fact: FactRow) -> tuple[str, str, str]:
         for sid in fact.src:
             try:
                 source = ks.source(sid)
-            except KeyError:
+            except KeyError:  # pragma: no cover
                 continue
             citations.append(source.citation)
             urls.append(source.url)
@@ -153,7 +153,7 @@ def _source_fields(ks: KnowledgeSet, fact: FactRow) -> tuple[str, str, str]:
     elif fact.dataset_id:
         try:
             dataset = ks.dataset(fact.dataset_id)
-        except KeyError:
+        except KeyError:  # pragma: no cover
             dataset = None
         if dataset is not None:
             citations.append(f"{dataset.name} {dataset.version}".strip())

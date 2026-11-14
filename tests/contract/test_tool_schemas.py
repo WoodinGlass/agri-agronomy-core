@@ -214,3 +214,24 @@ def test_committed_schema_matches_generator(schema: dict[str, Any]) -> None:
         "`python -m agri_core.cli export --pack sample "
         "--format tool_schemas --out schema` and commit the result."
     )
+
+
+# ---- M16 coverage gap: write_tool_schemas, _object with description ----
+
+
+def test_write_tool_schemas_writes_file(tmp_path: Path) -> None:
+    from agri_core.export.tool_schemas import write_tool_schemas
+
+    target = tmp_path / "tool_schemas.json"
+    result = write_tool_schemas(path=target)
+    assert result == target
+    assert target.exists()
+    data = json.loads(target.read_text())
+    assert data["tool_schemas_version"] == "1.0.0"
+
+
+def test_object_helper_with_description() -> None:
+    from agri_core.export.tool_schemas import _object
+
+    result = _object({"a": {"type": "string"}}, description="test")
+    assert result["description"] == "test"

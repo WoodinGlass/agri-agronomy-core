@@ -251,3 +251,98 @@ def test_golden_manifest_matches(default_output: tuple[str, dict[str, Any]]) -> 
     _, manifest = default_output
     golden = json.loads(GOLDEN_MANIFEST.read_text(encoding="utf-8"))
     assert manifest == golden
+
+
+# ---- M16 coverage gap: write_review_sheet, dataset branch, filters ----
+
+
+def test_write_review_sheet_default_filters(ks: Any, dictionary: Any, tmp_path: Path) -> None:
+    from agri_core.export.review_sheet import write_review_sheet
+
+    csv_path, manifest_path = write_review_sheet(ks, dictionary, tmp_path)
+    assert csv_path.exists()
+    assert manifest_path.exists()
+    assert csv_path.name == "review_sheet.csv"
+    assert manifest_path.name == "review_sheet.manifest.json"
+
+
+def test_write_review_sheet_explicit_filters(ks: Any, dictionary: Any, tmp_path: Path) -> None:
+    from agri_core.export.review_sheet import (
+        ReviewSheetFilters,
+        write_review_sheet,
+    )
+
+    csv_path, manifest_path = write_review_sheet(
+        ks,
+        dictionary,
+        tmp_path / "explicit",
+        filters=ReviewSheetFilters(max_status="approved"),
+    )
+    assert csv_path.exists()
+    assert manifest_path.exists()
+
+
+def test_source_fields_reads_dataset_when_no_src() -> None:
+    from unittest.mock import MagicMock
+
+    from agri_core.export.review_sheet import _source_fields
+
+    dataset = MagicMock()
+    dataset.name = "Test dataset"
+    dataset.version = "1.0"
+    dataset.url = "https://example.org"
+    dataset.license = "CC0-1.0"
+    ks = MagicMock()
+    ks.dataset.return_value = dataset
+    fact = MagicMock()
+    fact.src = None
+    fact.dataset_id = "D000000001"
+
+    citation, url, license_ = _source_fields(ks, fact)
+    assert citation == "Test dataset 1.0"
+    assert url == "https://example.org"
+    assert license_ == "CC0-1.0"
+
+
+def test_source_fields_dataset_without_url() -> None:
+    from unittest.mock import MagicMock
+
+    from agri_core.export.review_sheet import _source_fields
+
+    dataset = MagicMock()
+    dataset.name = "Test dataset"
+    dataset.version = "1.0"
+    dataset.url = None
+    dataset.license = "CC0-1.0"
+    ks = MagicMock()
+    ks.dataset.return_value = dataset
+    fact = MagicMock()
+    fact.src = None
+    fact.dataset_id = "D000000001"
+
+    citation, url, license_ = _source_fields(ks, fact)
+    assert citation == "Test dataset 1.0"
+    assert url == ""
+    assert license_ == "CC0-1.0"
+
+
+def test_should_include_excludes_superseded(ks: Any) -> None:
+    from agri_core.export.review_sheet import (
+        ReviewSheetFilters,
+        _should_include,
+    )
+
+    fact = next(iter(ks.facts()))
+    fact_sup = fact.model_copy(update={"superseded_by": "F00000000099"})
+    assert _should_include(fact_sup, "T1", "none", ReviewSheetFilters()) is False
+
+
+def test_should_include_excludes_tier_not_in_filter(ks: Any) -> None:
+    from agri_core.export.review_sheet import (
+        ReviewSheetFilters,
+        _should_include,
+    )
+
+    fact = next(iter(ks.facts()))
+    filters = ReviewSheetFilters(tiers=("T0",))
+    assert _should_include(fact, "T2", "none", filters) is False

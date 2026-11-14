@@ -73,20 +73,8 @@ def _number(description: str) -> dict[str, Any]:
     return {"type": "number", "description": description}
 
 
-def _integer(description: str) -> dict[str, Any]:
-    return {"type": "integer", "description": description}
-
-
-def _boolean(description: str) -> dict[str, Any]:
-    return {"type": "boolean", "description": description}
-
-
 def _enum(values: list[str], description: str) -> dict[str, Any]:
     return {"type": "string", "enum": values, "description": description}
-
-
-def _array_of_strings(description: str) -> dict[str, Any]:
-    return {"type": "array", "items": {"type": "string"}, "description": description}
 
 
 def _object(

@@ -126,3 +126,19 @@ def test_ingest_side_recovery() -> None:
         ingest("-cmd")
     with pytest.raises(ValueError, match="rejected"):
         ingest("@x")
+
+
+# ---- M16 coverage gap: _as_cell None / non-str ----
+
+
+def test_as_cell_none_returns_empty() -> None:
+    from agri_core.export.review_sheet import _as_cell
+
+    assert _as_cell(None) == ""
+
+
+def test_as_cell_non_str_converts() -> None:
+    from agri_core.export.review_sheet import _as_cell
+
+    assert _as_cell(42) == "42"
+    assert _as_cell(3.14) == "3.14"
