@@ -7,7 +7,7 @@ from collections.abc import Callable, Iterable, Mapping
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from agri_core.catalog.excluded import matches_excluded
-from agri_core.models.canonical import canonical_json
+from agri_core.models.canonical import canonical_json_rfc8785
 from agri_core.models.dictionary import Dictionary
 from agri_core.models.fact import TrapezoidValue
 from agri_core.models.finding import (
@@ -161,7 +161,7 @@ def check_fact_key_duplicate(
     for fact in ks.facts():
         if fact.superseded_by is not None:
             continue
-        scope_key = canonical_json(fact.scope).decode("utf-8")
+        scope_key = canonical_json_rfc8785(fact.scope).decode("utf-8")
         key = (fact.taxon_id, fact.parameter, fact.phase, scope_key)
         if key not in by_key:
             by_key[key] = fact

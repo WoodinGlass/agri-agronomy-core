@@ -16,7 +16,7 @@ from datetime import date, datetime
 from types import MappingProxyType
 from typing import Any, Literal
 
-from agri_core.models.canonical import canonical_json
+from agri_core.models.canonical import canonical_json_rfc8785
 from agri_core.pack.errors import (
     PackFieldTooLargeError,
     PackRowTooLargeError,
@@ -363,10 +363,10 @@ def _encode_cell(value: Any, col: ColumnSpec, *, line: int) -> str:
                     key=col.name,
                 )
         # canonical_json returns bytes; decode for CSV cell
-        return canonical_json(value).decode("utf-8")
+        return canonical_json_rfc8785(value).decode("utf-8")
     if col.type == "json":
         # canonical_json returns bytes; decode for CSV cell
-        return canonical_json(value).decode("utf-8")
+        return canonical_json_rfc8785(value).decode("utf-8")
     raise PackTableInvalidError(f"unknown column type {col.type!r}", line=line, key=col.name)
 
 

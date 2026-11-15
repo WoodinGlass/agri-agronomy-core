@@ -45,7 +45,7 @@ __all__ = [
 ]
 
 #: Independent SemVer for the review-sheet contract.
-SHEET_SCHEMA_VERSION = "1.0.0"
+SHEET_SCHEMA_VERSION = "1.1.0"
 
 #: Read-only columns. Populated from the pack.
 READONLY_COLUMNS = (

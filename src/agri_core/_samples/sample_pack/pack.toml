@@ -4,4 +4,5 @@ schema_version = 1
 engine_min = "0.0.0"
 dictionary_min = "1.2.0"
 synthetic = true
+hash_alg = "rfc8785"
 content_hash = "sha256:4ca67c008ae0abbc1218b16f570770bdc00069a686d5dee2c0154e03b08204f1"

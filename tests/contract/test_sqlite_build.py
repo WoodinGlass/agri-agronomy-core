@@ -289,7 +289,7 @@ def test_list_cells_sorted_using_real_vocab() -> None:
 def test_json_cells_canonical() -> None:
     import json as _json
 
-    from agri_core.models.canonical import canonical_json
+    from agri_core.models.canonical import canonical_json, canonical_json_rfc8785
 
     conn = _open_bytes(build_sqlite_bytes(_source_pack()))
     try:
@@ -300,9 +300,9 @@ def test_json_cells_canonical() -> None:
 
     for cell in scopes + values:
         parsed = _json.loads(cell)
-        assert canonical_json(parsed).decode("utf-8") == cell, (
+        assert canonical_json_rfc8785(parsed).decode("utf-8") == cell, (
             f"cell not canonical: stored={cell!r} "
-            f"recomputed={canonical_json(parsed).decode('utf-8')!r}"
+            f"recomputed={canonical_json_rfc8785(parsed).decode('utf-8')!r}"
         )
 
     zero_cell = canonical_json({"x": -0.0}).decode("utf-8")

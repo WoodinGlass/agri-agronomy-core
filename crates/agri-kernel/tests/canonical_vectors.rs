@@ -4,9 +4,9 @@ use agri_kernel::canonical::canonical_json;
 fn reads_shared_vectors() {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../tests/vectors/canonical.json"
+        "/../../tests/vectors/canonical_legacy.json"
     );
-    let data = std::fs::read_to_string(path).expect("canonical.json readable");
+    let data = std::fs::read_to_string(path).expect("canonical_legacy.json readable");
     let corpus: serde_json::Value = serde_json::from_str(&data).expect("valid json");
     let cases = corpus.as_array().expect("array of cases");
     let mut n = 0;

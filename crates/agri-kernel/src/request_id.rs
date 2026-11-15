@@ -1,6 +1,6 @@
 //! `compute_request_id` matching `src/agri_core/models/envelope.py`.
 
-use crate::canonical::canonical_json;
+use crate::canonical::canonical_json_rfc8785;
 use crate::hash::sha256_hex;
 use serde_json::{json, Value};
 
@@ -16,7 +16,7 @@ pub fn compute_request_id(
         "engine_version": engine_version,
         "pack_hash": pack_hash,
     });
-    let bytes = canonical_json(&payload).map_err(|e| format!("{e}"))?;
+    let bytes = canonical_json_rfc8785(&payload).map_err(|e| format!("{e}"))?;
     let hex = sha256_hex(&bytes);
     Ok(format!("req_{}", hex.get(..32).unwrap_or("")))
 }
