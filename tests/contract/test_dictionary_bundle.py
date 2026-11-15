@@ -279,3 +279,21 @@ def test_classify_custom_unit_added_minor() -> None:
     b = _bundle()
     b["units"]["custom_units"]["ppm"] = {"kind": "custom", "description": "ppm"}
     assert classify_change(a, b) == "MINOR"
+
+
+def test_contract_hash_rfc8785_dispatch() -> None:
+    """contract_hash(hash_alg=...) dispatches to the requested canonicalizer."""
+    a = _bundle()
+    legacy = contract_hash(a, hash_alg="pre-rfc8785")
+    rfc = contract_hash(a, hash_alg="rfc8785")
+    # Different algorithms produce different hashes for the same bundle.
+    assert legacy != rfc
+    # Deterministic.
+    assert contract_hash(a, hash_alg="rfc8785") == rfc
+    # Legacy remains default.
+    assert contract_hash(a) == legacy
+
+
+def test_contract_hash_bad_alg_raises() -> None:
+    with pytest.raises(ValueError, match=r"hash_alg must be"):
+        contract_hash(_bundle(), hash_alg="bogus")

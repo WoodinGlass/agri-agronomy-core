@@ -29,9 +29,9 @@ def dictionary() -> Dictionary:
     return Dictionary.load(PARAMS_YAML)
 
 
-def test_dictionary_version_is_1_2_1() -> None:
+def test_dictionary_version_is_1_3_0() -> None:
     data = yaml.safe_load(PARAMS_YAML.read_text(encoding="utf-8"))
-    assert data["dictionary_version"] == "1.2.1"
+    assert data["dictionary_version"] == "1.3.0"
 
 
 def test_all_params_have_required_shape_fields(dictionary: Dictionary) -> None:

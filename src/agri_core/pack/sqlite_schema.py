@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from agri_core import __version__
-from agri_core.models.canonical import canonical_json
+from agri_core.models.canonical import canonical_json_rfc8785
 from agri_core.pack.errors import (
     InvalidPackError,
     PackError,
@@ -173,9 +173,9 @@ def _sql_value(value: Any, col: ColumnSpec) -> Any:
                 f"expected dict, got {type(value).__name__}",
                 key=col.name,
             )
-        return canonical_json(value).decode("utf-8")
+        return canonical_json_rfc8785(value).decode("utf-8")
     if col.type == "json":
-        return canonical_json(value).decode("utf-8")
+        return canonical_json_rfc8785(value).decode("utf-8")
     raise PackTableInvalidError(f"unknown column type {col.type!r}", key=col.name)
 
 

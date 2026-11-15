@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 if TYPE_CHECKING:
     from importlib.resources.abc import Traversable
 
-from agri_core.models.canonical import canonical_json
+from agri_core.models.canonical import canonical_json, canonical_json_rfc8785
 from agri_core.models.parameter import ParameterDef, check_semver
 
 
@@ -147,19 +147,35 @@ def load_bundle_from_root(root: Path) -> dict[str, Any]:
     }
 
 
-def contract_hash(bundle: dict[str, Any]) -> str:
+def contract_hash(
+    bundle: dict[str, Any],
+    *,
+    hash_alg: str = "pre-rfc8785",
+) -> str:
     """SHA-256 of canonical JSON of ``{parameters, vocab, units}``.
 
     Version is intentionally excluded: the version + hash pair lives in
     ``dictionary.lock`` and is checked separately. Two bundles with the same
     content but different version strings have the same ``contract_hash``.
+
+    *hash_alg* selects the canonicalizer:
+
+    - ``"pre-rfc8785"`` (default): legacy ``json.dumps`` + ``-0.0`` to
+      ``0.0``. Replicates pre-v0.1.7 behaviour so existing snapshots in
+      ``dictionary/history/`` keep verifying with their original hashes.
+    - ``"rfc8785"``: full RFC 8785 (JCS) form. Used by dictionary 1.3.0
+      onward; see ADR-020.
     """
     payload = {
         "parameters": bundle["parameters"],
         "vocab": bundle["vocab"],
         "units": bundle["units"],
     }
-    return hashlib.sha256(canonical_json(payload)).hexdigest()
+    if hash_alg == "pre-rfc8785":
+        return hashlib.sha256(canonical_json(payload)).hexdigest()
+    if hash_alg == "rfc8785":
+        return hashlib.sha256(canonical_json_rfc8785(payload)).hexdigest()
+    raise ValueError(f"hash_alg must be 'pre-rfc8785' or 'rfc8785', got {hash_alg!r}")
 
 
 _SOFT_FIELDS: frozenset[str] = frozenset({"description", "rationale"})

@@ -7,7 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+### Changed (breaking)
+
+- **RFC 8785 (JCS) canonical JSON is now the production canonicalizer.**
+  See ADR-020. This release flips the write-path canonicalizer from the
+  legacy Python `json.dumps` form to RFC 8785 for every encoding site
+  that affects a persisted artifact:
+  - `src/agri_core/pack/tables.py` (`dict_str_str` and `json` cells):
+    row content in CSV tables now serialized via `canonical_json_rfc8785`.
+  - `src/agri_core/pack/sqlite_schema.py` (`dict_str_str` and `json`
+    cells): built `pack.sqlite` content now serialized via rfc8785.
+    `artifact_sha256` therefore changes once for every pack rebuilt under
+    this release (documented; no cross-version byte-equality guarantee).
+  - `src/agri_core/pack/validate.py` (scope key dedup): internal
+    comparison uses rfc8785.
+  - `src/agri_core/models/envelope.py` (`compute_request_id`) and
+    `crates/agri-kernel/src/request_id.rs` (Rust parity): request IDs
+    rotate to RFC 8785-derived values.
+  - `src/agri_core/export/review_sheet.py`: `value_json` follows rfc8785;
+    `sheet_schema_version` bumps `1.0.0 -> 1.1.0`.
+- **Dictionary 1.2.1 -> 1.3.0.** `contract_hash` moves to
+  `cfb0a7f73dcebe4479130ba3ff8e4fd3336d45123f6a640eec9057ce61d4840f` (RFC
+  8785). `dictionary/dictionary.lock` appends a self-describing
+  `<version> jcs:<hex>` line. `contract_hash(bundle, *, hash_alg=...)`
+  dispatches: legacy snapshots (1.0.0-1.2.1) keep verifying with
+  `hash_alg="pre-rfc8785"`; 1.3.0+ uses `"rfc8785"`.
+- **`content_hash` for packs with no float in `pack.toml` is unchanged.**
+  Sample pack `content_hash` (`sha256:4ca67c00…`) and the `_GOLDEN_HASH`
+  test vector (`sha256:365f6cae…`) do not move: `_pack_toml_content`
+  strips `hash_alg` before hashing, and `json.dumps` vs rfc8785 produce
+  identical bytes for the sample pack's ASCII+int content. Packs with
+  floats or non-BMP keys in `pack.toml` (none shipped yet) would move.
+
+### Added
+
+- `tests/vectors/canonical_legacy.json` — the pre-v0.1.7 vector set
+  (renamed from `canonical.json`); Rust `crates/agri-kernel/tests/
+  canonical_vectors.rs` updated to read the new path.
+- `tests/contract/test_dictionary_lock.py`: LOCK_RE and `_parse_lock`
+  accept dual format (`<version> <hex>` legacy, `<version> jcs:<hex>`
+  rfc8785). Each snapshot is verified with the algorithm declared in
+  `canonical_algorithm` (snapshots pre-1.3.0 default to `"pre-rfc8785"`).
+- `tests/contract/test_dictionary_bundle.py::test_contract_hash_rfc8785_dispatch`:
+  relational test that `contract_hash(hash_alg=...)` switches
+  canonicalizer, is deterministic, and defaults to legacy.
+- `tests/contract/test_native_parity.py::test_compute_request_id_parity`:
+  Python `compute_request_id` and Rust `_native.compute_request_id` are
+  byte-identical under rfc8785 (3 fixtures: no-subject, VPD, GDD).
+- `dictionary/history/1.3.0.json`: frozen snapshot for the 1.3.0 bump
+  (same content as 1.2.1, `version="1.3.0"`, `canonical_algorithm=
+  "rfc8785"`).
 
 - **Dependency floor.** Raise the `tornado` dev-extra floor from
   `>=6.6` to `>=6.6.1` to exclude the 6.6.0 build flagged by

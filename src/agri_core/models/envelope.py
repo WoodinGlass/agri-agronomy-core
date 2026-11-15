@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from agri_core.models.canonical import canonical_json
+from agri_core.models.canonical import canonical_json_rfc8785
 
 
 class Subject(BaseModel):
@@ -43,7 +43,7 @@ def compute_request_id(
         "engine_version": engine_version,
         "pack_hash": pack_hash,
     }
-    digest = hashlib.sha256(canonical_json(payload)).hexdigest()
+    digest = hashlib.sha256(canonical_json_rfc8785(payload)).hexdigest()
     return "req_" + digest[:32]
 
 

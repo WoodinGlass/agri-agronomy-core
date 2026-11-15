@@ -22,19 +22,29 @@ ROOT = Path(__file__).resolve().parents[2]
 DICT = ROOT / "dictionary"
 LOCK = DICT / "dictionary.lock"
 HISTORY = DICT / "history"
-LOCK_RE = re.compile(r"^(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?) ([0-9a-f]{64})$")
+LOCK_RE = re.compile(
+    r"^(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?) "
+    r"(?:(jcs):)?([0-9a-f]{64})$"
+)
 SNAPSHOT_NAME_RE = re.compile(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?\.json$")
 
 
-def _parse_lock(text: str) -> list[tuple[str, str]]:
-    entries: list[tuple[str, str]] = []
+def _parse_lock(text: str) -> list[tuple[str, str, str]]:
+    """Return ``(version, hash_alg, hex)`` triples.
+
+    ``hash_alg`` is ``"rfc8785"`` when the line carries a ``jcs:`` prefix
+    (dictionary 1.3.0+), else ``"pre-rfc8785"`` (pre-1.3.0 lines).
+    """
+    entries: list[tuple[str, str, str]] = []
     for line in text.rstrip("\n").split("\n"):
         if not line.strip():
             continue
         m = LOCK_RE.match(line)
         if m is None:
             raise AssertionError(f"lock line not matched: {line!r}")
-        entries.append((m.group(1), m.group(2)))
+        version, prefix, hexh = m.group(1), m.group(2), m.group(3)
+        hash_alg = "rfc8785" if prefix == "jcs" else "pre-rfc8785"
+        entries.append((version, hash_alg, hexh))
     return entries
 
 
@@ -48,7 +58,7 @@ def _all_snapshots() -> list[tuple[str, dict]]:
 
 
 @pytest.fixture(scope="module")
-def lock_entries() -> list[tuple[str, str]]:
+def lock_entries() -> list[tuple[str, str, str]]:
     return _parse_lock(LOCK.read_text(encoding="utf-8"))
 
 
@@ -61,10 +71,11 @@ def test_lock_exists() -> None:
     assert LOCK.is_file()
 
 
-def test_lock_well_formed(lock_entries: list[tuple[str, str]]) -> None:
+def test_lock_well_formed(lock_entries: list[tuple[str, str, str]]) -> None:
     assert len(lock_entries) >= 1
-    for version, h in lock_entries:
+    for version, hash_alg, h in lock_entries:
         Version(version)
+        assert hash_alg in ("pre-rfc8785", "rfc8785")
         assert re.fullmatch(r"[0-9a-f]{64}", h)
 
 
@@ -77,22 +88,22 @@ def test_lock_no_extra_content() -> None:
         assert LOCK_RE.match(line), f"lock line malformed: {line!r}"
 
 
-def test_lock_versions_sorted(lock_entries: list[tuple[str, str]]) -> None:
-    versions = [Version(v) for v, _ in lock_entries]
+def test_lock_versions_sorted(lock_entries: list[tuple[str, str, str]]) -> None:
+    versions = [Version(v) for v, _, _ in lock_entries]
     assert versions == sorted(versions)
 
 
-def test_lock_no_duplicate_versions(lock_entries: list[tuple[str, str]]) -> None:
-    versions = [v for v, _ in lock_entries]
+def test_lock_no_duplicate_versions(lock_entries: list[tuple[str, str, str]]) -> None:
+    versions = [v for v, _, _ in lock_entries]
     assert len(versions) == len(set(versions))
 
 
 def test_lock_last_is_current_version(
-    lock_entries: list[tuple[str, str]], current_bundle: dict
+    lock_entries: list[tuple[str, str, str]], current_bundle: dict
 ) -> None:
-    last_version, last_hash = lock_entries[-1]
+    last_version, last_alg, last_hash = lock_entries[-1]
     assert current_bundle["version"] == last_version
-    assert contract_hash(current_bundle) == last_hash
+    assert contract_hash(current_bundle, hash_alg=last_alg) == last_hash
 
 
 def test_history_dir_exists() -> None:
@@ -104,29 +115,37 @@ def test_history_contains_only_versioned_snapshots() -> None:
         assert SNAPSHOT_NAME_RE.match(p.name), f"unexpected file in history/: {p.name!r}"
 
 
-def test_every_lock_version_has_snapshot(lock_entries: list[tuple[str, str]]) -> None:
-    for version, _ in lock_entries:
+def test_every_lock_version_has_snapshot(lock_entries: list[tuple[str, str, str]]) -> None:
+    for version, _, _ in lock_entries:
         assert (HISTORY / f"{version}.json").is_file(), f"missing snapshot {version}.json"
 
 
-def test_every_snapshot_matches_lock_hash(lock_entries: list[tuple[str, str]]) -> None:
-    lock = {v: h for v, h in lock_entries}
+def test_every_snapshot_matches_lock_hash(lock_entries: list[tuple[str, str, str]]) -> None:
+    lock = {v: (alg, h) for v, alg, h in lock_entries}
     for p in HISTORY.glob("*.json"):
         snap = _load_snapshot(p)
         v = snap["version"]
         assert v in lock, f"snapshot {p.name} version {v!r} not in lock"
-        assert contract_hash(snap) == lock[v], f"snapshot {p.name} hash != lock"
+        alg_from_lock, expected_hash = lock[v]
+        alg_from_snap = snap.get("canonical_algorithm", "pre-rfc8785")
+        assert alg_from_snap == alg_from_lock, (
+            f"snapshot {p.name} alg {alg_from_snap!r} != lock alg {alg_from_lock!r}"
+        )
+        assert contract_hash(snap, hash_alg=alg_from_snap) == expected_hash, (
+            f"snapshot {p.name} hash != lock"
+        )
 
 
 def test_snapshot_latest_matches_current(current_bundle: dict) -> None:
     snaps = _all_snapshots()
     latest_version, latest = snaps[-1]
     assert latest_version == current_bundle["version"]
-    assert contract_hash(latest) == contract_hash(current_bundle)
+    alg = latest.get("canonical_algorithm", "pre-rfc8785")
+    assert contract_hash(latest, hash_alg=alg) == contract_hash(current_bundle, hash_alg=alg)
 
 
 def test_introduced_in_matches_first_snapshot(
-    lock_entries: list[tuple[str, str]], current_bundle: dict
+    lock_entries: list[tuple[str, str, str]], current_bundle: dict
 ) -> None:
     snaps = _all_snapshots()
     first: dict[str, str] = {}
@@ -140,7 +159,7 @@ def test_introduced_in_matches_first_snapshot(
         )
 
 
-def test_semver_compat(lock_entries: list[tuple[str, str]]) -> None:
+def test_semver_compat(lock_entries: list[tuple[str, str, str]]) -> None:
     snaps = _all_snapshots()
     if len(snaps) < 2:
         pytest.skip("need at least 2 snapshots to test SemVer compat")
