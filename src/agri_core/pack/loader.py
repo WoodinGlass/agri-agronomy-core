@@ -68,8 +68,12 @@ from agri_core.registry.sources import SourceRow
 
 _DEFAULT_DICTIONARY_SOURCE = "dictionary/parameters.core.yaml"
 
-# ADR-019 §11.5: native load path is available but gated by this flag until
-# G4-4 flips it after perf gate. Set True to route _load_built_pack to native.
+# ADR-019 §11.12 (G4-4, 2026-11-16): stop-loss applied. Native load is
+# 5.54x Python on the 10k pack (5854ms vs 1057ms), missing both the
+# 1400ms user budget (ADR-010) and the <=0.5x gate (§11.9). The native
+# path exists and is byte-identical to Python on parity + error codes;
+# it stays reachable via `_NATIVE_LOAD=True` for benchmarks. Default
+# remains Python until the follow-up (M21.5/M22) meets §11.9.
 _NATIVE_LOAD: bool = False
 _MAX_FINDINGS = 20
 

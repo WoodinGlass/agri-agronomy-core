@@ -575,3 +575,49 @@ G4 (4 sub-cells, 7–9 working days) in exchange for:
 - Third oracle (§11.7) when the first two disagree.
 
 The plan places full parity above speed.
+
+#### 11.12 Phase G4-4: backend stop-loss (2026-11-16)
+
+**Stop-loss applied.** G4-4 flipped `_NATIVE_LOAD` to `True` and measured
+the native load path on the 10k reference pack:
+
+| Metric | Budget (§11.9) | Measured | Verdict |
+|---|---|---|---|
+| `load_knowledge_set(built)` | <=1400 ms (ADR-010 user budget) | **5854 ms min** | **FAIL** |
+| Native / Python ratio | <=0.50x | **5.54x** | **FAIL** |
+
+`_NATIVE_LOAD` reverts to `False`. Python `SQLiteKnowledgeSet` remains the
+default. The native `RustKnowledgeSet` implementation is complete and
+byte-identical to Python on parity + error codes; it stays reachable via
+`_NATIVE_LOAD=True` for benchmarks. The follow-up (M21.5 or M22) either
+meets §11.9 or records permanent stop-loss.
+
+**Root cause.** Rust loads eagerly into a full in-memory `RustKnowledgeSet`
+(all rows materialized as `Vec<Row>` + `BTreeMap` indexes), whereas Python
+`SQLiteKnowledgeSet` is lazy (rows decoded on demand from SQLite). For the
+`load` operation the correctness contract only requires the artifact be
+verified and opened — Python's lazy open is ~5x cheaper than Rust's eager
+materialization on the 10k pack. Native `resolve_fact` / `resolve_taxon`
+that would benefit from eager indexes have not been ported (M22).
+
+**Parity gate.** `tests/contract/test_native_parity_load.py` passes on
+parity (properties, iterators, lookups, per-taxon, ids_lock, names_index)
+using the `python_loader` fixture to force `_NATIVE_LOAD=False` for the
+baseline. Error codes are byte-identical via `load_built_pack_native`
+through `PackError.code`. These are M21 gates (§11.10) and both pass.
+
+**Scope of the four-way matrix (§11.5).** Unchanged: the matrix lands with
+M22 (`resolve_taxon` / `resolve_fact` / `name_index` in Rust). Not part of
+M21 G4-4.
+
+**Stale-artifact divergence.** `SQLiteKnowledgeSet` re-checks the `.sqlite`
+file on each `names_index` call and raises `PackStaleArtifactError` when
+the artifact was tampered. `RustKnowledgeSet` is eager + in-memory and
+never re-reads the file, so it does not raise. Asserted explicitly in
+`tests/contract/test_stale_artifact.py` (backend-parametrized). Deliberate
+consequence of eager loading (ADR-001); not a stop-loss trigger — the
+trigger here is the load perf gate.
+
+**Follow-up.** M21.5 or M22 must either (a) meet §11.9 (<=1400 ms and
+<=0.5x on 10k) or (b) record permanent stop-loss here. Until then,
+`meta().backends["load_knowledge_set"]` reports `"python"`.

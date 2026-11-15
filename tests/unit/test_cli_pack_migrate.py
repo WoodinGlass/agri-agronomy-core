@@ -153,12 +153,14 @@ def test_meta_reports_hash_alg_and_backends(tmp_path: Path) -> None:
     ks = load_knowledge_set(root, allow_synthetic=True)
     m = meta(ks)
     assert m.hash_alg == "pre-rfc8785"
-    # ADR-019 stop-loss (Phase B, 2026-11-15): backends report "python"
-    # even when the native extension ships. Native remains importable as
-    # `_native.hash_pack_files` for opt-in benchmarks.
+    # ADR-019 stop-loss: hash_pack_files (Phase B), build_pack +
+    # validate_pack (Phase D), load_knowledge_set (Phase G4-4, §11.12)
+    # remain Python by design (perf gate not met; native still importable
+    # for opt-in benchmarks via `_NATIVE_LOAD=True` or `_native.*`).
     assert m.backends["hash_pack_files"] == "python"
     assert m.backends["build_pack"] == "python"
-    assert m.backends["load_knowledge_set"] == "python"
     assert m.backends["validate_pack"] == "python"
+    assert m.backends["load_knowledge_set"] == "python"
+    # Not yet ported (Phase E/F): remain Python.
     assert m.backends["diff_packs"] == "python"
     assert m.backends["derive_all_tiers"] == "python"
