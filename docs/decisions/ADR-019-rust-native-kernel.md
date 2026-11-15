@@ -366,3 +366,212 @@ port: **perf gate did not pass**, stop-loss applied.
   Python stdlib sqlite3). Current default (Python) -> no KAT change.
 - **Follow-up (Phase G, loader port):** unlocks
   `backends["validate_pack"]="native"`. Does not block tag `v0.1.7`.
+
+### 11. Phase G4: native `load_knowledge_set` + `normalize_name` + `name_index` (2026-11-16)
+
+Port `_load_built_pack`, `normalize_name`, `normalize_scope_value`, and
+`build_name_index` to Rust as **one backend unit** (binding rules below).
+This supersedes the "NameIndex tetap di Python" deferral in the
+2026-11-15 amendment.
+
+The decision trades a larger single PR for one property: every code path
+that resolves a taxon name goes through **one** normalizer and **one**
+index builder, so `resolve_taxon` cannot see two different names as equal
+(or unequal) depending on which Python interpreter happens to be running.
+
+#### 11.1 Unicode version pin
+
+The native normalizer is authoritative. `unicode-normalization 0.1.26`
+ships Unicode **18.0.0** tables; `caseless 0.2.2` ships **16.0.0** tables.
+Using both as-is would make NFKC (18.0) and casefold (16.0) operate on
+different Unicode versions — codepoints assigned in 17.0/18.0 would pass
+through NFKC but not get casefolded. That is a pipeline incoherence we do
+**not** ship.
+
+**Pin: Unicode 16.0.0.** NFKC and casefold both run against 16.0 tables.
+- `unicode-normalization` tables above 16.0 are dead for any input
+  we accept (strict mode rejects unassigned-at-16.0).
+- `caseless` at 16.0 matches.
+- Golden oracle: Python 3.14 (`unicodedata.unidata_version == "16.0.0"`).
+
+Version pin is asserted by `test_unicode_version_pin` (checks
+`caseless::UNICODE_VERSION == (16, 0, 0)` and
+`unicode_normalization::UNICODE_VERSION >= (16, 0, 0)`; the >= allows
+the normalization crate to ship later tables while we reject input that
+would exercise them) and `test_cargo_lock_single_unicode_normalization`.
+
+Native pin is exposed at runtime as `meta().unicode_version == "16.0.0"`.
+
+#### 11.2 Parity contract — version-minimum
+
+Cross-version divergence in NFKC/casefold is a **property of Unicode**, not
+a bug we introduce. Per Unicode stability policy, `toCasefold∘toNFKC` is
+stable for codepoints already encoded when they were assigned; only newly
+assigned codepoints can differ.
+
+**Contract:**
+
+- **Codepoints assigned in Unicode 14.0 or earlier:** byte-for-byte
+  parity with every Python version in the CI matrix (3.11/14.0,
+  3.12/15.0, 3.13/15.1, 3.14/16.0). No exceptions.
+- **Codepoints assigned in 14.1–16.0:** native is authoritative. Python
+  older than the codepoint's assignment version may differ; tests are
+  **version-aware** (skip codepoints whose `unicodedata.category == "Cn"`
+  in the running interpreter).
+- **Codepoints assigned after 16.0:** native rejects in strict mode
+  (§11.4); warning in normal mode.
+
+Golden vectors are generated from the **pinned** oracle (Python 3.14 /
+Unicode 16.0), not from whichever Python happens to run the tests.
+
+#### 11.3 Normalization pipeline (binding)
+
+`normalize_name(s)` and `normalize_scope_value(s)` implement exactly:
+
+1. **NFKC** (Unicode 16.0, via `unicode-normalization`).
+2. **Full case folding** (Unicode 16.0, via `caseless` `C`+`F` mappings).
+3. **Hybrid lift** (`normalize_name` only): `U+00D7` -> ASCII `x`.
+   `normalize_scope_value` skips this step.
+4. **Whitespace collapse** against an **explicit codepoint list** (§11.4),
+   not a language predicate.
+
+`Python str.split()` and Rust `char::is_whitespace()` agree on U+0009–U+000D,
+U+0020, U+00A0, U+1680, U+2000–U+200A, U+2028, U+2029, U+202F, U+205F,
+U+3000, and disagree on U+001C–U+001F (Python: whitespace; Rust: not).
+The two backends agree by **whitelisting** the same list. Emitted whitespace
+is ASCII space only.
+
+#### 11.4 Whitespace + strict-mode codepoint lists
+
+Two explicit codepoint sets are committed:
+
+- `WHITESPACE`: the list above (verified identical against Python
+  `str.isspace()` at the pin).
+- `UNSTABLE_AT_PIN`: `Cn` (unassigned) ∪ noncharacters (`U+FDD0..U+FDEF`,
+  `U+*FFFE`, `U+*FFFF`) ∪ private-use (`Co`) ∪ controls (`Cc`).
+  `surrogates (Cs)` are excluded from `UNSTABLE_AT_PIN` only because a
+  valid UTF-8 string cannot contain them; they are rejected upstream.
+
+**Strict mode** (`agri-core validate --strict`, pack-load default):
+reject codepoints in `UNSTABLE_AT_PIN`. **Normal mode**: warning, proceed.
+
+Rejection is **stability-driven**, not novelty-driven: Tulu-Tigalari
+(assigned in 16.0) is accepted because its NFKC/casefold behavior is frozen
+at the pin. Codepoints assigned in 17.0/18.0 are rejected because the pin
+cannot vouch for their behavior across future interpreters.
+
+**200-character cap** is applied **before** normalization, identically in
+both backends. Lone surrogates are rejected in Python before FFI; the
+native normalizer is never called with a string Python would have rejected.
+
+#### 11.5 Backend unit — `normalize` + `name_index`
+
+`normalize` and `name_index` ship as **one backend unit**. Four
+combinations are tested:
+
+| load backend | normalization backend | `resolve_taxon` |
+|---|---|---|
+| Python | Python | baseline |
+| Python | Rust | must equal baseline |
+| Rust | Python | must equal baseline |
+| Rust | Rust | must equal baseline |
+
+`meta().backends` records `"normalize_name"`, `"build_name_index"`, and
+`"load_knowledge_set"` individually. Any of the four combinations must
+produce identical `resolve_taxon` output for every fixture and every
+fuzz case.
+
+**Index built at load from raw rows.** `RustKnowledgeSet::__init__` builds
+the name index eagerly from `TaxonRow`/`NameRow` rows it already holds.
+No stored index, no index derived from Python, no index tied to a
+`KnowledgeSet` class in a way that survives a backend switch. This is the
+precondition that makes stop-loss safe (§11.7): if we flip native -> Python,
+the Python `SQLiteKnowledgeSet._build` rebuilds its index from the same raw
+rows, with the same normalizer, so `resolve_taxon` cannot see a
+half-native / half-Python state.
+
+#### 11.6 Determinism
+
+- No `HashMap` iteration in output paths. `BTreeMap` and `sort` only.
+- `Ambiguous.candidates` sorted by `taxon_id` (already §8).
+- No locale, no clock, no environment variable read. Two runs against the
+  same pack produce identical output.
+- Index sort order per bucket: `(taxon_id, matched_via, language, name)` —
+  exactly the Python order.
+
+#### 11.7 Fail taxonomy + stop-loss
+
+When a test fails, classify:
+
+1. **Port bug** (isolated, fixable). Time-box: 2 fix cycles. Then (3).
+2. **Unicode version diff** (`Cn` in the pinned oracle, or divergence only
+   on codepoints newly assigned in 14.1–16.0). Expected. Handled by
+   version-aware tests (§11.2). Not a stop-loss.
+3. **Semantic diff on codepoints <=14.0**, triaged with the ICU4X oracle
+   (dev-only, `icu_casemap` + `icu_normalizer`, license Unicode-3.0).
+   **Stop-loss applies:** `normalize_name`, `normalize_scope_value`, and
+   `build_name_index` stay Python; `load_knowledge_set` stays native if it
+   independently passes. `backends` reports the mix.
+
+Stop-loss condition is **not** "one test failed". It is "an unresolvable
+semantic diff on codepoints whose behavior the pin promises to be
+stable." A single port bug is a bug to fix, not a reason to abandon the
+port.
+
+#### 11.8 Security
+
+- `#![forbid(unsafe_code)]` in `agri-kernel`. PyO3 binding (`agri-py`)
+  is the only place `unsafe` is allowed, and only for FFI.
+- Clippy deny: `unwrap_used`, `expect_used`, `panic`, `indexing_slicing`.
+- Size limits enforced before allocation: `DEFAULT_MAX_BYTES = 100 MiB`
+  (pack), `MAX_FIELD_BYTES = 16 KiB`, `MAX_ROW_BYTES = 64 KiB` (CSV).
+- Hash-while-read: the SHA-256 of `pack.sqlite` is computed **as it is
+  streamed into** `deserialize_read_exact`. The bytes that are hashed are
+  the bytes that are opened. No TOCTOU window between hash and query.
+- SQLite opened with `query_only = ON`, `trusted_schema = OFF`.
+- Zero reachable panic under `cargo-fuzz` (24h gate). PyO3 converts any
+  Rust panic to `PanicException`; the gate proves no such panic is
+  reachable from any public binding.
+
+#### 11.9 Perf gate
+
+The <=0.5x gate applies to **post-load query paths**, not just `__init__`:
+
+- `load_knowledge_set(built)`: <=0.5x Python `SQLiteKnowledgeSet._build`.
+- `resolve_taxon` p95: <=5 ms (ADR-010 budget, unchanged).
+- `resolve_fact` p95: <=75 µs (ADR-010 budget, unchanged).
+- 100k-taxa scale ratio: <= gate from ADR-010 "multi-scale scaling".
+- `batch_suitability` 5k: <= baseline.
+
+RSS is measured **in a subprocess** (`ru_maxrss` / `VmHWM`), not via
+`tracemalloc` (which does not see Rust allocations). Native RSS <=2x the
+Python baseline. Missing a bound here is a stop-loss for the load port
+only; `normalize` + `name_index` remain independently judged.
+
+#### 11.10 Error codes + parity contract
+
+All errors use the stable `PackError.code` set (§8). `RustKnowledgeSet`
+raises the same Python exception type that `SQLiteKnowledgeSet` raises for
+the same condition. `test_stale_artifact` is **parametrized per backend**:
+
+- Python: changing `pack.sqlite` after load raises `PACK_STALE_ARTIFACT`.
+- Native: `pack.sqlite` is read once into memory; changing the file after
+  load is a no-op. `RustKnowledgeSet` is **immutable by construction**.
+  Divergence recorded here (mirrors §8).
+
+`mypy --strict` and `mypy stubtest` pass with `RustKnowledgeSet` typed
+against the `KnowledgeSet` Protocol.
+
+#### 11.11 Why this ships
+
+Wrong taxon = wrong fact = wrong advice. The cost of a name normalization
+bug is a crop-level decision made on the wrong species. We accept a larger
+G4 (4 sub-cells, 7–9 working days) in exchange for:
+
+- Full parity contract (§11.2), not a sample.
+- Single backend unit (§11.5), tested in all four combinations.
+- Cross-version safety (§11.1 pin + §11.2 version-aware tests).
+- Fail taxonomy that distinguishes port bug from stop-loss (§11.7).
+- Third oracle (§11.7) when the first two disagree.
+
+The plan places full parity above speed.
