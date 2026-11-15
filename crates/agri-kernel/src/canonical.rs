@@ -129,3 +129,258 @@ pub fn canonical_json(v: &Value) -> Result<Vec<u8>, CanonicalError> {
     write_value(&mut out, v)?;
     Ok(out)
 }
+
+// ============================================================================
+// RFC 8785 (JCS) canonical JSON
+// ============================================================================
+// See ADR-020. Mirrors src/agri_core/models/canonical.py::canonical_json_rfc8785.
+// Cross-checked against Node.js JSON.stringify on 101 boundary cases
+// (tests/vectors/canonical_rfc8785.json).
+
+fn rfc8785_int(i: i64) -> Result<String, CanonicalError> {
+    // Integers exact as IEEE 754 double format via rfc8785_float;
+    // integers that lose precision are rejected.
+    if i.unsigned_abs() < (1u64 << 53) {
+        return Ok(i.to_string());
+    }
+    let f = i as f64;
+    let f_back = f as i128;
+    let i_128 = i as i128;
+    if f_back != i_128 {
+        return Err(CanonicalError::Serde(format!(
+            "RFC 8785: integer {} loses precision as IEEE 754 double",
+            i
+        )));
+    }
+    rfc8785_float(f)
+}
+
+fn rfc8785_uint(u: u64) -> Result<String, CanonicalError> {
+    if u < (1u64 << 53) {
+        return Ok(u.to_string());
+    }
+    let f = u as f64;
+    let f_back = f as u128;
+    let u_128 = u as u128;
+    if f_back != u_128 {
+        return Err(CanonicalError::Serde(format!(
+            "RFC 8785: integer {} loses precision as IEEE 754 double",
+            u
+        )));
+    }
+    rfc8785_float(f)
+}
+
+/// ECMA-262 section 7.1.12.1 Number.prototype.toString (RFC 8785 s3.2.2.3).
+fn rfc8785_float(f: f64) -> Result<String, CanonicalError> {
+    if f.is_nan() {
+        return Err(CanonicalError::NonFinite);
+    }
+    if f.is_infinite() {
+        return Err(CanonicalError::NonFinite);
+    }
+    if f == 0.0 {
+        // Covers both +0.0 and -0.0.
+        return Ok("0".to_string());
+    }
+    let sign = if f < 0.0 { "-" } else { "" };
+    let abs = f.abs();
+    // Shortest-roundtrip exponential form: "<mantissa>e<exp>".
+    // For -0.0 we already returned early; abs > 0 here.
+    let sci = format!("{:e}", abs);
+    let (mant_str, exp_str) = sci
+        .split_once('e')
+        .ok_or_else(|| CanonicalError::Serde(format!("unexpected sci form: {sci}")))?;
+    let exp: i32 = exp_str
+        .parse()
+        .map_err(|_| CanonicalError::Serde(format!("bad exp in sci: {exp_str}")))?;
+
+    let mut digits: String = mant_str.chars().filter(|c| *c != '.').collect();
+    let k = digits.len() as i32;
+
+    // ECMA-262 s7.1.12.1 tiebreak: when s1 and s1 - 1 are both
+    // shortest representations of `abs` AND `abs` is exactly at their
+    // midpoint, choose the even one. Rust's `{:e}` picks s1 (may be odd).
+    // Exact rational arithmetic on f64 bits (no f64 rounding).
+    if digits.len() >= 2 {
+        if let Some(last) = digits.chars().last() {
+            if matches!(last, '3' | '5' | '7' | '9') {
+                if let Some(cand_str) = try_even_tiebreak(&digits, exp, abs) {
+                    digits = cand_str;
+                }
+            }
+        }
+    }
+
+    let n = exp + 1;
+
+    let body = if n > 0 && n <= 21 {
+        // Plain decimal notation.
+        if n >= k {
+            let pad = (n - k) as usize;
+            let mut s = digits;
+            s.push_str(&"0".repeat(pad));
+            s
+        } else {
+            let head: String = digits.chars().take(n as usize).collect();
+            let tail: String = digits.chars().skip(n as usize).collect();
+            format!("{head}.{tail}")
+        }
+    } else if n > -6 && n <= 0 {
+        // Small decimal: 0.000...digits.
+        let zeros = "0".repeat((-n) as usize);
+        format!("0.{zeros}{digits}")
+    } else {
+        // Scientific notation: d[.ddd]e+/-NN.
+        let exp_val = n - 1;
+        let sign_exp = if exp_val >= 0 { "+" } else { "-" };
+        let abs_exp = exp_val.unsigned_abs();
+        if k == 1 {
+            format!("{digits}e{sign_exp}{abs_exp}")
+        } else {
+            let head: String = digits.chars().take(1).collect();
+            let tail: String = digits.chars().skip(1).collect();
+            format!("{head}.{tail}e{sign_exp}{abs_exp}")
+        }
+    };
+    Ok(format!("{sign}{body}"))
+}
+
+/// ECMA-262 s7.1.12.1 tiebreak: return `digits - 1` (same digit count,
+/// even last digit) when the original `digits` and `digits - 1` are BOTH
+/// shortest representations of `abs` AND `abs` is EXACTLY at their
+/// midpoint. Exact rational arithmetic on f64 bits (`mant * 2^p`) vs
+/// midpoint (`(2d - 1) * 10^(exp-k+1)` / 2) — no f64 rounding. Returns
+/// `None` on overflow, subnormal `abs`, or non-tie.
+fn try_even_tiebreak(digits: &str, exp: i32, abs: f64) -> Option<String> {
+    let mut cand_bytes: Vec<u8> = digits.as_bytes().to_vec();
+    *cand_bytes.last_mut()? -= 1;
+    let cand_str = String::from_utf8(cand_bytes).ok()?;
+
+    let k = digits.len() as i32;
+    let cand_sci = if k == 1 {
+        format!("{cand_str}e{exp}")
+    } else {
+        let first = cand_str.chars().next()?;
+        let rest: String = cand_str.chars().skip(1).collect();
+        format!("{first}.{rest}e{exp}")
+    };
+    if cand_sci.parse::<f64>().ok()? != abs {
+        return None;
+    }
+
+    // Decompose abs = mant * 2^p from f64 bits (positive normal only).
+    let bits = abs.to_bits();
+    let exp_bits = ((bits >> 52) & 0x7FF) as i32;
+    if exp_bits == 0 || exp_bits == 0x7FF {
+        return None;
+    }
+    let mant: u128 = (1u128 << 52) | ((bits & 0xFFFFFFFFFFFFF) as u128);
+    let p = exp_bits - 1023 - 52;
+
+    let d_val: u128 = digits.parse().ok()?;
+    let two_d_minus_1 = d_val.checked_mul(2)?.checked_sub(1)?;
+
+    // Compare mant * 2^(p+1) == (2d-1) * 10^(exp - k + 1).
+    let lhs_exp = p + 1;
+    let rhs_exp = exp - k + 1;
+
+    let lhs_shift = if lhs_exp >= 0 { lhs_exp as u32 } else { 0 };
+    let lhs_div = if lhs_exp < 0 { (-lhs_exp) as u32 } else { 0 };
+    let rhs_shift = if rhs_exp >= 0 { rhs_exp as u32 } else { 0 };
+    let rhs_div = if rhs_exp < 0 { (-rhs_exp) as u32 } else { 0 };
+
+    let ten_rhs_div = 10u128.checked_pow(rhs_div)?;
+    let ten_rhs_shift = 10u128.checked_pow(rhs_shift)?;
+
+    let lhs = mant.checked_shl(lhs_shift)?.checked_mul(ten_rhs_div)?;
+    let rhs = two_d_minus_1
+        .checked_mul(ten_rhs_shift)?
+        .checked_shl(lhs_div)?;
+
+    if lhs == rhs {
+        Some(cand_str)
+    } else {
+        None
+    }
+}
+
+fn werr(e: std::io::Error) -> CanonicalError {
+    CanonicalError::Serde(e.to_string())
+}
+
+fn serr(e: serde_json::Error) -> CanonicalError {
+    CanonicalError::Serde(e.to_string())
+}
+
+fn write_rfc8785<W: std::io::Write>(w: &mut W, v: &Value) -> Result<(), CanonicalError> {
+    match v {
+        Value::Null => w.write_all(b"null").map_err(werr),
+        Value::Bool(true) => w.write_all(b"true").map_err(werr),
+        Value::Bool(false) => w.write_all(b"false").map_err(werr),
+        Value::Number(n) => {
+            let s = if let Some(i) = n.as_i64() {
+                rfc8785_int(i)?
+            } else if let Some(u) = n.as_u64() {
+                rfc8785_uint(u)?
+            } else if let Some(f) = n.as_f64() {
+                rfc8785_float(f)?
+            } else {
+                return Err(CanonicalError::Serde("unrepresentable number".into()));
+            };
+            w.write_all(s.as_bytes()).map_err(werr)
+        }
+        Value::String(s) => {
+            // serde_json::to_string matches RFC 8785 s3.2.2.2:
+            // escapes ", \, control chars; leaves non-ASCII as UTF-8.
+            let esc = serde_json::to_string(s).map_err(serr)?;
+            w.write_all(esc.as_bytes()).map_err(werr)
+        }
+        Value::Array(arr) => {
+            w.write_all(b"[").map_err(werr)?;
+            for (i, item) in arr.iter().enumerate() {
+                if i > 0 {
+                    w.write_all(b",").map_err(werr)?;
+                }
+                write_rfc8785(w, item)?;
+            }
+            w.write_all(b"]").map_err(werr)
+        }
+        Value::Object(map) => {
+            w.write_all(b"{").map_err(werr)?;
+            // Sort keys by UTF-16 code units (RFC 8785 s3.2.3).
+            let mut entries: Vec<(Vec<u16>, &String, &Value)> = map
+                .iter()
+                .map(|(k, v)| (k.encode_utf16().collect::<Vec<u16>>(), k, v))
+                .collect();
+            entries.sort_by(|a, b| a.0.cmp(&b.0));
+            let mut first = true;
+            for (_, k, v) in entries {
+                if !first {
+                    w.write_all(b",").map_err(werr)?;
+                }
+                first = false;
+                let esc_key = serde_json::to_string(k).map_err(serr)?;
+                w.write_all(esc_key.as_bytes()).map_err(werr)?;
+                w.write_all(b":").map_err(werr)?;
+                write_rfc8785(w, v)?;
+            }
+            w.write_all(b"}").map_err(werr)
+        }
+    }
+}
+
+/// Return RFC 8785 (JCS) canonical JSON bytes for a serde_json Value.
+///
+/// Implements:
+///   - Number per ECMA-262 s7.1.12.1 (1.0 -> "1", 1e-7 -> "1e-7",
+///     -0.0 -> "0", 1e21 -> "1e+21").
+///   - Object key sort by UTF-16 code units.
+///   - Reject: NaN, Infinity, integers losing double precision.
+///
+/// Byte-identical to Python `canonical_json_rfc8785`.
+pub fn canonical_json_rfc8785(v: &Value) -> Result<Vec<u8>, CanonicalError> {
+    let mut out = Vec::new();
+    write_rfc8785(&mut out, v)?;
+    Ok(out)
+}

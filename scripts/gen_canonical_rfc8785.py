@@ -99,6 +99,10 @@ FLOATS = [
     2.2250738585072014e-308,
     # Negative small
     -1e-7,
+    # Even tiebreak (ECMA-262 s7.1.12.1: exact tie -> even last digit)
+    70368744177664.125,  # 2^46 + 0.125; Rust {:e} -> .13, ECMA wants .12
+    1125899906842624.2,  # 2^50 + 0.2
+    -70368744177664.125,  # sign variant
 ]
 
 INTS = [
