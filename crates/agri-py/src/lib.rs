@@ -162,6 +162,12 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(pack::py_write_table, m)?)?;
     m.add_function(wrap_pyfunction!(pack::py_find_forbidden, m)?)?;
     m.add_function(wrap_pyfunction!(pack::py_build_sqlite_bytes, m)?)?;
+    m.add_function(wrap_pyfunction!(pack::py_load_built_pack_native, m)?)?;
+    m.add_class::<pack::PyRustKnowledgeSet>()?;
+    m.add_class::<pack::TaxonIterator>()?;
+    m.add_class::<pack::FactIterator>()?;
+    m.add_class::<pack::NameIterator>()?;
+    m.add_class::<pack::HazardIterator>()?;
     m.add_function(wrap_pyfunction!(pack::py_validate_pack_findings, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())

@@ -173,7 +173,9 @@ mod tests {
             organism_group: "vascular_plant".into(),
             archetype: "annual".into(),
             uses: vec!["vegetable".into()],
+            traits: vec![],
             parent_id: None,
+            external_ids: None,
             src: Some(vec!["S001".into()]),
             dataset_id: None,
         }

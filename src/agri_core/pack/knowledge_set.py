@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 import re
 import sqlite3
 from collections.abc import Iterable, Iterator, Mapping
@@ -26,7 +27,7 @@ from agri_core.pack.normalize import normalize_name
 from agri_core.pack.tables import TABLES, TableSpec
 from agri_core.registry.sources import SourceRow
 
-__all__ = ["InMemoryKnowledgeSet", "KnowledgeSet", "SQLiteKnowledgeSet"]
+__all__ = ["InMemoryKnowledgeSet", "KnowledgeSet", "RustKnowledgeSet", "SQLiteKnowledgeSet"]
 
 _T = TypeVar("_T", bound=BaseModel)
 _PACK_HASH_RE = re.compile(r"^sha256:[a-f0-9]{64}$")
@@ -761,4 +762,164 @@ class SQLiteKnowledgeSet:
 
 def _conforms_sqlite(ks: SQLiteKnowledgeSet) -> KnowledgeSet:
     """mypy structural check: SQLiteKnowledgeSet satisfies KnowledgeSet."""
+    return ks
+
+# ---- RustKnowledgeSet (M21 G4-3) ------------------------------------------
+
+_NATIVE_LOAD_AVAILABLE: bool = False
+try:
+    from agri_core import _native as _native_mod
+
+    _NATIVE_LOAD_AVAILABLE = hasattr(_native_mod, "load_built_pack_native")
+except ImportError:
+    _native_mod = None  # type: ignore[assignment]
+
+
+class RustKnowledgeSet:
+    """Wrapper around native `_native.PyRustKnowledgeSet` (M21 G4).
+
+    Mirrors the KnowledgeSet Protocol. Rows are built via Pydantic
+    `model_construct` (fields validated at pack-build time; no re-validation
+    per row) — per ADR-019 §11.5 the native set already holds structurally
+    validated rows.
+
+    Date fields (`reviewed_at`, `as_of`, `access_date`) are converted from
+    ISO strings to `datetime.date` per row when consumed, so lazy iteration
+    keeps memory bounded.
+    """
+
+    __slots__ = ("_native", "_manifest", "_dictionary")
+
+    def __init__(
+        self,
+        native: object,
+        manifest: PackManifest,
+        dictionary: Dictionary,
+    ) -> None:
+        object.__setattr__(self, "_native", native)
+        object.__setattr__(self, "_manifest", manifest)
+        object.__setattr__(self, "_dictionary", dictionary)
+
+    # ---- Protocol properties ----
+
+    @property
+    def manifest(self) -> PackManifest:
+        return self._manifest
+
+    @property
+    def pack_hash(self) -> str:
+        return str(self._native.pack_hash)  # type: ignore[attr-defined]
+
+    @property
+    def dictionary_version(self) -> str:
+        return str(self._native.dictionary_version)  # type: ignore[attr-defined]
+
+    @property
+    def verified(self) -> bool:
+        return bool(self._native.verified)  # type: ignore[attr-defined]
+
+    @property
+    def dictionary(self) -> Dictionary:
+        return self._dictionary
+
+    @property
+    def artifact_sha256(self) -> str:
+        return str(self._native.artifact_sha256)  # type: ignore[attr-defined]
+
+    # ---- per-item lookups ----
+
+    def taxon(self, taxon_id: str) -> TaxonRow:
+        d = self._native.taxon(taxon_id)  # type: ignore[attr-defined]
+        if d is None:
+            raise KeyError(taxon_id)
+        return TaxonRow.model_construct(**d)
+
+    def source(self, source_id: str) -> SourceRow:
+        d = self._native.source(source_id)  # type: ignore[attr-defined]
+        if d is None:
+            raise KeyError(source_id)
+        if d.get("access_date"):
+            d = {**d, "access_date": date.fromisoformat(d["access_date"])}
+        return SourceRow.model_construct(**d)
+
+    def dataset(self, dataset_id: str) -> DatasetRow:
+        d = self._native.dataset(dataset_id)  # type: ignore[attr-defined]
+        if d is None:
+            raise KeyError(dataset_id)
+        if d.get("access_date"):
+            d = {**d, "access_date": date.fromisoformat(d["access_date"])}
+        return DatasetRow.model_construct(**d)
+
+    # ---- iterators ----
+
+    def taxa(self) -> Iterator[TaxonRow]:
+        for d in self._native.taxa():  # type: ignore[attr-defined]
+            yield TaxonRow.model_construct(**d)
+
+    def facts(self) -> Iterator[FactRow]:
+        for d in self._native.facts():  # type: ignore[attr-defined]
+            if d.get("reviewed_at"):
+                d = {**d, "reviewed_at": date.fromisoformat(d["reviewed_at"])}
+            yield FactRow.model_construct(**d)
+
+    def names(self) -> Iterator[NameRow]:
+        for d in self._native.names():  # type: ignore[attr-defined]
+            yield NameRow.model_construct(**d)
+
+    def hazards(self) -> Iterator[HazardRow]:
+        for d in self._native.hazards():  # type: ignore[attr-defined]
+            if d.get("as_of"):
+                d = {**d, "as_of": date.fromisoformat(d["as_of"])}
+            yield HazardRow.model_construct(**d)
+
+    # ---- per-taxon ----
+
+    def facts_for(self, taxon_id: str, parameter: str | None = None) -> tuple[FactRow, ...]:
+        rows = self._native.facts_for(taxon_id, parameter)  # type: ignore[attr-defined]
+        out = []
+        for d in rows:
+            if d.get("reviewed_at"):
+                d = {**d, "reviewed_at": date.fromisoformat(d["reviewed_at"])}
+            out.append(FactRow.model_construct(**d))
+        return tuple(out)
+
+    def names_for(self, taxon_id: str) -> tuple[NameRow, ...]:
+        rows = self._native.names_for(taxon_id)  # type: ignore[attr-defined]
+        return tuple(NameRow.model_construct(**d) for d in rows)
+
+    def hazards_for(self, taxon_id: str) -> tuple[HazardRow, ...]:
+        rows = self._native.hazards_for(taxon_id)  # type: ignore[attr-defined]
+        out = []
+        for d in rows:
+            if d.get("as_of"):
+                d = {**d, "as_of": date.fromisoformat(d["as_of"])}
+            out.append(HazardRow.model_construct(**d))
+        return tuple(out)
+
+    def ids_lock(self) -> frozenset[str] | None:
+        v = self._native.ids_lock()  # type: ignore[attr-defined]
+        return frozenset(v) if v is not None else None
+
+    def names_index(self, query: str) -> tuple[NameIndexEntry, ...]:
+        rows = self._native.names_index(query)  # type: ignore[attr-defined]
+        out = []
+        for d in rows:
+            out.append(
+                NameIndexEntry(
+                    taxon_id=d["taxon_id"],
+                    name=d["name"],
+                    normalized_name=d["normalized_name"],
+                    language=d["language"],
+                    kind=d["kind"],
+                    preferred=bool(d["preferred"]),
+                    matched_via=d["matched_via"],
+                    rank=d["rank"],
+                    scientific_name=d["scientific_name"],
+                )
+            )
+        return tuple(out)
+
+
+def _conforms_rust(ks: RustKnowledgeSet) -> KnowledgeSet:
+    """mypy structural check: RustKnowledgeSet satisfies KnowledgeSet."""
     return ks

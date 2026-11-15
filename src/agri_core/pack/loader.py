@@ -55,6 +55,11 @@ from agri_core.pack.knowledge_set import (
     SQLiteKnowledgeSet,
     _sqlite_uri,
 )
+
+try:
+    from agri_core import _native as _native_mod
+except ImportError:
+    _native_mod = None  # type: ignore[assignment]
 from agri_core.pack.manifest import SUPPORTED_SCHEMA_VERSIONS, PackManifest
 from agri_core.pack.sqlite_schema import SQLITE_SCHEMA_VERSION
 from agri_core.pack.tables import TABLES, Table, read_table
@@ -62,6 +67,10 @@ from agri_core.pack.verify import compute_file_sha256, hash_pack_files
 from agri_core.registry.sources import SourceRow
 
 _DEFAULT_DICTIONARY_SOURCE = "dictionary/parameters.core.yaml"
+
+# ADR-019 §11.5: native load path is available but gated by this flag until
+# G4-4 flips it after perf gate. Set True to route _load_built_pack to native.
+_NATIVE_LOAD: bool = False
 _MAX_FINDINGS = 20
 
 
@@ -726,6 +735,26 @@ def _load_built_pack(
             "the file is being modified concurrently",
             file="pack.sqlite",
         )
+
+    if _NATIVE_LOAD:
+        from agri_core.pack.knowledge_set import (
+            _NATIVE_LOAD_AVAILABLE,
+            RustKnowledgeSet,
+        )
+
+        if _NATIVE_LOAD_AVAILABLE:
+            native = _native_mod.load_built_pack_native(  # type: ignore[union-attr]
+                str(pack_sqlite),
+                manifest.model_dump(mode="json"),
+                expected_hash,
+                dictionary.version,
+                max_bytes,
+            )
+            return RustKnowledgeSet(
+                native,
+                manifest=manifest,
+                dictionary=dictionary,
+            )
 
     return SQLiteKnowledgeSet._build(
         sqlite_path=pack_sqlite,

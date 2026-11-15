@@ -756,7 +756,7 @@ def meta(pack: KnowledgeSet) -> MetaInfo:
             # Phase B: hash_pack_files detects native at import time.
             "hash_pack_files": _hash_pack_files_backend(),
             "build_pack": "python",
-            "load_knowledge_set": "python",
+            "load_knowledge_set": _load_knowledge_set_backend(),
             "validate_pack": "python",
             "diff_packs": "python",
             "derive_all_tiers": "python",
