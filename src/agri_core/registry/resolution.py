@@ -719,6 +719,19 @@ FactOutcomeAdapter: TypeAdapter[FactOutcome] = TypeAdapter(FactOutcome)
 """Validate or serialize any :data:`FactOutcome` value."""
 
 
+def _hash_pack_files_backend() -> str:
+    """Report the backend the public `hash_pack_files` wrapper uses.
+
+    ADR-019 stop-loss (Phase B, 2026-11-15): native measured 1.86x
+    pure-Python on the 10k pack (SHA-256 crate bottleneck on CPUs
+    without SHA-NI). The public wrapper uses pure Python; native is
+    importable as `agri_core._native.hash_pack_files` for opt-in
+    benchmarks. This function returns "python" unconditionally until
+    a follow-up PR swaps the SHA-256 crate and passes the 0.5x gate.
+    """
+    return "python"
+
+
 def meta(pack: KnowledgeSet) -> MetaInfo:
     """Return :class:`MetaInfo` for *pack*.
 
@@ -738,10 +751,10 @@ def meta(pack: KnowledgeSet) -> MetaInfo:
         engine_min=pack.manifest.engine_min,
         hash_alg=pack.manifest.hash_alg or "pre-rfc8785",
         backends={
-            # Phase B/C/D/E/F/G will flip individual entries to "native"
+            # Phase B/C/D/E/F/G flip individual entries to "native"
             # once the native implementation passes its perf gate.
-            # A1: all Python (Rust hash_pack_files etc. not yet written).
-            "hash_pack_files": "python",
+            # Phase B: hash_pack_files detects native at import time.
+            "hash_pack_files": _hash_pack_files_backend(),
             "build_pack": "python",
             "load_knowledge_set": "python",
             "validate_pack": "python",

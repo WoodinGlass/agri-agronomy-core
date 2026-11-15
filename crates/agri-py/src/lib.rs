@@ -135,10 +135,25 @@ fn canonical_json_rfc8785(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<Ve
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("{e}")))
 }
 
+#[pyfunction]
+#[pyo3(signature = (files, *, hash_alg))]
+fn hash_pack_files(files: &Bound<'_, pyo3::types::PyDict>, hash_alg: String) -> PyResult<String> {
+    use std::collections::HashMap;
+    let mut map: HashMap<String, Vec<u8>> = HashMap::new();
+    for (k, v) in files.iter() {
+        let key: String = k.extract()?;
+        let bytes: Vec<u8> = v.extract()?;
+        map.insert(key, bytes);
+    }
+    agri_kernel::pack::verify::hash_pack_files(&map, &hash_alg)
+        .map_err(pyo3::exceptions::PyValueError::new_err)
+}
+
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(canonical_json, m)?)?;
     m.add_function(wrap_pyfunction!(canonical_json_rfc8785, m)?)?;
+    m.add_function(wrap_pyfunction!(hash_pack_files, m)?)?;
     m.add_function(wrap_pyfunction!(sha256_hex, m)?)?;
     m.add_function(wrap_pyfunction!(compute_request_id, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;

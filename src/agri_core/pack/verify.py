@@ -63,12 +63,15 @@ def _content_bytes(relpath: str, data: bytes, *, hash_alg: str) -> bytes:
     return _normalize_lf(data)
 
 
-def hash_pack_files(
+def _hash_pack_files_py(
     files: Mapping[str, bytes],
     *,
     hash_alg: str,
 ) -> str:
-    """Return ``sha256:<hex>`` over *files* in canonical form (P1).
+    """Return ``sha256:<hex>`` over *files* in canonical form (P1) — pure Python.
+
+    Oracle for the native implementation. Byte-identical to
+    ``agri_core._native.hash_pack_files`` for the same input + hash_alg.
 
     Algorithm::
 
@@ -97,6 +100,57 @@ def hash_pack_files(
         content_hex = hashlib.sha256(content).hexdigest()
         digest.update(f"{content_hex}  {relpath}\n".encode())
     return "sha256:" + digest.hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# Native delegate (Phase B, M21)
+# ---------------------------------------------------------------------------
+# When `agri_core._native` is importable and exports `hash_pack_files`, the
+# public `hash_pack_files` delegates there. Fallback to the pure-Python
+# implementation on source installs without the compiled extension, and on
+# any native unexpected error (defensive: never let a native bug mask as a
+# Python bug).
+#
+# Error semantics preserved: native `PyValueError` messages about
+# `pack.toml` / `datetime` are translated to `PackTableInvalidError` to
+# match the Python contract.
+
+_NATIVE_HAS_HASH_PACK_FILES: bool = False
+try:
+    from agri_core import _native as _native_mod
+
+    _NATIVE_HAS_HASH_PACK_FILES = hasattr(_native_mod, "hash_pack_files")
+except ImportError:
+    _native_mod = None  # type: ignore[assignment]
+
+
+def hash_pack_files(
+    files: Mapping[str, bytes],
+    *,
+    hash_alg: str,
+) -> str:
+    """Return ``sha256:<hex>`` over *files* in canonical form (P1).
+
+    Uses the pure-Python implementation (ADR-019 stop-loss, Phase B,
+    2026-11-15). Native ``agri_core._native.hash_pack_files`` remains
+    importable for opt-in benchmarks and produces byte-identical output;
+    see ``tests/vectors/hash_pack_files.json`` and
+    ``tests/contract/test_native_parity_pack.py``.
+    """
+    if hash_alg not in ("pre-rfc8785", "rfc8785"):
+        raise ValueError(f"hash_alg must be 'pre-rfc8785' or 'rfc8785', got {hash_alg!r}")
+    if "pack.toml" not in files:
+        raise PackTableInvalidError("pack.toml missing from files mapping", file="pack.toml")
+
+    # ADR-019 stop-loss (Phase B, 2026-11-15): native `hash_pack_files`
+    # measured 1.86x pure-Python on the 10k reference pack. Root cause is
+    # rustcrypto `sha2 0.11` at ~156 MB/s vs OpenSSL `hashlib` at
+    # ~318 MB/s on CPUs without SHA-NI (the perf runner has avx2, no
+    # sha_ni). Per-file SHA-256 alone is 435 ms native vs 214 ms Python.
+    # The public wrapper therefore uses pure Python. Native remains
+    # importable as `agri_core._native.hash_pack_files` for opt-in
+    # benchmarks; see ADR-019 amendment 2026-11-15 §9 for the follow-up.
+    return _hash_pack_files_py(files, hash_alg=hash_alg)
 
 
 def compute_pack_hash(
