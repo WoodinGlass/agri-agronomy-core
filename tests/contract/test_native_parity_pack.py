@@ -132,6 +132,15 @@ def test_hypothesis_small_mappings() -> None:
         "So",
         "Zs",
     )
+    _RESERVED_TOML_KEYS = frozenset(
+        {
+            "name",
+            "version",
+            "schema_version",
+            "engine_min",
+            "dictionary_min",
+        }
+    )
     scalar = st.one_of(
         st.text(
             min_size=0,
@@ -160,11 +169,16 @@ def test_hypothesis_small_mappings() -> None:
         min_size=1,
         max_size=12,
     )
+    # `extra` must not collide with the hardcoded reserved keys above:
+    # duplicate TOML keys are invalid per TOML spec, and `_pack_toml_content`
+    # correctly rejects them. Filter them out of the key strategy so the
+    # fuzz exercises canonicalization parity, not TOML parse rejection.
+    extra_key_st = name_st.filter(lambda k: k not in _RESERVED_TOML_KEYS)
 
     @given(
         name=name_st,
         version=st.from_regex(r"[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}", fullmatch=True),
-        extra=st.dictionaries(name_st, value, min_size=0, max_size=3),
+        extra=st.dictionaries(extra_key_st, value, min_size=0, max_size=3),
         hash_alg=st.sampled_from(["pre-rfc8785", "rfc8785"]),
     )
     @settings(max_examples=1000, deadline=None)
