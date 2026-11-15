@@ -100,3 +100,93 @@ def test_adr_008_gap_documented(decision_section: str) -> None:
     assert "ADR-008" in decision_section, (
         "ADR-008 file missing but §Decision records doesn't explain the gap"
     )
+
+
+# ---- ADR-NNN §M section reference gate (added D1, M21 Phase G4) ----
+
+
+_ADR_SECTION_REF = re.compile(r"ADR-(\d+)\s*((?:§\d+(?:\s*,\s*§\d+)*))")
+_ADR_SECTION_NUM = re.compile(r"§(\d+)")
+_ADR_HEADING = re.compile(r"^### (\d+)\.", re.MULTILINE)
+
+
+def _adr_files_by_num() -> dict[str, Path]:
+    out: dict[str, Path] = {}
+    for p in ADR_DIR.glob("ADR-*.md"):
+        m = _ADR_FILE_NUM.search(p.name)
+        if m:
+            out[m.group(1)] = p
+    return out
+
+
+def _section_nums_in(adr_path: Path) -> set[str]:
+    return set(_ADR_HEADING.findall(adr_path.read_text(encoding="utf-8")))
+
+
+def _all_section_refs() -> list[tuple[Path, int, str, list[str]]]:
+    """Yield (source_file, line, adr_num, [section_nums]) for every ref."""
+    adr_files_by_num = _adr_files_by_num()
+    refs: list[tuple[Path, int, str, list[str]]] = []
+    files = [
+        *list((ROOT / "docs").rglob("*.md")),
+        ROOT / "CHANGELOG.md",
+        ROOT / "README.md",
+    ]
+    for f in files:
+        if f.name == "ADR-019-rust-native-kernel.md":
+            # Skip self-references inside ADR-019 (§4, §5 appear in prose
+            # describing the amendment itself, not as external pointers).
+            continue
+        try:
+            text = f.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for i, line in enumerate(text.splitlines(), start=1):
+            for m in _ADR_SECTION_REF.finditer(line):
+                adr_num = m.group(1)
+                if adr_num not in adr_files_by_num:
+                    continue
+                secs = _ADR_SECTION_NUM.findall(m.group(2))
+                refs.append((f, i, adr_num, secs))
+    return refs
+
+
+def test_adr_section_refs_point_to_existing_headings() -> None:
+    """Every `ADR-NNN §M` or `ADR-NNN §M, §N` in docs/README/CHANGELOG
+    must point to an existing `### M.` heading in that ADR file.
+
+    Retroactive gate added D1 (M21 Phase G4). Closes the class of error
+    that produced d0610a1's "Documented in ADR-019 §10" claim while §10
+    did not exist.
+    """
+    adr_files = _adr_files_by_num()
+    failures: list[str] = []
+    for src, line_no, adr_num, secs in _all_section_refs():
+        existing = _section_nums_in(adr_files[adr_num])
+        missing = [s for s in secs if s not in existing]
+        if missing:
+            rel = src.relative_to(ROOT)
+            existing_str = ", ".join(f"§{s}" for s in sorted(existing)) or "none"
+            failures.append(
+                f"{rel}:{line_no} references ADR-{adr_num} "
+                f"§{', §'.join(missing)} but ADR-{adr_num} has no "
+                f"such section(s) (existing: {existing_str})"
+            )
+    assert not failures, "ADR section references point to missing headings:\n" + "\n".join(failures)
+
+
+def test_adr_019_sections_contiguous() -> None:
+    """ADR-019 numbered subsections must be contiguous 1..N with no gaps.
+
+    Guards against silently skipping a section (the A1b claim referenced
+    §10 while only §1-§9 existed). New sections must extend the tail, not
+    insert gaps.
+    """
+    nums = _section_nums_in(ADR_DIR / "ADR-019-rust-native-kernel.md")
+    if not nums:
+        pytest.skip("ADR-019 has no numbered subsections yet")
+    ints = sorted(int(n) for n in nums)
+    assert ints == list(range(1, ints[-1] + 1)), (
+        f"ADR-019 numbered sections are not contiguous: got {ints}, "
+        f"expected 1..{ints[-1]} with no gaps"
+    )
