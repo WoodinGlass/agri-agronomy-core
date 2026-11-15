@@ -732,6 +732,29 @@ def _hash_pack_files_backend() -> str:
     return "python"
 
 
+def _load_knowledge_set_backend() -> str:
+    """Report the backend the public `load_knowledge_set` wrapper uses.
+
+    ADR-019 stop-loss (Phase G4-3, 2026-11-16): the Rust load path is
+    available behind ``_NATIVE_LOAD`` in :mod:`agri_core.pack.loader`
+    (currently ``False``). G4-4 flips the flag after the perf gate.
+    This function reports ``"python"`` while the flag is ``False``; once
+    G4-4 flips it, ``_NATIVE_LOAD`` becomes ``True`` and this reports
+    ``"native"`` only when the extension actually exports
+    ``load_built_pack_native``. Keeping the check here (not a constant)
+    keeps ``meta()`` truthful through the flip without code changes.
+    """
+    from agri_core.pack import loader as _loader
+
+    if not getattr(_loader, "_NATIVE_LOAD", False):
+        return "python"
+    try:
+        from agri_core.pack.knowledge_set import _NATIVE_LOAD_AVAILABLE
+    except ImportError:
+        return "python"
+    return "native" if _NATIVE_LOAD_AVAILABLE else "python"
+
+
 def meta(pack: KnowledgeSet) -> MetaInfo:
     """Return :class:`MetaInfo` for *pack*.
 

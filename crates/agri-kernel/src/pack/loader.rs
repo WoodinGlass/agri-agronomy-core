@@ -313,6 +313,25 @@ fn sql_to_json(
     use crate::pack::tables::ColumnType;
     use serde_json::Value;
     let col = spec.columns.iter().find(|c| c.name == col_name);
+    let col_type = col.map(|c| c.ty);
+
+    // Bool columns are stored by SQLite as INTEGER (0/1) or TEXT
+    // ('true'/'false'). Handle before the numeric arms so the JSON value
+    // stays Value::Bool, matching the CSV path (`read_table`).
+    if matches!(col_type, Some(ColumnType::Bool)) {
+        return match v {
+            SqlVal::Null => Value::Null,
+            SqlVal::Integer(i) => Value::Bool(*i != 0),
+            SqlVal::Real(f) => Value::Bool(*f != 0.0),
+            SqlVal::Text(s) => match s.as_str() {
+                "1" | "true" => Value::Bool(true),
+                "0" | "false" | "" => Value::Bool(false),
+                _ => Value::String(s.clone()),
+            },
+            SqlVal::Blob(_) => Value::Null,
+        };
+    }
+
     match v {
         SqlVal::Null => Value::Null,
         SqlVal::Integer(i) => Value::Number((*i).into()),
@@ -320,7 +339,6 @@ fn sql_to_json(
             .map(Value::Number)
             .unwrap_or(Value::Null),
         SqlVal::Text(s) => {
-            let col_type = col.map(|c| c.ty);
             match col_type {
                 Some(ColumnType::ListStr) => {
                     // Pipe-encoded; split.

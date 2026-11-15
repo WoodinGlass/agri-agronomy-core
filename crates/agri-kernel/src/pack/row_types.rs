@@ -104,9 +104,30 @@ fn get_f64(v: &Value, k: &'static str) -> Result<f64, ConvertError> {
 }
 
 fn get_bool(v: &Value, k: &'static str) -> Result<bool, ConvertError> {
-    v.get(k)
-        .and_then(|x| x.as_bool())
-        .ok_or(ConvertError::MissingKey(k))
+    match v.get(k) {
+        Some(Value::Bool(b)) => Ok(*b),
+        Some(Value::Number(n)) => {
+            if let Some(i) = n.as_i64() {
+                return Ok(i != 0);
+            }
+            if let Some(f) = n.as_f64() {
+                return Ok(f != 0.0);
+            }
+            Err(ConvertError::WrongType {
+                key: k,
+                expected: "bool",
+            })
+        }
+        Some(Value::String(s)) => match s.as_str() {
+            "true" | "1" => Ok(true),
+            "false" | "0" => Ok(false),
+            _ => Err(ConvertError::WrongType {
+                key: k,
+                expected: "bool",
+            }),
+        },
+        _ => Err(ConvertError::MissingKey(k)),
+    }
 }
 
 fn get_list_str(v: &Value, k: &'static str) -> Result<Vec<String>, ConvertError> {

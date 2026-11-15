@@ -743,7 +743,7 @@ def _load_built_pack(
         )
 
         if _NATIVE_LOAD_AVAILABLE:
-            native = _native_mod.load_built_pack_native(  # type: ignore[union-attr]
+            native = _native_mod.load_built_pack_native(
                 str(pack_sqlite),
                 manifest.model_dump(mode="json"),
                 expected_hash,

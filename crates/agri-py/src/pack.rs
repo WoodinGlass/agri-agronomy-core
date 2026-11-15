@@ -548,7 +548,6 @@ fn dict_info_from_pydict(
 
 use std::sync::Arc;
 
-use agri_kernel::pack::build::parse_manifest_fields;
 use agri_kernel::pack::knowledge_set::RustKnowledgeSet;
 use agri_kernel::pack::loader::load_built_pack;
 use agri_kernel::pack::name_index::NameIndexEntry;
@@ -777,7 +776,7 @@ fn name_index_entry_to_pydict(py: Python<'_>, e: &NameIndexEntry) -> PyResult<Py
 macro_rules! make_iter_class {
     ($name:ident, $row:ty, $conv:ident) => {
         #[pyclass]
-        struct $name {
+        pub struct $name {
             data: std::vec::IntoIter<$row>,
         }
 
@@ -804,7 +803,7 @@ make_iter_class!(HazardIterator, HazardRow, hazard_to_pydict);
 // ---- PyRustKnowledgeSet ----
 
 #[pyclass]
-struct PyRustKnowledgeSet {
+pub struct PyRustKnowledgeSet {
     inner: Arc<RustKnowledgeSet>,
 }
 
@@ -1014,7 +1013,7 @@ fn manifest_fields_from_pydict(
 
 #[pyfunction]
 #[pyo3(name = "load_built_pack_native")]
-fn py_load_built_pack_native(
+pub fn py_load_built_pack_native(
     py: Python<'_>,
     sqlite_path: std::path::PathBuf,
     manifest_dict: &Bound<'_, PyDict>,
