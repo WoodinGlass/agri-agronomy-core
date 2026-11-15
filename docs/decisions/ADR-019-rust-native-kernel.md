@@ -334,3 +334,35 @@ Divergensi didokumentasikan di sini sampai sunset (poin 3).
   runners). Does not block tag `v0.1.7`.
 - `tests/perf/test_hash_pack_files_perf.py` is `@pytest.mark.xfail(
   strict=False)` until the follow-up; XPASS signals the gate is met.
+
+### 10. Phase D perf gate result — retroaktif (2026-11-16)
+
+Ditulis retroaktif untuk melengkapi commit `d0610a1`
+(`feat(native): C+D - Rust build_pack + validate_pack rules (M21) (#206)`,
+merged 2026-11-16 +08:00), yang menyebut "Documented in ADR-019 §5, §10"
+tetapi tidak menambahkan §10 ke ADR. Isi berikut adalah keputusan yang
+**benar-benar diambil** pada commit tersebut — tidak ditulis ulang.
+
+`build_sqlite_bytes` (Phase C) + 16 `validate` rules (Phase D) native
+port: **perf gate did not pass**, stop-loss applied.
+
+- **Parity preserved as KAT:** DDL SHA256 matches `468260bd...`; 16 rules
+  produce identical `Finding` output (code/severity/message/location);
+  sorted by Python `_sort_key` (file, line, key, taxon_id, code).
+  121 Rust tests pass (99 existing + 22 new).
+- **Why gate cannot pass on C+D alone:** 98% of `validate_pack` wall time
+  is `load_knowledge_set_from_files` (structure check + Pydantic + CSV
+  parse), which stays Python until Phase G. Porting 16 rules saves
+  ~1.4s out of ~57s -> ratio ~1.0x.
+- **Stop-loss applied (§5):**
+  - `meta().backends["build_pack"] = "python"`
+  - `meta().backends["validate_pack"] = "python"`
+  - Native opt-in: `_native.build_sqlite_bytes`,
+    `_native.validate_pack_findings`.
+  - `tests/perf/test_validate_pack_native_perf.py` is
+    `@pytest.mark.xfail(strict=False)`; will XPASS after Phase G.
+- **`artifact_sha256`** documented: will change **once** when
+  `build_pack` flips to native (SQLite header writer version differs from
+  Python stdlib sqlite3). Current default (Python) -> no KAT change.
+- **Follow-up (Phase G, loader port):** unlocks
+  `backends["validate_pack"]="native"`. Does not block tag `v0.1.7`.
