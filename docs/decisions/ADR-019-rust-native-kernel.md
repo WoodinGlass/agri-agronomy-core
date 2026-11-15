@@ -306,3 +306,31 @@ Bukan `meta().backend` tunggal.
 - Python: raise `PACK_STALE_ARTIFACT` (perilaku lama).
 - Native: immutable — ubah file setelah load → query tetap dari memori.
 Divergensi didokumentasikan di sini sampai sunset (poin 3).
+
+### 9. Phase B perf gate result (2026-11-15)
+
+`hash_pack_files` native port: **perf gate did not pass**.
+
+- Measured: **1.86× Python** on the 10k reference pack (10,007 files,
+  68 MB, avg 6.8 KB/file), above the ≤0.5× gate (§4).
+- Root cause: **SHA-256 implementation**. `rustcrypto sha2 0.11`
+  delivers ~156 MB/s on the perf runner (Intel Xeon @ 2.20 GHz,
+  `avx2` present, **no `sha_ni`**); OpenSSL `hashlib` delivers
+  ~318 MB/s on the same CPU. Per-file SHA-256 alone is 435 ms
+  native vs 214 ms Python.
+- Secondary costs: per-file `format!` + hex encoding (~145 ms
+  combined). PyO3 boundary copy measured at ~3 ms for 10k files
+  (negligible).
+- **Stop-loss applied (§5):** `meta().backends["hash_pack_files"]`
+  reports `"python"` and the public wrapper uses pure Python. Native
+  remains importable as `_native.hash_pack_files` for opt-in
+  benchmarks.
+- **Parity preserved as KAT:** 15 reference vectors, 10k synthetic
+  pack, Hypothesis 1000-example fuzz, both `hash_alg` values. No
+  user-visible KAT moves.
+- **Follow-up (M21.5):** swap SHA-256 crate to `ring` (or equivalent
+  OpenSSL-speed backend) and add `rayon` per-file parallelism.
+  Expected to reach ≤0.5× on SHA-NI-enabled CPUs (CI nightly
+  runners). Does not block tag `v0.1.7`.
+- `tests/perf/test_hash_pack_files_perf.py` is `@pytest.mark.xfail(
+  strict=False)` until the follow-up; XPASS signals the gate is met.

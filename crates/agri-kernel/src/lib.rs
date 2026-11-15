@@ -10,4 +10,5 @@
 
 pub mod canonical;
 pub mod hash;
+pub mod pack;
 pub mod request_id;

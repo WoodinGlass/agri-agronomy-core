@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Native `hash_pack_files` (Phase B, M21).** `agri-core` ships a Rust
+  implementation of `hash_pack_files` (SHA-256 over canonical pack
+  content) behind `agri_core._native.hash_pack_files`. Byte-identical to
+  the Python implementation for both `hash_alg="pre-rfc8785"` and
+  `hash_alg="rfc8785"` on 15 reference vectors (`tests/vectors/
+  hash_pack_files.json`, including the sample pack), on a 10k synthetic
+  pack, and under a Hypothesis differential fuzz at 1000 examples per
+  test run. `meta().backends["hash_pack_files"]` reports `"python"` (stop-loss
+  applied; see below); the compiled extension remains importable as
+  `_native.hash_pack_files` for opt-in benchmarks. No user-visible KAT
+  moves: sample `content_hash`
+  (`sha256:4ca67c00…`), `_GOLDEN_HASH`, `DDL_SHA256`, and dictionary
+  `contract_hash` are unchanged.
+
+- **Stop-loss applied to Phase B (ADR-019 §5, §9).** The Phase B perf
+  gate did **not** pass: native `hash_pack_files` is **1.86×** Python on
+  the 10k reference pack (10,007 files, 68 MB, avg 6.8 KB/file).
+  Root cause is SHA-256: rustcrypto `sha2 0.11` delivers ~156 MB/s
+  vs OpenSSL `hashlib` at ~318 MB/s on the perf runner (Intel Xeon
+  @ 2.20 GHz, `avx2` present, **`sha_ni` absent**); per-file SHA-256
+  alone accounts for 435 ms native vs 214 ms Python. PyO3 boundary
+  copy was measured at ~3 ms for 10k files (not the bottleneck).
+  Per ADR-019 stop-loss, the public wrapper uses pure Python and
+  `meta().backends` reports `"python"`; `tests/perf/test_hash_pack_files_perf.py`
+  is `@pytest.mark.xfail(strict=False)` until the follow-up passes.
+  Parity (15 vectors, 10k pack, 1000-example Hypothesis fuzz, both
+  `hash_alg` values) is preserved as KAT. Follow-up under M21.5:
+  swap SHA-256 crate to `ring` + add `rayon` per-file parallelism.
+
 ### Changed (breaking)
 
 - **RFC 8785 (JCS) canonical JSON is now the production canonicalizer.**
