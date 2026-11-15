@@ -106,6 +106,10 @@ def test_canonical_json_rfc8785_parity_golden() -> None:
         {"\ufffd": 1, "\U00010000": 2},  # UTF-16 order vs code point order
         {"unicode": "caf\u00e9"},
         {"emoji": "\U0001f600"},
+        # Even tiebreak (ECMA-262 s7.1.12.1)
+        {"v": 70368744177664.125},
+        {"v": 1125899906842624.2},
+        {"v": -70368744177664.125},
     ]
     for case in cases:
         py_out = py_rfc8785(case)

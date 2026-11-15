@@ -195,10 +195,23 @@ fn rfc8785_float(f: f64) -> Result<String, CanonicalError> {
         .parse()
         .map_err(|_| CanonicalError::Serde(format!("bad exp in sci: {exp_str}")))?;
 
-    let digits: String = mant_str.chars().filter(|c| *c != '.').collect();
+    let mut digits: String = mant_str.chars().filter(|c| *c != '.').collect();
     let k = digits.len() as i32;
-    // ECMA's `n`: position of the decimal point relative to the first
-    // significant digit. For `m x 10^exp` with 1 <= m < 10, n = exp + 1.
+
+    // ECMA-262 s7.1.12.1 tiebreak: when s1 and s1 - 1 are both
+    // shortest representations of `abs` AND `abs` is exactly at their
+    // midpoint, choose the even one. Rust's `{:e}` picks s1 (may be odd).
+    // Exact rational arithmetic on f64 bits (no f64 rounding).
+    if digits.len() >= 2 {
+        if let Some(last) = digits.chars().last() {
+            if matches!(last, '3' | '5' | '7' | '9') {
+                if let Some(cand_str) = try_even_tiebreak(&digits, exp, abs) {
+                    digits = cand_str;
+                }
+            }
+        }
+    }
+
     let n = exp + 1;
 
     let body = if n > 0 && n <= 21 {
@@ -231,6 +244,65 @@ fn rfc8785_float(f: f64) -> Result<String, CanonicalError> {
         }
     };
     Ok(format!("{sign}{body}"))
+}
+
+/// ECMA-262 s7.1.12.1 tiebreak: return `digits - 1` (same digit count,
+/// even last digit) when the original `digits` and `digits - 1` are BOTH
+/// shortest representations of `abs` AND `abs` is EXACTLY at their
+/// midpoint. Exact rational arithmetic on f64 bits (`mant * 2^p`) vs
+/// midpoint (`(2d - 1) * 10^(exp-k+1)` / 2) — no f64 rounding. Returns
+/// `None` on overflow, subnormal `abs`, or non-tie.
+fn try_even_tiebreak(digits: &str, exp: i32, abs: f64) -> Option<String> {
+    let mut cand_bytes: Vec<u8> = digits.as_bytes().to_vec();
+    *cand_bytes.last_mut()? -= 1;
+    let cand_str = String::from_utf8(cand_bytes).ok()?;
+
+    let k = digits.len() as i32;
+    let cand_sci = if k == 1 {
+        format!("{cand_str}e{exp}")
+    } else {
+        let first = cand_str.chars().next()?;
+        let rest: String = cand_str.chars().skip(1).collect();
+        format!("{first}.{rest}e{exp}")
+    };
+    if cand_sci.parse::<f64>().ok()? != abs {
+        return None;
+    }
+
+    // Decompose abs = mant * 2^p from f64 bits (positive normal only).
+    let bits = abs.to_bits();
+    let exp_bits = ((bits >> 52) & 0x7FF) as i32;
+    if exp_bits == 0 || exp_bits == 0x7FF {
+        return None;
+    }
+    let mant: u128 = (1u128 << 52) | ((bits & 0xFFFFFFFFFFFFF) as u128);
+    let p = exp_bits - 1023 - 52;
+
+    let d_val: u128 = digits.parse().ok()?;
+    let two_d_minus_1 = d_val.checked_mul(2)?.checked_sub(1)?;
+
+    // Compare mant * 2^(p+1) == (2d-1) * 10^(exp - k + 1).
+    let lhs_exp = p + 1;
+    let rhs_exp = exp - k + 1;
+
+    let lhs_shift = if lhs_exp >= 0 { lhs_exp as u32 } else { 0 };
+    let lhs_div = if lhs_exp < 0 { (-lhs_exp) as u32 } else { 0 };
+    let rhs_shift = if rhs_exp >= 0 { rhs_exp as u32 } else { 0 };
+    let rhs_div = if rhs_exp < 0 { (-rhs_exp) as u32 } else { 0 };
+
+    let ten_rhs_div = 10u128.checked_pow(rhs_div)?;
+    let ten_rhs_shift = 10u128.checked_pow(rhs_shift)?;
+
+    let lhs = mant.checked_shl(lhs_shift)?.checked_mul(ten_rhs_div)?;
+    let rhs = two_d_minus_1
+        .checked_mul(ten_rhs_shift)?
+        .checked_shl(lhs_div)?;
+
+    if lhs == rhs {
+        Some(cand_str)
+    } else {
+        None
+    }
 }
 
 fn werr(e: std::io::Error) -> CanonicalError {

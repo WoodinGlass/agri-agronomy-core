@@ -3,7 +3,7 @@
 ## What this is
 
 `tests/vectors/canonical_rfc8785.json` is generated from **Node.js
-`JSON.stringify`** on **101** boundary-value inputs. Node implements
+`JSON.stringify`** on **104** boundary-value inputs. Node implements
 ECMA-262 §7.1.12.1 `Number.prototype.toString` exactly, which is the
 number serialization form RFC 8785 §3.2.2.3 requires.
 
