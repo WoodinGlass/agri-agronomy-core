@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Native `validate_pack` rules (Phase D, M21).** `agri-core` ships a Rust
+  implementation of all 16 validation rules in `crates/agri-kernel/src/pack/rules/`
+  (trapezoid, superseded self/cycle, fact_key_duplicate, 6 license, safety_double_review,
+  2 protection, 2 id_ledger, catalog stub). Byte-identical Finding output
+  (code, severity, message, location) to Python's `validate.py::RULES`, sorted by
+  `_sort_key` (file, line, key, taxon_id, code).
+  Exposed as `agri_core._native.validate_pack_findings(files, dictionary) -> list[dict]`
+  (opt-in path for tests/benchmark; default stays Python).
+
+### Note
+
+- **Stop-loss applied to Phase D (ADR-019 §5, §10).** The perf gate (`validate_pack`
+  ≤0.5× Python) **cannot pass on Phase D alone**: 98% of `validate_pack` wall time
+  is `load_knowledge_set_from_files` (structure check + Pydantic + CSV parse),
+  which remains Python until Phase G (loader port). Porting 16 rules to Rust
+  saves ~1.4s out of ~57s (`meta().backends["validate_pack"]` = `"python"`).
+  Perf test `test_validate_pack_native_perf.py` is `@pytest.mark.xfail(strict=False)`
+  and will XPASS after Phase G. Structure findings reach the report via the
+  existing Python exception path in `validate_pack_report`, so the report content
+  is identical to Python-only.
+
+
+### Added
+
 - **Native `hash_pack_files` (Phase B, M21).** `agri-core` ships a Rust
   implementation of `hash_pack_files` (SHA-256 over canonical pack
   content) behind `agri_core._native.hash_pack_files`. Byte-identical to

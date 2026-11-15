@@ -21,7 +21,7 @@ impl std::fmt::Display for CanonicalError {
 
 /// Python `repr(float)` equivalent for finite f64.
 /// Python: 1.0 -> "1.0", 1e-7 -> "1e-07", 1e-4 -> "0.0001", 1e16 -> "1e+16".
-fn py_float_repr(f: f64) -> String {
+pub(crate) fn py_float_repr(f: f64) -> String {
     // Rust's Debug for f64 uses core::fmt's shortest-roundtrip algorithm,
     // which matches Python's repr for finite floats (both are David Gay's
     // shortest-representation family). `ryu::format_finite` has roundtrip

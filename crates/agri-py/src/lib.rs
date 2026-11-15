@@ -1,5 +1,7 @@
 use pyo3::prelude::*;
 
+mod pack;
+
 const MAX_JSON_DEPTH: usize = 1000;
 
 fn py_to_json_value(_py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<serde_json::Value> {
@@ -156,6 +158,11 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hash_pack_files, m)?)?;
     m.add_function(wrap_pyfunction!(sha256_hex, m)?)?;
     m.add_function(wrap_pyfunction!(compute_request_id, m)?)?;
+    m.add_function(wrap_pyfunction!(pack::py_read_table, m)?)?;
+    m.add_function(wrap_pyfunction!(pack::py_write_table, m)?)?;
+    m.add_function(wrap_pyfunction!(pack::py_find_forbidden, m)?)?;
+    m.add_function(wrap_pyfunction!(pack::py_build_sqlite_bytes, m)?)?;
+    m.add_function(wrap_pyfunction!(pack::py_validate_pack_findings, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 }

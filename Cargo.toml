@@ -9,10 +9,14 @@ rust-version = "1.100"
 license = "Apache-2.0"
 
 [workspace.dependencies]
+serde = "1"
 serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = "0.11"
 toml = "0.8"
 pyo3 = { version = "0.30", features = ["abi3-py311", "extension-module"] }
+# M21 Phase C/D (A1b, stop-loss prep): SQLite build + CSV parse
+rusqlite = { version = "0.42", features = ["bundled", "serialize"] }
+csv = "1"
 
 [profile.release]
 lto = "thin"
