@@ -233,7 +233,12 @@ def test_meta_backends_reports_python_stop_loss() -> None:
 
     ks = load_knowledge_set(_SAMPLE, allow_synthetic=True)
     m = meta(ks)
+    # A1b stop-loss (ADR-019 §5, §10): all three A1b backends report "python"
+    # even though native impl is available. Native is opt-in via
+    # `_native.build_sqlite_bytes` / `_native.validate_pack_findings`.
     assert m.backends["hash_pack_files"] == "python"
+    assert m.backends["build_pack"] == "python"
+    assert m.backends["validate_pack"] == "python"
 
 
 def test_public_and_native_hash_match_stop_loss() -> None:
