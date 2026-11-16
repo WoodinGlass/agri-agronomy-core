@@ -576,6 +576,66 @@ G4 (4 sub-cells, 7–9 working days) in exchange for:
 
 The plan places full parity above speed.
 
+#### 11.14 D4 (Phase G extension): golden-16.0 + idempotence + ordering + adversarial + real corpus + proptest (2026-11-17)
+
+Coverage for the native normalizer across five dimensions, on top of
+D2's golden-based parity test.
+
+**Full scalar sweep** (`crates/agri-kernel/tests/normalize_sweep.rs`):
+
+- **Standalone**: every codepoint `0..=0x10FFFF` excluding surrogates
+  and `SKIP_CN_15_1`. Expected = whitespace → `""`, golden[cp] when
+  present (6408 pinned 16.0 entries), identity otherwise.
+- **Context**: `normalize("a{ch}b")` asserted **idempotent**, not
+  derived from `normalize(ch)`. NFKC is **not compositional**:
+  `"a" + combining_acute` → `"á"` (U+00E1) while
+  `normalize(combining_acute) == combining_acute` unchanged. Context-
+  derivation from standalone is fundamentally wrong; idempotence is
+  the sound property.
+
+**`SKIP_CN_15_1`** (132 codepoints) = codepoints whose
+`category(chr(cp))` in Python 3.13.18 (Unicode 15.1.0) is `Cn` **and**
+whose native 16.0 normalization is non-identity. Of these, **63 are in
+the 16.0 golden** (Python 3.14.9 assigned them and their change is
+pinned) and are additionally covered by `test_native_matches_16_0_golden`
+in `tests/contract/test_native_parity_normalize.py`; the remaining
+**69** have no golden entry and are skipped entirely in the Rust sweep
+(native 16.0 authoritative, not testable against a 15.1-invisible
+reference).
+
+`SKIP_CN_15_1` is a **tripwire**: its size is pinned by
+`skip_list_size_is_pinned`; regen requires an ADR amendment. Rationale
+for explicit list (vs. a 16.0 Cn-bitmap asset ~140 KB): the change-set
+is exactly what the test must distinguish, and is
+132 entries.
+
+**Python sweep** (`tests/contract/test_native_parity_normalize.py::test_sweep_version_aware`):
+same codepoint set, two skips: `ch.isspace()` (Python `str.split`
+collapses; golden has no entry, identity fallback would be wrong) and
+`unicodedata.category(ch) == "Cn"` (unassigned in runtime → native
+authoritative per §11.2).
+
+**Ordering** (`normalize_ordering.rs`): Hangul L/V (399) + L/V/T
+(10,773) compositions (`S_BASE = 0xAC00`, arithmetic step `T_COUNT = 28`,
+`T_BASE = 0x11A8` for 27 trailing consonants); canonical ccc reorder
+**with composition** (`a + U+0301 + U+0316` → `"á" + U+0316`, not raw
+reorder — NFKC composes across lower-ccc marks when a composition
+exists); ligature and casefold expansions.
+
+**Adversarial** (`normalize_adversarial.rs`): bidi embedding/isolate,
+ZWJ/ZWNJ, VS BMP + supplemental, SHY, tag, noncharacters, NUL. No
+panic; idempotence; `unstable_at_pin` flagging for strict mode.
+
+**Real corpus** (`normalize_real_corpus.rs`): sample pack names.csv +
+plant wishlist. Idempotence.
+
+**Proptest** (`normalize_proptest.rs`): idempotence + expansion bound.
+`MAX_EXPANSION_FACTOR = 18.0`, measured across the full sweep (driver
+U+FDFA NFKC = 18 codepoints), locked as a constant.
+
+**Bumping the Unicode pin** requires regen of the skip list, the golden
+vectors, and this section (tripwire, not silent drift).
+
 #### 11.13 D3 (Phase G extension): pin tripwire + ICU4X third oracle (2026-11-17)
 
 Tripwire tests added (`crates/agri-kernel/tests/unicode_version_pin.rs`,

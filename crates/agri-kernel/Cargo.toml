@@ -22,3 +22,5 @@ base64 = "0.22"
 # D3 (Phase G extension): third-oracle parity (Unicode-3.0, dev-only).
 icu_casemap.workspace = true
 icu_normalizer.workspace = true
+# D4 (Phase G extension): property-based testing (idempotence, expansion bound).
+proptest.workspace = true
