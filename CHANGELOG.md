@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Native `normalize_name` + `normalize_scope_value` exposed via `_native` (D2, Phase G extension).** PyO3 bindings `_native.normalize_name`, `_native.normalize_scope_value`, and `_native.unicode_version` mirror the Python implementation bit-for-bit. `MetaInfo.unicode_version` added (contract `"16.0.0"` per ADR-019 §11.1). Golden vectors `tests/vectors/normalize_{name,scope_value}_16_0.json` regenerated from Python 3.14.9 / Unicode 16.0.0 (pinned oracle, ADR §11.2) by `scripts/gen_normalize_vectors.py`. Version-aware parity test `tests/contract/test_native_parity_normalize.py` asserts native matches 16.0.0 for every entry and Python matches only for codepoints assigned in the running interpreter (`Cn` skipped per Unicode stability policy).
+
 - **Native `validate_pack` rules (Phase D, M21).** `agri-core` ships a Rust
   implementation of all 16 validation rules in `crates/agri-kernel/src/pack/rules/`
   (trapezoid, superseded self/cycle, fact_key_duplicate, 6 license, safety_double_review,

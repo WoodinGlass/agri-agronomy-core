@@ -691,6 +691,7 @@ class MetaInfo(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     engine_version: str
+    unicode_version: str
     resolution_policy_version: str
     pack_version: str
     schema_version: int
@@ -755,6 +756,24 @@ def _load_knowledge_set_backend() -> str:
     return "native" if _NATIVE_LOAD_AVAILABLE else "python"
 
 
+def _unicode_version() -> str:
+    """Return the native Unicode pin (ADR-019 §11.1).
+
+    Contract value is `"16.0.0"`. When the native extension is
+    available, read from `_native.unicode_version()` so a crate bump
+    without ADR amendment is caught by `test_unicode_version_pin` (D3).
+    When not available (pure-Python install), fall back to the ADR-
+    documented pin: the contract does not change based on whether the
+    extension is compiled.
+    """
+    try:
+        from agri_core import _native as _native_mod
+
+        return _native_mod.unicode_version()
+    except (ImportError, AttributeError):
+        return "16.0.0"
+
+
 def meta(pack: KnowledgeSet) -> MetaInfo:
     """Return :class:`MetaInfo` for *pack*.
 
@@ -763,6 +782,7 @@ def meta(pack: KnowledgeSet) -> MetaInfo:
     """
     return MetaInfo(
         engine_version=__version__,
+        unicode_version=_unicode_version(),
         resolution_policy_version=RESOLUTION_POLICY_VERSION,
         pack_version=pack.manifest.version,
         schema_version=pack.manifest.schema_version,

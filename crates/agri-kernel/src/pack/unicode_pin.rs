@@ -18,6 +18,14 @@
 //! enforcement path; until then `unstable_at_pin()` under-reports, which
 //! is safe (no false rejection).
 
+/// The Unicode version this crate's tables are pinned to.
+///
+/// Exposed via `agri_core._native.unicode_version()` and reported as
+/// `MetaInfo.unicode_version` in the Python API (ADR-019 §11.1).
+/// Tripwire test `tests/contract/test_unicode_version_pin.py` (D3)
+/// asserts this matches `caseless::UNICODE_VERSION` and the ADR pin.
+pub const UNICODE_VERSION: &str = "16.0.0";
+
 /// Codepoints Python's `str.split()` collapses at Unicode 15.1.0.
 ///
 /// Derived empirically: `("a" + chr(cp) + "b").split() == ["a", "b"]`.
