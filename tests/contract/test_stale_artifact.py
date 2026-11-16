@@ -15,6 +15,19 @@ pytestmark = pytest.mark.contract
 _REPO = Path(__file__).resolve().parents[2]
 _SRC = _REPO / "src" / "agri_core" / "_samples" / "sample_pack"
 
+try:
+    from agri_core import _native as _native_mod
+
+    _NATIVE_HAS_LOAD = hasattr(_native_mod, "load_built_pack_native")
+except ImportError:
+    _native_mod = None  # type: ignore[assignment]
+    _NATIVE_HAS_LOAD = False
+
+_SKIP_NATIVE = pytest.mark.skipif(
+    not _NATIVE_HAS_LOAD,
+    reason="native load_built_pack_native not exported (rebuild with maturin)",
+)
+
 
 def _build_sample(tmp_path: Path) -> Path:
     files = read_pack_bytes(_SRC)
@@ -32,7 +45,14 @@ def test_names_index_works_before_tamper(tmp_path: Path) -> None:
     assert len(hits) >= 1
 
 
-def test_names_index_raises_after_artifact_replaced(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "backend",
+    ["python", pytest.param("native", marks=_SKIP_NATIVE)],
+)
+def test_names_index_raises_after_artifact_replaced(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, backend: str
+) -> None:
+    monkeypatch.setattr("agri_core.pack.loader._NATIVE_LOAD", backend == "native")
     built = _build_sample(tmp_path)
     ks = load_knowledge_set(built, allow_synthetic=True)
     sqlite_path = built / "pack.sqlite"
@@ -44,5 +64,12 @@ def test_names_index_raises_after_artifact_replaced(tmp_path: Path) -> None:
     with sqlite_path.open("ab") as f:
         f.write(b"\x00")
 
-    with pytest.raises(PackStaleArtifactError, match=r"changed since load"):
-        ks.names_index("anything")
+    if backend == "python":
+        with pytest.raises(PackStaleArtifactError, match=r"changed since load"):
+            ks.names_index("anything")
+    else:
+        # RustKnowledgeSet is in-memory immutable: tampered file is never
+        # read again. Divergence documented in ADR-019 §11.12.
+        assert type(ks).__name__ == "RustKnowledgeSet"
+        hits = ks.names_index("anything")
+        assert isinstance(hits, tuple)

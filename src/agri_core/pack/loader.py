@@ -55,6 +55,11 @@ from agri_core.pack.knowledge_set import (
     SQLiteKnowledgeSet,
     _sqlite_uri,
 )
+
+try:
+    from agri_core import _native as _native_mod
+except ImportError:
+    _native_mod = None  # type: ignore[assignment]
 from agri_core.pack.manifest import SUPPORTED_SCHEMA_VERSIONS, PackManifest
 from agri_core.pack.sqlite_schema import SQLITE_SCHEMA_VERSION
 from agri_core.pack.tables import TABLES, Table, read_table
@@ -62,6 +67,14 @@ from agri_core.pack.verify import compute_file_sha256, hash_pack_files
 from agri_core.registry.sources import SourceRow
 
 _DEFAULT_DICTIONARY_SOURCE = "dictionary/parameters.core.yaml"
+
+# ADR-019 §11.12 (G4-4, 2026-11-16): stop-loss applied. Native load is
+# 5.54x Python on the 10k pack (5854ms vs 1057ms), missing both the
+# 1400ms user budget (ADR-010) and the <=0.5x gate (§11.9). The native
+# path exists and is byte-identical to Python on parity + error codes;
+# it stays reachable via `_NATIVE_LOAD=True` for benchmarks. Default
+# remains Python until the follow-up (M21.5/M22) meets §11.9.
+_NATIVE_LOAD: bool = False
 _MAX_FINDINGS = 20
 
 
@@ -726,6 +739,26 @@ def _load_built_pack(
             "the file is being modified concurrently",
             file="pack.sqlite",
         )
+
+    if _NATIVE_LOAD:
+        from agri_core.pack.knowledge_set import (
+            _NATIVE_LOAD_AVAILABLE,
+            RustKnowledgeSet,
+        )
+
+        if _NATIVE_LOAD_AVAILABLE:
+            native = _native_mod.load_built_pack_native(
+                str(pack_sqlite),
+                manifest.model_dump(mode="json"),
+                expected_hash,
+                dictionary.version,
+                max_bytes,
+            )
+            return RustKnowledgeSet(
+                native,
+                manifest=manifest,
+                dictionary=dictionary,
+            )
 
     return SQLiteKnowledgeSet._build(
         sqlite_path=pack_sqlite,

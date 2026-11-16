@@ -62,6 +62,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `hash_alg` values) is preserved as KAT. Follow-up under M21.5:
   swap SHA-256 crate to `ring` + add `rayon` per-file parallelism.
 
+### Added
+
+- **Native `load_knowledge_set` is available behind `_NATIVE_LOAD=False` (Phase G4-4, M21).**
+  Stop-loss applied per ADR-019 §5 + §11.12: native load measured
+  **5.54x Python** on the 10k reference pack (5854 ms vs 1057 ms), missing
+  both the 1400 ms ADR-010 user budget and the <=0.5x gate (§11.9).
+  `_NATIVE_LOAD` stays `False`; `meta().backends["load_knowledge_set"]`
+  reports `"python"`. The native `RustKnowledgeSet` implementation is
+  complete and byte-identical to Python on parity + error codes (M21
+  gates, §11.10); it remains reachable via `_NATIVE_LOAD=True` for
+  benchmarks. `RustKnowledgeSet` is eager + in-memory (ADR-001), so it
+  does not re-check the `.sqlite` artifact per call; that divergence is
+  asserted in `tests/contract/test_stale_artifact.py` (backend-parametrized)
+  and documented in ADR-019 §11.12. Root cause: Rust materializes all
+  rows eagerly while Python's lazy SQLite open is ~5x cheaper at load
+  time. Follow-up (M21.5/M22) must either meet §11.9 or record permanent
+  stop-loss. The four-way matrix (load x normalize) ships with M22.
+
 ### Changed (breaking)
 
 - **RFC 8785 (JCS) canonical JSON is now the production canonicalizer.**

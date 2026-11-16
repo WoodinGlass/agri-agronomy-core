@@ -104,9 +104,30 @@ fn get_f64(v: &Value, k: &'static str) -> Result<f64, ConvertError> {
 }
 
 fn get_bool(v: &Value, k: &'static str) -> Result<bool, ConvertError> {
-    v.get(k)
-        .and_then(|x| x.as_bool())
-        .ok_or(ConvertError::MissingKey(k))
+    match v.get(k) {
+        Some(Value::Bool(b)) => Ok(*b),
+        Some(Value::Number(n)) => {
+            if let Some(i) = n.as_i64() {
+                return Ok(i != 0);
+            }
+            if let Some(f) = n.as_f64() {
+                return Ok(f != 0.0);
+            }
+            Err(ConvertError::WrongType {
+                key: k,
+                expected: "bool",
+            })
+        }
+        Some(Value::String(s)) => match s.as_str() {
+            "true" | "1" => Ok(true),
+            "false" | "0" => Ok(false),
+            _ => Err(ConvertError::WrongType {
+                key: k,
+                expected: "bool",
+            }),
+        },
+        _ => Err(ConvertError::MissingKey(k)),
+    }
 }
 
 fn get_list_str(v: &Value, k: &'static str) -> Result<Vec<String>, ConvertError> {
@@ -204,7 +225,9 @@ pub struct TaxonRow {
     pub organism_group: String,
     pub archetype: String,
     pub uses: Vec<String>,
+    pub traits: Vec<String>,
     pub parent_id: Option<String>,
+    pub external_ids: Option<std::collections::BTreeMap<String, String>>,
     pub src: Option<Vec<String>>,
     pub dataset_id: Option<String>,
 }
@@ -277,6 +300,25 @@ pub struct DatasetRow {
 // ---- Conversions ----
 
 pub fn taxon_from_json(v: &Value) -> Result<TaxonRow, ConvertError> {
+    let traits = match v.get("traits").and_then(|x| x.as_array()) {
+        Some(arr) => arr
+            .iter()
+            .filter_map(|x| x.as_str().map(String::from))
+            .collect::<Vec<String>>(),
+        None => Vec::new(),
+    };
+    let external_ids = match v.get("external_ids").and_then(|x| x.as_object()) {
+        Some(obj) => {
+            let mut m = std::collections::BTreeMap::new();
+            for (k, vv) in obj {
+                if let Some(s) = vv.as_str() {
+                    m.insert(k.clone(), s.to_string());
+                }
+            }
+            Some(m)
+        }
+        None => None,
+    };
     Ok(TaxonRow {
         taxon_id: get_str(v, "taxon_id")?.to_string(),
         rank: get_str(v, "rank")?.to_string(),
@@ -285,7 +327,9 @@ pub fn taxon_from_json(v: &Value) -> Result<TaxonRow, ConvertError> {
         organism_group: get_str(v, "organism_group")?.to_string(),
         archetype: get_str(v, "archetype")?.to_string(),
         uses: get_list_str(v, "uses")?,
+        traits,
         parent_id: get_opt_str(v, "parent_id"),
+        external_ids,
         src: get_opt_list_str(v, "src")?,
         dataset_id: get_opt_str(v, "dataset_id"),
     })

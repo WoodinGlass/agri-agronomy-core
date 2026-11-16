@@ -5,6 +5,8 @@
 //! valid rows only. Structure findings come via the Python exception path
 //! (see `validate_pack_report` docstring).
 
+pub const SQLITE_SCHEMA_VERSION: i64 = 1;
+
 use std::collections::HashMap;
 
 use super::rules;

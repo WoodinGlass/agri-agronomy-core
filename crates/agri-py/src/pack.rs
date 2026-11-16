@@ -537,3 +537,503 @@ fn dict_info_from_pydict(
         phases_by_archetype,
     })
 }
+
+// ============================================================================
+// M21 G4-3b: PyRustKnowledgeSet — eager in-memory load_knowledge_set backend.
+// ============================================================================
+//
+// Per ADR-019 §11.5, normalize + name_index ship as one backend unit.
+// The RustKnowledgeSet built by `load_built_pack` holds all rows in Rust
+// memory; iterators yield per-row dicts lazily to keep memory bounded.
+
+use std::sync::Arc;
+
+use agri_kernel::pack::knowledge_set::RustKnowledgeSet;
+use agri_kernel::pack::loader::load_built_pack;
+use agri_kernel::pack::name_index::NameIndexEntry;
+use agri_kernel::pack::row_types::{
+    DatasetRow, FactRow, FactValue, HazardRow, NameRow, SourceRow, TaxonRow,
+};
+
+// ---- Row -> PyDict converters ----
+
+fn taxon_to_pydict(py: Python<'_>, t: &TaxonRow) -> PyResult<Py<PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("taxon_id", &t.taxon_id)?;
+    d.set_item("rank", &t.rank)?;
+    d.set_item("scientific_name", &t.scientific_name)?;
+    d.set_item("accepted_name", t.accepted_name.as_deref())?;
+    d.set_item("organism_group", &t.organism_group)?;
+    d.set_item("archetype", &t.archetype)?;
+    let uses = PyList::empty(py);
+    for u in &t.uses {
+        uses.append(u)?;
+    }
+    d.set_item("uses", uses)?;
+    let traits = PyList::empty(py);
+    for tr in &t.traits {
+        traits.append(tr)?;
+    }
+    d.set_item("traits", traits)?;
+    d.set_item("parent_id", t.parent_id.as_deref())?;
+    match &t.external_ids {
+        None => d.set_item("external_ids", py.None())?,
+        Some(m) => {
+            let d2 = PyDict::new(py);
+            for (k, v) in m {
+                d2.set_item(k, v)?;
+            }
+            d.set_item("external_ids", d2)?;
+        }
+    }
+    match &t.src {
+        None => d.set_item("src", py.None())?,
+        Some(s) => {
+            let l = PyList::empty(py);
+            for x in s {
+                l.append(x)?;
+            }
+            d.set_item("src", l)?;
+        }
+    }
+    d.set_item("dataset_id", t.dataset_id.as_deref())?;
+    Ok(d.unbind())
+}
+
+fn name_to_pydict(py: Python<'_>, n: &NameRow) -> PyResult<Py<PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("taxon_id", &n.taxon_id)?;
+    d.set_item("name", &n.name)?;
+    d.set_item("language", &n.language)?;
+    d.set_item("script", &n.script)?;
+    d.set_item("kind", &n.kind)?;
+    d.set_item("preferred", PyBool::new(py, n.preferred).to_owned())?;
+    match &n.src {
+        None => d.set_item("src", py.None())?,
+        Some(s) => {
+            let l = PyList::empty(py);
+            for x in s {
+                l.append(x)?;
+            }
+            d.set_item("src", l)?;
+        }
+    }
+    d.set_item("dataset_id", n.dataset_id.as_deref())?;
+    Ok(d.unbind())
+}
+
+fn fact_value_to_pydict(py: Python<'_>, v: &FactValue) -> PyResult<Py<PyDict>> {
+    let d = PyDict::new(py);
+    match v {
+        FactValue::Trapezoid { unit, pts } => {
+            d.set_item("shape", "trapezoid")?;
+            d.set_item("unit", unit)?;
+            d.set_item("pts", pts.to_vec())?;
+        }
+        FactValue::Range { unit, min, max } => {
+            d.set_item("shape", "range")?;
+            d.set_item("unit", unit)?;
+            d.set_item("min", *min)?;
+            d.set_item("max", *max)?;
+        }
+        FactValue::Scalar { unit, value } => {
+            d.set_item("shape", "scalar")?;
+            d.set_item("unit", unit)?;
+            d.set_item("value", *value)?;
+        }
+        FactValue::Enum { value } => {
+            d.set_item("shape", "enum")?;
+            d.set_item("value", value)?;
+        }
+        FactValue::EnumSet { values } => {
+            d.set_item("shape", "enum_set")?;
+            let l = PyList::empty(py);
+            for x in values {
+                l.append(x)?;
+            }
+            d.set_item("values", l)?;
+        }
+        FactValue::Bool { value } => {
+            d.set_item("shape", "bool")?;
+            d.set_item("value", PyBool::new(py, *value).to_owned())?;
+        }
+        FactValue::Rule { data_json } => {
+            d.set_item("shape", "rule")?;
+            let parsed: serde_json::Value =
+                serde_json::from_str(data_json).unwrap_or(serde_json::Value::Null);
+            d.set_item("data", json_to_py(py, &parsed)?)?;
+        }
+        FactValue::Unknown { reason } => {
+            d.set_item("shape", "unknown")?;
+            d.set_item("reason", reason)?;
+        }
+    }
+    Ok(d.unbind())
+}
+
+fn fact_to_pydict(py: Python<'_>, f: &FactRow) -> PyResult<Py<PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("fact_id", &f.fact_id)?;
+    d.set_item("taxon_id", &f.taxon_id)?;
+    d.set_item("parameter", &f.parameter)?;
+    d.set_item("phase", f.phase.as_deref())?;
+    d.set_item("value", fact_value_to_pydict(py, &f.value)?)?;
+    let scope: serde_json::Value =
+        serde_json::from_str(&f.scope_json).unwrap_or(serde_json::Value::Null);
+    d.set_item("scope", json_to_py(py, &scope)?)?;
+    d.set_item("provenance_kind", &f.provenance_kind)?;
+    match &f.src {
+        None => d.set_item("src", py.None())?,
+        Some(s) => {
+            let l = PyList::empty(py);
+            for x in s {
+                l.append(x)?;
+            }
+            d.set_item("src", l)?;
+        }
+    }
+    d.set_item("dataset_id", f.dataset_id.as_deref())?;
+    d.set_item("locator", f.locator.as_deref())?;
+    d.set_item("evidence", &f.evidence)?;
+    d.set_item("status", &f.status)?;
+    match &f.reviewed_by {
+        None => d.set_item("reviewed_by", py.None())?,
+        Some(s) => {
+            let l = PyList::empty(py);
+            for x in s {
+                l.append(x)?;
+            }
+            d.set_item("reviewed_by", l)?;
+        }
+    }
+    d.set_item("reviewed_at", f.reviewed_at.as_deref())?;
+    d.set_item("superseded_by", f.superseded_by.as_deref())?;
+    Ok(d.unbind())
+}
+
+fn hazard_to_pydict(py: Python<'_>, h: &HazardRow) -> PyResult<Py<PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("taxon_id", &h.taxon_id)?;
+    d.set_item("hazard_code", &h.hazard_code)?;
+    d.set_item("severity", &h.severity)?;
+    d.set_item("reason", &h.reason)?;
+    d.set_item("as_of", &h.as_of)?;
+    d.set_item("authority", &h.authority)?;
+    match &h.src {
+        None => d.set_item("src", py.None())?,
+        Some(s) => {
+            let l = PyList::empty(py);
+            for x in s {
+                l.append(x)?;
+            }
+            d.set_item("src", l)?;
+        }
+    }
+    d.set_item("dataset_id", h.dataset_id.as_deref())?;
+    Ok(d.unbind())
+}
+
+fn source_to_pydict(py: Python<'_>, s: &SourceRow) -> PyResult<Py<PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("id", &s.id)?;
+    d.set_item("url", &s.url)?;
+    d.set_item("license", &s.license)?;
+    d.set_item("commercial_use", &s.commercial_use)?;
+    d.set_item("access_date", &s.access_date)?;
+    d.set_item("citation", &s.citation)?;
+    Ok(d.unbind())
+}
+
+fn dataset_to_pydict(py: Python<'_>, d_in: &DatasetRow) -> PyResult<Py<PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("dataset_id", &d_in.dataset_id)?;
+    d.set_item("name", &d_in.name)?;
+    d.set_item("version", &d_in.version)?;
+    d.set_item("license", &d_in.license)?;
+    d.set_item("checksum", &d_in.checksum)?;
+    d.set_item("url", d_in.url.as_deref())?;
+    d.set_item("locator", d_in.locator.as_deref())?;
+    d.set_item("access_date", &d_in.access_date)?;
+    Ok(d.unbind())
+}
+
+fn name_index_entry_to_pydict(py: Python<'_>, e: &NameIndexEntry) -> PyResult<Py<PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("taxon_id", &e.taxon_id)?;
+    d.set_item("name", &e.name)?;
+    d.set_item("normalized_name", &e.normalized_name)?;
+    d.set_item("language", &e.language)?;
+    d.set_item("kind", &e.kind)?;
+    d.set_item("preferred", PyBool::new(py, e.preferred).to_owned())?;
+    d.set_item("matched_via", e.matched_via.as_str())?;
+    d.set_item("rank", &e.rank)?;
+    d.set_item("scientific_name", &e.scientific_name)?;
+    Ok(d.unbind())
+}
+
+// ---- Iterator classes ----
+
+macro_rules! make_iter_class {
+    ($name:ident, $row:ty, $conv:ident) => {
+        #[pyclass]
+        pub struct $name {
+            data: std::vec::IntoIter<$row>,
+        }
+
+        #[pymethods]
+        impl $name {
+            fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+                slf
+            }
+            fn __next__(&mut self, py: Python<'_>) -> PyResult<Option<Py<PyDict>>> {
+                match self.data.next() {
+                    None => Ok(None),
+                    Some(row) => Ok(Some($conv(py, &row)?)),
+                }
+            }
+        }
+    };
+}
+
+make_iter_class!(TaxonIterator, TaxonRow, taxon_to_pydict);
+make_iter_class!(FactIterator, FactRow, fact_to_pydict);
+make_iter_class!(NameIterator, NameRow, name_to_pydict);
+make_iter_class!(HazardIterator, HazardRow, hazard_to_pydict);
+
+// ---- PyRustKnowledgeSet ----
+
+#[pyclass]
+pub struct PyRustKnowledgeSet {
+    inner: Arc<RustKnowledgeSet>,
+}
+
+#[pymethods]
+impl PyRustKnowledgeSet {
+    // ---- properties ----
+
+    #[getter]
+    fn pack_hash(&self) -> &str {
+        &self.inner.pack_hash
+    }
+
+    #[getter]
+    fn artifact_sha256(&self) -> &str {
+        &self.inner.artifact_sha256
+    }
+
+    #[getter]
+    fn dictionary_version(&self) -> &str {
+        &self.inner.dictionary_version
+    }
+
+    #[getter]
+    fn verified(&self) -> bool {
+        self.inner.verified
+    }
+
+    // ---- per-item lookups ----
+
+    fn taxon(&self, py: Python<'_>, taxon_id: &str) -> PyResult<Option<Py<PyDict>>> {
+        match self.inner.taxon(taxon_id) {
+            None => Ok(None),
+            Some(t) => Ok(Some(taxon_to_pydict(py, t)?)),
+        }
+    }
+
+    fn source(&self, py: Python<'_>, source_id: &str) -> PyResult<Option<Py<PyDict>>> {
+        match self.inner.source(source_id) {
+            None => Ok(None),
+            Some(s) => Ok(Some(source_to_pydict(py, s)?)),
+        }
+    }
+
+    fn dataset(&self, py: Python<'_>, dataset_id: &str) -> PyResult<Option<Py<PyDict>>> {
+        match self.inner.dataset(dataset_id) {
+            None => Ok(None),
+            Some(d) => Ok(Some(dataset_to_pydict(py, d)?)),
+        }
+    }
+
+    // ---- iterators ----
+
+    fn taxa(&self, py: Python<'_>) -> PyResult<Py<TaxonIterator>> {
+        Py::new(
+            py,
+            TaxonIterator {
+                data: self.inner.taxa().to_vec().into_iter(),
+            },
+        )
+    }
+
+    fn facts(&self, py: Python<'_>) -> PyResult<Py<FactIterator>> {
+        Py::new(
+            py,
+            FactIterator {
+                data: self.inner.facts().to_vec().into_iter(),
+            },
+        )
+    }
+
+    fn names(&self, py: Python<'_>) -> PyResult<Py<NameIterator>> {
+        Py::new(
+            py,
+            NameIterator {
+                data: self.inner.names().to_vec().into_iter(),
+            },
+        )
+    }
+
+    fn hazards(&self, py: Python<'_>) -> PyResult<Py<HazardIterator>> {
+        Py::new(
+            py,
+            HazardIterator {
+                data: self.inner.hazards().to_vec().into_iter(),
+            },
+        )
+    }
+
+    // ---- per-taxon collections ----
+
+    fn facts_for(
+        &self,
+        py: Python<'_>,
+        taxon_id: &str,
+        parameter: Option<&str>,
+    ) -> PyResult<Py<PyAny>> {
+        match self.inner.facts_for(taxon_id, parameter) {
+            Err(_) => Err(pyo3::exceptions::PyKeyError::new_err(taxon_id.to_string())),
+            Ok(rows) => {
+                let l = PyList::empty(py);
+                for r in rows {
+                    l.append(fact_to_pydict(py, r)?)?;
+                }
+                Ok(l.into_any().unbind())
+            }
+        }
+    }
+
+    fn names_for(&self, py: Python<'_>, taxon_id: &str) -> PyResult<Py<PyAny>> {
+        match self.inner.names_for(taxon_id) {
+            Err(_) => Err(pyo3::exceptions::PyKeyError::new_err(taxon_id.to_string())),
+            Ok(rows) => {
+                let l = PyList::empty(py);
+                for r in rows {
+                    l.append(name_to_pydict(py, r)?)?;
+                }
+                Ok(l.into_any().unbind())
+            }
+        }
+    }
+
+    fn hazards_for(&self, py: Python<'_>, taxon_id: &str) -> PyResult<Py<PyAny>> {
+        match self.inner.hazards_for(taxon_id) {
+            Err(_) => Err(pyo3::exceptions::PyKeyError::new_err(taxon_id.to_string())),
+            Ok(rows) => {
+                let l = PyList::empty(py);
+                for r in rows {
+                    l.append(hazard_to_pydict(py, r)?)?;
+                }
+                Ok(l.into_any().unbind())
+            }
+        }
+    }
+
+    fn ids_lock(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        match self.inner.ids_lock() {
+            None => Ok(py.None()),
+            Some(set) => {
+                let l = PyList::empty(py);
+                for x in set {
+                    l.append(x)?;
+                }
+                let fset = py.import("builtins")?.getattr("frozenset")?.call1((l,))?;
+                Ok(fset.unbind())
+            }
+        }
+    }
+
+    fn names_index(&self, py: Python<'_>, query: &str) -> PyResult<Py<PyAny>> {
+        let entries = self.inner.names_index(query);
+        let l = PyList::empty(py);
+        for e in entries {
+            l.append(name_index_entry_to_pydict(py, e)?)?;
+        }
+        Ok(l.into_any().unbind())
+    }
+}
+
+// ---- load_built_pack_native ----
+
+fn manifest_fields_from_pydict(
+    d: &Bound<'_, PyDict>,
+) -> PyResult<agri_kernel::pack::build::ManifestFields> {
+    use agri_kernel::pack::build::ManifestFields;
+    let get_str = |k: &str| -> PyResult<String> {
+        d.get_item(k)?
+            .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err(k.to_string()))?
+            .extract()
+    };
+    let get_int = |k: &str| -> PyResult<i64> {
+        d.get_item(k)?
+            .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err(k.to_string()))?
+            .extract()
+    };
+    let get_opt_str = |k: &str| -> PyResult<Option<String>> {
+        match d.get_item(k)? {
+            Some(x) if !x.is_none() => Ok(Some(x.extract()?)),
+            _ => Ok(None),
+        }
+    };
+    let get_opt_int = |k: &str| -> PyResult<Option<i64>> {
+        match d.get_item(k)? {
+            Some(x) if !x.is_none() => Ok(Some(x.extract()?)),
+            _ => Ok(None),
+        }
+    };
+    let get_bool = |k: &str| -> PyResult<bool> {
+        match d.get_item(k)? {
+            Some(x) if !x.is_none() => x.extract(),
+            _ => Ok(false),
+        }
+    };
+    Ok(ManifestFields {
+        name: get_str("name")?,
+        version: get_str("version")?,
+        schema_version: get_int("schema_version")?,
+        engine_min: get_str("engine_min")?,
+        dictionary_min: get_str("dictionary_min")?,
+        content_hash: get_opt_str("content_hash")?,
+        synthetic: get_bool("synthetic")?,
+        artifact_sha256: get_opt_str("artifact_sha256")?,
+        sqlite_schema_version: get_opt_int("sqlite_schema_version")?,
+        built_by: get_opt_str("built_by")?,
+        hash_alg: get_opt_str("hash_alg")?,
+    })
+}
+
+#[pyfunction]
+#[pyo3(name = "load_built_pack_native")]
+pub fn py_load_built_pack_native(
+    py: Python<'_>,
+    sqlite_path: std::path::PathBuf,
+    manifest_dict: &Bound<'_, PyDict>,
+    expected_content_hash: Option<String>,
+    dictionary_version: String,
+    max_bytes: u64,
+) -> PyResult<Py<PyRustKnowledgeSet>> {
+    let manifest = manifest_fields_from_pydict(manifest_dict)?;
+    let set = load_built_pack(
+        &sqlite_path,
+        manifest,
+        expected_content_hash.as_deref(),
+        dictionary_version,
+        max_bytes,
+    )
+    .map_err(|e| raise_pack_error(py, e))?;
+    Py::new(
+        py,
+        PyRustKnowledgeSet {
+            inner: Arc::new(set),
+        },
+    )
+}
