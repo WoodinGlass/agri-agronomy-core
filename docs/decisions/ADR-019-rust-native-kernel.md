@@ -576,6 +576,40 @@ G4 (4 sub-cells, 7–9 working days) in exchange for:
 
 The plan places full parity above speed.
 
+#### 11.13 D3 (Phase G extension): pin tripwire + ICU4X third oracle (2026-11-17)
+
+Tripwire tests added (`crates/agri-kernel/tests/unicode_version_pin.rs`,
+`crates/agri-kernel/tests/cargo_lock_single.rs`,
+`tests/contract/test_unicode_version_pin.py`,
+`tests/contract/test_cargo_lock_single_unicode_normalization.py`):
+
+- `caseless::UNICODE_VERSION == (16, 0, 0)` — exact.
+- `unicode_normalization::UNICODE_VERSION >= (16, 0)` — lower bound. At
+  `0.1.26` it ships **18.0** tables. That is coherent with the pin:
+  strict mode (§11.4) rejects codepoints unassigned-at-16.0, and per
+  Unicode stability policy NFKC output for assigned codepoints is
+  locked; input that would exercise the 17.0/18.0 tables never reaches
+  NFKC.
+- `Cargo.lock` holds exactly one `unicode-normalization`, one `caseless`,
+  one `icu_casemap`, and one `icu_normalizer`.
+- `icu_casemap` / `icu_normalizer` pinned exactly at `2.4.0`, dev-only.
+
+**ICU4X third oracle.** `crates/agri-kernel/tests/normalize_icu4x_oracle.rs`
+uses `icu_casemap::CaseMapper::new().fold_string(...)` and
+`icu_normalizer::ComposingNormalizer::new_nfkc().normalize(...)` — both
+backed by the crate's `compiled_data` feature (default in 2.4.0) — to
+reproduce the native pipeline on representative inputs. The test is
+`#[ignore]` and runs nightly via `.github/workflows/rust.yml` job
+`icu4x-oracle`, not on PRs.
+
+Failure of the ICU4X oracle is **monitored, not blocking**. A semantic
+diff on codepoints assigned at <=16.0 is a candidate stop-loss under
+§11.7 (would flip `normalize` + `name_index` to Python as one unit); a
+diff on newly assigned codepoints is expected per §11.2 and handled by
+the version-aware parity tests.
+
+License: ICU4X is `Unicode-3.0`, in `deny.toml` allowlist.
+
 #### 11.12 Phase G4-4: backend stop-loss (2026-11-16)
 
 **Stop-loss applied.** G4-4 flipped `_NATIVE_LOAD` to `True` and measured

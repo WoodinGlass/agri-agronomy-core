@@ -77,3 +77,14 @@ jobs:
         with:
           command: check
           arguments: --all-features --locked
+
+  icu4x-oracle:
+    name: ICU4X third-oracle parity (nightly)
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked --test normalize_icu4x_oracle -- --ignored
