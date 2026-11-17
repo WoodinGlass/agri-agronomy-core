@@ -69,7 +69,7 @@ def _generate(fn, out_name: str) -> int:
         "entries": entries,
     }
     out = _VECTORS / out_name
-    out.write_text(json.dumps(payload, ensure_ascii=False) + "\n")
+    out.write_text(json.dumps(payload, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"wrote {out}: {len(entries)} entries, unicode={payload['version']}")
     return len(entries)
 

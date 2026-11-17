@@ -42,7 +42,7 @@ _SKIP_NATIVE = pytest.mark.skipif(
 def _load(golden_file: str) -> dict:
     p = _VECTORS / golden_file
     assert p.exists(), f"golden file missing: {p}"
-    data = json.loads(p.read_text())
+    data = json.loads(p.read_text(encoding="utf-8"))
     assert data["version"] == "16.0.0", f"{golden_file}: version={data['version']}, expected 16.0.0"
     return data
 
