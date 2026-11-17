@@ -30,7 +30,9 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: Install from lock
         run: |
@@ -78,7 +80,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: Install project
         run: pip install -e ".[dev]"
@@ -108,7 +112,9 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: Install uv
         run: python -m pip install --upgrade uv
@@ -137,10 +143,12 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
       - name: Install project
         run: pip install -e ".[dev]"
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
       - name: Cache pre-commit hooks
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6
         with:
@@ -159,10 +167,12 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
       - name: Install project
         run: pip install -e ".[dev]"
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
       - name: Run notebooks (nbmake)
         run: pytest --nbmake notebooks/ --no-cov -q -W ignore::DeprecationWarning
 
@@ -177,7 +187,9 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: Install build and twine
         run: python -m pip install build twine
@@ -309,7 +321,9 @@ jobs:
         with:
           name: wheel
           path: ${{ runner.temp }}/wheel-dist
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: Smoke test wheel artifact
         working-directory: ${{ runner.temp }}
@@ -378,7 +392,9 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: Install from lock
         run: |
@@ -399,7 +415,9 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: Install project
         shell: bash
@@ -427,7 +445,9 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: Install runtime dependencies in a clean venv
         shell: bash
@@ -529,7 +549,9 @@ jobs:
         with:
           name: sdist
           path: ${{ runner.temp }}/sdist-dist
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: Install build
         run: python -m pip install build

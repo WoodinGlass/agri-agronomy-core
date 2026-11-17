@@ -1037,3 +1037,30 @@ pub fn py_load_built_pack_native(
         },
     )
 }
+
+// ============================================================================
+// M21 D2 (Phase G extension): normalize + unicode_version PyO3 bindings.
+// Per ADR-019 §11.1 (pin), §11.3 (pipeline), §11.5 (one backend unit).
+// ============================================================================
+
+/// Normalize a taxon name: NFKC -> full casefold -> hybrid lift -> collapse.
+/// Mirrors `agri_core.pack.normalize.normalize_name` bit-for-bit.
+#[pyfunction]
+#[pyo3(name = "normalize_name")]
+pub fn py_normalize_name(s: &str) -> String {
+    agri_kernel::pack::normalize::normalize_name(s)
+}
+
+/// Normalize a scope value: same pipeline minus the hybrid lift.
+#[pyfunction]
+#[pyo3(name = "normalize_scope_value")]
+pub fn py_normalize_scope_value(s: &str) -> String {
+    agri_kernel::pack::normalize::normalize_scope_value(s)
+}
+
+/// The Unicode version the native tables are pinned to (ADR-019 §11.1).
+#[pyfunction]
+#[pyo3(name = "unicode_version")]
+pub fn py_unicode_version() -> &'static str {
+    agri_kernel::pack::unicode_pin::UNICODE_VERSION
+}

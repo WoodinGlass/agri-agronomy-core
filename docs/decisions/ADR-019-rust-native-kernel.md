@@ -576,6 +576,100 @@ G4 (4 sub-cells, 7–9 working days) in exchange for:
 
 The plan places full parity above speed.
 
+#### 11.14 D4 (Phase G extension): golden-16.0 + idempotence + ordering + adversarial + real corpus + proptest (2026-11-17)
+
+Coverage for the native normalizer across five dimensions, on top of
+D2's golden-based parity test.
+
+**Full scalar sweep** (`crates/agri-kernel/tests/normalize_sweep.rs`):
+
+- **Standalone**: every codepoint `0..=0x10FFFF` excluding surrogates
+  and `SKIP_CN_15_1`. Expected = whitespace → `""`, golden[cp] when
+  present (6408 pinned 16.0 entries), identity otherwise.
+- **Context**: `normalize("a{ch}b")` asserted **idempotent**, not
+  derived from `normalize(ch)`. NFKC is **not compositional**:
+  `"a" + combining_acute` → `"á"` (U+00E1) while
+  `normalize(combining_acute) == combining_acute` unchanged. Context-
+  derivation from standalone is fundamentally wrong; idempotence is
+  the sound property.
+
+**`SKIP_CN_15_1`** (132 codepoints) = codepoints whose
+`category(chr(cp))` in Python 3.13.18 (Unicode 15.1.0) is `Cn` **and**
+whose native 16.0 normalization is non-identity. Of these, **63 are in
+the 16.0 golden** (Python 3.14.9 assigned them and their change is
+pinned) and are additionally covered by `test_native_matches_16_0_golden`
+in `tests/contract/test_native_parity_normalize.py`; the remaining
+**69** have no golden entry and are skipped entirely in the Rust sweep
+(native 16.0 authoritative, not testable against a 15.1-invisible
+reference).
+
+`SKIP_CN_15_1` is a **tripwire**: its size is pinned by
+`skip_list_size_is_pinned`; regen requires an ADR amendment. Rationale
+for explicit list (vs. a 16.0 Cn-bitmap asset ~140 KB): the change-set
+is exactly what the test must distinguish, and is
+132 entries.
+
+**Python sweep** (`tests/contract/test_native_parity_normalize.py::test_sweep_version_aware`):
+same codepoint set, two skips: `ch.isspace()` (Python `str.split`
+collapses; golden has no entry, identity fallback would be wrong) and
+`unicodedata.category(ch) == "Cn"` (unassigned in runtime → native
+authoritative per §11.2).
+
+**Ordering** (`normalize_ordering.rs`): Hangul L/V (399) + L/V/T
+(10,773) compositions (`S_BASE = 0xAC00`, arithmetic step `T_COUNT = 28`,
+`T_BASE = 0x11A8` for 27 trailing consonants); canonical ccc reorder
+**with composition** (`a + U+0301 + U+0316` → `"á" + U+0316`, not raw
+reorder — NFKC composes across lower-ccc marks when a composition
+exists); ligature and casefold expansions.
+
+**Adversarial** (`normalize_adversarial.rs`): bidi embedding/isolate,
+ZWJ/ZWNJ, VS BMP + supplemental, SHY, tag, noncharacters, NUL. No
+panic; idempotence; `unstable_at_pin` flagging for strict mode.
+
+**Real corpus** (`normalize_real_corpus.rs`): sample pack names.csv +
+plant wishlist. Idempotence.
+
+**Proptest** (`normalize_proptest.rs`): idempotence + expansion bound.
+`MAX_EXPANSION_FACTOR = 18.0`, measured across the full sweep (driver
+U+FDFA NFKC = 18 codepoints), locked as a constant.
+
+**Bumping the Unicode pin** requires regen of the skip list, the golden
+vectors, and this section (tripwire, not silent drift).
+
+#### 11.13 D3 (Phase G extension): pin tripwire + ICU4X third oracle (2026-11-17)
+
+Tripwire tests added (`crates/agri-kernel/tests/unicode_version_pin.rs`,
+`crates/agri-kernel/tests/cargo_lock_single.rs`,
+`tests/contract/test_unicode_version_pin.py`,
+`tests/contract/test_cargo_lock_single_unicode_normalization.py`):
+
+- `caseless::UNICODE_VERSION == (16, 0, 0)` — exact.
+- `unicode_normalization::UNICODE_VERSION >= (16, 0)` — lower bound. At
+  `0.1.26` it ships **18.0** tables. That is coherent with the pin:
+  strict mode (§11.4) rejects codepoints unassigned-at-16.0, and per
+  Unicode stability policy NFKC output for assigned codepoints is
+  locked; input that would exercise the 17.0/18.0 tables never reaches
+  NFKC.
+- `Cargo.lock` holds exactly one `unicode-normalization`, one `caseless`,
+  one `icu_casemap`, and one `icu_normalizer`.
+- `icu_casemap` / `icu_normalizer` pinned exactly at `2.4.0`, dev-only.
+
+**ICU4X third oracle.** `crates/agri-kernel/tests/normalize_icu4x_oracle.rs`
+uses `icu_casemap::CaseMapper::new().fold_string(...)` and
+`icu_normalizer::ComposingNormalizer::new_nfkc().normalize(...)` — both
+backed by the crate's `compiled_data` feature (default in 2.4.0) — to
+reproduce the native pipeline on representative inputs. The test is
+`#[ignore]` and runs nightly via `.github/workflows/rust.yml` job
+`icu4x-oracle`, not on PRs.
+
+Failure of the ICU4X oracle is **monitored, not blocking**. A semantic
+diff on codepoints assigned at <=16.0 is a candidate stop-loss under
+§11.7 (would flip `normalize` + `name_index` to Python as one unit); a
+diff on newly assigned codepoints is expected per §11.2 and handled by
+the version-aware parity tests.
+
+License: ICU4X is `Unicode-3.0`, in `deny.toml` allowlist.
+
 #### 11.12 Phase G4-4: backend stop-loss (2026-11-16)
 
 **Stop-loss applied.** G4-4 flipped `_NATIVE_LOAD` to `True` and measured

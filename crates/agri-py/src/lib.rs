@@ -169,6 +169,9 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<pack::NameIterator>()?;
     m.add_class::<pack::HazardIterator>()?;
     m.add_function(wrap_pyfunction!(pack::py_validate_pack_findings, m)?)?;
+    m.add_function(wrap_pyfunction!(pack::py_normalize_name, m)?)?;
+    m.add_function(wrap_pyfunction!(pack::py_normalize_scope_value, m)?)?;
+    m.add_function(wrap_pyfunction!(pack::py_unicode_version, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 }

@@ -56,6 +56,10 @@
       "title": "Synthetic",
       "type": "boolean"
     },
+    "unicode_version": {
+      "title": "Unicode Version",
+      "type": "string"
+    },
     "verified": {
       "title": "Verified",
       "type": "boolean"
@@ -63,6 +67,7 @@
   },
   "required": [
     "engine_version",
+    "unicode_version",
     "resolution_policy_version",
     "pack_version",
     "schema_version",

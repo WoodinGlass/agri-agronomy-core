@@ -20,6 +20,13 @@ csv = "1"
 # M21 G4-2: Unicode normalization (pinned per ADR-019 §11.1)
 unicode-normalization = "=0.1.26"
 caseless = "=0.2.2"
+# M21 D3 (Phase G extension): ICU4X as third oracle, dev-only, nightly.
+# icu_casemap/icu_normalizer license = Unicode-3.0 (deny.toml allowlist).
+# Not shipped; only used by crates/agri-kernel dev-tests.
+icu_casemap = "=2.4.0"
+icu_normalizer = "=2.4.0"
+# M21 D4 (Phase G extension): proptest for property-based testing.
+proptest = "1"
 
 [profile.release]
 lto = "thin"
