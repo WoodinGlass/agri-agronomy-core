@@ -32,7 +32,7 @@ fn load_entries(path: &std::path::Path) -> Vec<Value> {
 
 #[test]
 fn normalize_name_parity() {
-    let path = vector_path("normalize_name_15_1.json");
+    let path = vector_path("normalize_name_16_0.json");
     let entries = load_entries(&path);
     let mut failures = Vec::new();
     for e in entries.iter() {
@@ -59,7 +59,7 @@ fn normalize_name_parity() {
 
 #[test]
 fn normalize_scope_value_parity() {
-    let path = vector_path("normalize_scope_value_15_1.json");
+    let path = vector_path("normalize_scope_value_16_0.json");
     let entries = load_entries(&path);
     let mut failures = Vec::new();
     for e in entries.iter() {

@@ -432,7 +432,14 @@ Unicode 16.0), not from whichever Python happens to run the tests.
 2. **Full case folding** (Unicode 16.0, via `caseless` `C`+`F` mappings).
 3. **Hybrid lift** (`normalize_name` only): `U+00D7` -> ASCII `x`.
    `normalize_scope_value` skips this step.
-4. **Whitespace collapse** against an **explicit codepoint list** (§11.4),
+4. **NFC** (Unicode 16.0, via `unicode-normalization`): re-canonicalize
+   after steps 2-3 so the output is idempotent. Case folding may emit a
+   decomposed combining sequence (`U+00D7 U+0307` -> `x U+0307`) that
+   NFKC did not see; a second `normalize_name` pass composes it to
+   `U+1E8B`. NFC after the lift closes this class. The final form is
+   canonical by construction, so `normalize_name(normalize_name(s)) ==
+   normalize_name(s)` for every input.
+5. **Whitespace collapse** against an **explicit codepoint list** (§11.4),
    not a language predicate.
 
 `Python str.split()` and Rust `char::is_whitespace()` agree on U+0009–U+000D,

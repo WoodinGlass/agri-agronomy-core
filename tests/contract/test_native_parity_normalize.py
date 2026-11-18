@@ -222,13 +222,17 @@ def test_real_corpus_idempotent() -> None:
 @pytest.mark.property
 def test_hypothesis_idempotent_and_expansion_bounded() -> None:
     """Hypothesis: idempotence + expansion <= MAX_EXPANSION_FACTOR (18.0)."""
-    from hypothesis import given, settings
+    from hypothesis import example, given, settings
     from hypothesis import strategies as st
 
     MAX_FACTOR = 18.0  # matches crates/agri-kernel/tests/normalize_proptest.rs
 
-    @given(st.text())
     @settings(max_examples=500, deadline=None)
+    @example("\u00d7\u0307")  # ADR-019 §11.3 regression (NFC after hybrid lift)
+    @example("\u00d7\u0308")
+    @example("\u01f0")
+    @example("j\u030c")
+    @given(st.text())
     def _check(s: str) -> None:
         once = normalize_name(s)
         twice = normalize_name(once)
@@ -238,3 +242,23 @@ def test_hypothesis_idempotent_and_expansion_bounded() -> None:
             assert factor <= MAX_FACTOR, f"expansion {factor:.2} > {MAX_FACTOR} on {s!r}"
 
     _check()
+
+
+@pytest.mark.property
+def test_idempotent_known_regressions() -> None:
+    """Explicit regressions for non-idempotent inputs found by Hypothesis.
+
+    See ADR-019 §11.3 step 4: casefold + hybrid lift can produce a
+    decomposed combining sequence (e.g. U+00D7 U+0307 -> x U+0307) that
+    NFKC did not see; NFC re-canonicalization closes the class.
+    """
+    cases = [
+        "\u00d7\u0307",
+        "\u00d7\u0308",
+        "\u01f0",
+        "j\u030c",
+    ]
+    for s in cases:
+        once = normalize_name(s)
+        twice = normalize_name(once)
+        assert once == twice, f"idempotence regression: {s!r} -> {once!r} -> {twice!r}"

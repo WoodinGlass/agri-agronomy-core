@@ -21,7 +21,10 @@ def normalize_name(s: str) -> str:
     3. Hybrid lift: U+00D7 MULTIPLICATION SIGN -> ASCII ``x``, so a
        query typed as ``Testus x hybridus`` matches a scientific name
        written with the multiplication sign.
-    4. Whitespace collapse: any run of Unicode whitespace (including
+    4. NFC re-canonicalization: compose any combining sequences that
+       case folding or the hybrid lift produced, so the output is
+       idempotent under a second pass.
+    5. Whitespace collapse: any run of Unicode whitespace (including
        NO-BREAK SPACE U+00A0, tab, newline) becomes a single ASCII
        space; leading and trailing whitespace is stripped.
 
@@ -34,6 +37,7 @@ def normalize_name(s: str) -> str:
     s = unicodedata.normalize("NFKC", s)
     s = s.casefold()
     s = s.replace(_HYBRID_SIGN, _HYBRID_LIFT)
+    s = unicodedata.normalize("NFC", s)
     return " ".join(s.split())
 
 
@@ -49,4 +53,5 @@ def normalize_scope_value(s: str) -> str:
         return ""
     s = unicodedata.normalize("NFKC", s)
     s = s.casefold()
+    s = unicodedata.normalize("NFC", s)
     return " ".join(s.split())

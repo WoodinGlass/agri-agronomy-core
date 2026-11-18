@@ -44,8 +44,12 @@ Unicode 16.0), not from whichever Python happens to run the tests:
 - `normalize_name_16_0.json`
 - `normalize_scope_value_16_0.json`
 
-The `*_15_1.json` files (from Python 3.13.18 / Unicode 15.1.0) are
-retained as historical reference but are **not** used by parity tests.
+The former `*_15_1.json` files (from Python 3.13.18 / Unicode 15.1.0)
+were removed when the pipeline adopted NFC re-canonicalization
+(ADR-019 §11.3 step 4). Both the Rust and Python parity tests read
+`*_16_0.json` only, matching the ADR-019 §11.1 pin. The
+`SKIP_CN_15_1` list in `normalize_sweep.rs` is unrelated: it is a
+codepoint list, not a golden file.
 
 ## Tests
 

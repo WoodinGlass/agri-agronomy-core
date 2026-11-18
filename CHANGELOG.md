@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `normalize_name` / `normalize_scope_value`: NFC re-canonicalization after
+  case folding and hybrid lift (ADR-019 §11.3 step 4). Previous pipeline
+  was non-idempotent for inputs whose casefold output decomposed into
+  combining sequences that NFKC did not see (U+00D7 U+0307 -> x U+0307 ->
+  U+1E8B). Found by `test_hypothesis_idempotent_and_expansion_bounded`
+  (Hypothesis). Golden vectors regenerated on Python 3.14.9 / Unicode
+  16.0.0: 26 entries changed in each of `normalize_name_16_0.json` and
+  `normalize_scope_value_16_0.json` (5 recomposed, 21 dropped because
+  they became identity under the new NFC step). No behavioral change
+  for codepoints whose output was already NFC-canonical. Rust test
+  `crates/agri-kernel/tests/normalize_vectors.rs` switched from the
+  legacy `*_15_1.json` to `*_16_0.json` (single source per ADR-019
+  §11.1); the legacy files were deleted.
+
 ### Added
 
 - **D4 (Phase G extension) — full scalar sweep + ordering + adversarial + real corpus + proptest.** `normalize_sweep.rs` iterates every scalar (0..0x10FFFF, excl. surrogates + `SKIP_CN_15_1`): whitespace → `""`, golden[cp] when present (6408 pinned 16.0 entries), identity otherwise; plus context idempotence. `SKIP_CN_15_1` (132 cp) = Unicode 16.0 additions whose behavior differs from identity at 15.1 — **tripwire** (size pinned; regen requires ADR amendment); 63 covered additionally by golden parity test. `normalize_ordering.rs` covers Hangul L/V (399) + L/V/T (10,773) compositions, ccc reorder + composition, ligature/casefold expansions. `normalize_adversarial.rs` (bidi/ZWJ/VS/SHY/tag/noncharacter/NUL). `normalize_real_corpus.rs` (sample pack + wishlist). `normalize_proptest.rs` (idempotence + `MAX_EXPANSION_FACTOR = 18.0` locked, driver U+FDFA). Python `test_sweep_version_aware` version-aware (isspace + Cn skip). ADR §11.14 records scope.
