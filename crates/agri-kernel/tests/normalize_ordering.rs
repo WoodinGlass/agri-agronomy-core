@@ -154,12 +154,12 @@ fn ligature_expansions() {
 
 #[test]
 fn casefold_expansions() {
-    // C+F casefold expansions (post-NFKC)
+    // C+F casefold expansions (post-NFKC), then NFC composition (ADR-019 §11.3 step 4)
     let cases = [
         ("\u{00DF}", "ss"),                       // ß
         ("\u{1E9E}", "ss"),                       // ẞ
         ("\u{0130}", "i\u{0307}"),                // İ -> i + combining dot
-        ("\u{1FD3}", "\u{03B9}\u{0308}\u{0301}"), // ΐ
+        ("\u{1FD3}", "\u{0390}"),                 // ΐ -> NFC composes ΐ to U+0390 (tonos)
     ];
     for (input, expected) in cases {
         assert_eq!(normalize_name(input), expected, "input {input:?}");
