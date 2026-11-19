@@ -41,6 +41,7 @@ from agri_core.pack import (
     Tier,
     compute_pack_hash,
     derive_all_tiers,
+    diff_pack_paths,
     diff_packs,
     hash_pack_files,
     load_knowledge_set,
@@ -654,13 +655,30 @@ def diff(
     old_path = _resolve_pack_path(old)
     new_path = _resolve_pack_path(new)
     try:
-        old_ks = load_knowledge_set(old_path, allow_synthetic=True)
-        new_ks = load_knowledge_set(new_path, allow_synthetic=True)
+        # Prefer path-based dispatch when both dirs carry a pack.toml.
+        # `diff_pack_paths` transparently falls back to load + diff_packs
+        # when the native exp-diff feature is off (see ADR-019).
+        if (
+            old_path.is_dir()
+            and new_path.is_dir()
+            and (old_path / "pack.toml").is_file()
+            and (new_path / "pack.toml").is_file()
+        ):
+            old_manifest = parse_manifest_bytes((old_path / "pack.toml").read_bytes())
+            new_manifest = parse_manifest_bytes((new_path / "pack.toml").read_bytes())
+            report = diff_pack_paths(
+                old_path,
+                new_path,
+                old_manifest=old_manifest,
+                new_manifest=new_manifest,
+            )
+        else:
+            old_ks = load_knowledge_set(old_path, allow_synthetic=True)
+            new_ks = load_knowledge_set(new_path, allow_synthetic=True)
+            report = diff_packs(old_ks, new_ks)
     except PackError as exc:
         typer.echo(f"error: {exc.code}: {exc}", err=True)
         raise typer.Exit(EXIT_PACK) from exc
-
-    report = diff_packs(old_ks, new_ks)
 
     if json_output:
         typer.echo(report.model_dump_json(indent=2))
