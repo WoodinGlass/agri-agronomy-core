@@ -13,8 +13,14 @@ import pytest
 from typer.testing import CliRunner
 
 from agri_core.cli import app
-from agri_core.pack import TABLES, diff_packs, load_knowledge_set, write_table
-from agri_core.pack.diff import FactChangeClass
+from agri_core.pack import (
+    TABLES,
+    PackManifest,
+    diff_packs,
+    load_knowledge_set,
+    write_table,
+)
+from agri_core.pack.diff import DiffReport, FactChangeClass
 from agri_core.pack.tables import read_table
 
 pytestmark = pytest.mark.contract
@@ -329,3 +335,45 @@ def test_diff_same_pack_twice_identical(tmp_path: Path) -> None:
     assert report.identical is True
     assert report.violations == ()
     assert report.old_pack_hash == report.new_pack_hash
+
+
+def test_diff_cli_uses_path_based_dispatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """CLI must route through diff_pack_paths when both dirs have pack.toml."""
+    from agri_core.pack import diff as _diff_module
+
+    calls: list[tuple[object, object]] = []
+    orig = _diff_module.diff_pack_paths
+
+    def _spy(
+        old_path: Path,
+        new_path: Path,
+        *,
+        old_manifest: PackManifest,
+        new_manifest: PackManifest,
+    ) -> DiffReport:
+        calls.append(
+            (
+                (old_path, new_path),
+                {
+                    "old_manifest": old_manifest,
+                    "new_manifest": new_manifest,
+                },
+            )
+        )
+        return orig(
+            old_path,
+            new_path,
+            old_manifest=old_manifest,
+            new_manifest=new_manifest,
+        )
+
+    monkeypatch.setattr(_diff_module, "diff_pack_paths", _spy)
+    import agri_core.cli as _cli_module
+
+    monkeypatch.setattr(_cli_module, "diff_pack_paths", _spy)
+
+    a = _sample_copy(tmp_path, "a")
+    b = _sample_copy(tmp_path, "b")
+    result = CliRunner().invoke(app, ["diff", "--old", str(a), "--new", str(b)])
+    assert result.exit_code == 0, result.stdout + result.stderr
+    assert len(calls) == 1
