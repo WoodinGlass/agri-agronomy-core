@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Windows `cargo test`: `pack::build::tests::build_minimal_returns_sqlite_magic`
+  could race with `build_allows_advisories_whitespace` because the temp
+  path used PID + clock only (Windows `SystemTime` granularity ~15 ms in
+  one process). `vacuum_into_temp` now claims a unique sub-directory via
+  `std::fs::create_dir` (fail-if-exists on all targets), so two
+  concurrent `build_sqlite_bytes` calls cannot share a `VACUUM INTO`
+  target. `artifact_sha256` unchanged. No new dependency.
+
 - `normalize_name` / `normalize_scope_value`: NFC re-canonicalization after
   case folding and hybrid lift (ADR-019 §11.3 step 4). Previous pipeline
   was non-idempotent for inputs whose casefold output decomposed into

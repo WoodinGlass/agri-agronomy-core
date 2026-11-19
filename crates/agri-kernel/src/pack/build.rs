@@ -376,24 +376,61 @@ pub fn parse_all_tables(
 // ---- Vacuum to temp file ----
 
 fn vacuum_into_temp(conn: &Connection) -> Result<Vec<u8>, PackError> {
-    let dir = std::env::temp_dir();
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    let path = dir.join(format!(
-        "agri_build_{}_{}.sqlite",
-        std::process::id(),
-        nanos
-    ));
+    // Allocate a unique sub-directory atomically. `create_dir` is
+    // fail-if-exists on POSIX and Windows, so the loop below is the
+    // atomicity boundary: two concurrent `build_sqlite_bytes` calls
+    // cannot share a target path. PID plus clock alone collide on
+    // Windows (SystemTime granularity is ~15 ms) when cargo test runs
+    // the build tests in parallel inside one process; the attempt
+    // counter guarantees forward progress even if the clock does not
+    // advance.
+    let base = std::env::temp_dir();
+    let mut subdir: Option<std::path::PathBuf> = None;
+    for attempt in 0u32..64u32 {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let candidate = base.join(format!(
+            "agri_build_{}_{}_{}",
+            std::process::id(),
+            nanos,
+            attempt
+        ));
+        match std::fs::create_dir(&candidate) {
+            Ok(()) => {
+                subdir = Some(candidate);
+                break;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => {
+                return Err(PackError::pack_invalid(format!("create temp dir: {e}")));
+            }
+        }
+    }
+    let subdir = match subdir {
+        Some(d) => d,
+        None => {
+            return Err(PackError::pack_invalid(
+                "could not allocate unique temp dir after 64 attempts",
+            ))
+        }
+    };
+    let path = subdir.join("pack.sqlite");
     let safe = path.to_string_lossy().replace('\'', "''");
     let sql = format!("VACUUM INTO '{safe}'");
-    conn.execute(&sql, [])
-        .map_err(|e| PackError::pack_invalid(format!("VACUUM INTO failed: {e}")))?;
-    let bytes = std::fs::read(&path)
-        .map_err(|e| PackError::pack_invalid(format!("read temp sqlite: {e}")))?;
+    let result = conn
+        .execute(&sql, [])
+        .map_err(|e| PackError::pack_invalid(format!("VACUUM INTO failed: {e}")))
+        .and_then(|_| {
+            std::fs::read(&path)
+                .map_err(|e| PackError::pack_invalid(format!("read temp sqlite: {e}")))
+        });
+    // Best-effort cleanup: a failure here must not mask the primary
+    // result.
     let _ = std::fs::remove_file(&path);
-    Ok(bytes)
+    let _ = std::fs::remove_dir(&subdir);
+    result
 }
 
 // ---- Main build entry ----
