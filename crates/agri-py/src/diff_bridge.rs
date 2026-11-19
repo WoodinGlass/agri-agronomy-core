@@ -1,13 +1,12 @@
 //! PyO3 adapters for Phase E diff.
 //!
 //! Two entry points:
-//! - py_diff_pack_paths: path-based (streams a built pack in Rust)
+//! - py_diff_pack_paths: path-based (streams built packs in Rust)
 //! - py_diff_loaded:     rows-based (in-memory rows from Python)
 //!
 //! Both return a PyDict that Python's `_render_diff_payload` turns into a
-//! `DiffReport`. Message rendering happens on the Python side; this module
-//! emits structured violation meta only. Never format!() a user-facing
-//! violation message here.
+//! `DiffReport`. Message rendering lives on the Python side (N17); this
+//! module emits structured ViolationMeta only.
 
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -16,20 +15,16 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyFrozenSet, PyList};
 
 use agri_kernel::pack::build::ManifestFields;
-use agri_kernel::pack::diff::{diff_rows, DiffConfig, DiffOutcome, ViolationMeta};
+use agri_kernel::pack::diff::{
+    diff_rows, stream_diff_rows_from_iterators, DiffConfig, DiffOutcome, ViolationMeta,
+};
 use agri_kernel::pack::errors::PackError;
 use agri_kernel::pack::row_types::{fact_from_json, taxon_from_json, FactRow, TaxonRow};
 use agri_kernel::pack::stream::PackStream;
 
-// ---- Error mapping ----
-
 fn err_to_py(e: PackError) -> PyErr {
-    // Structured ": " preserves the stable PackError.code so
-    // the Python wrapper can translate to the right exception subclass.
     pyo3::exceptions::PyValueError::new_err(format!("{}: {}", e.code, e.message))
 }
-
-// ---- Pydict → ManifestFields ----
 
 fn manifest_fields_from_pydict(d: &Bound<'_, PyDict>) -> PyResult<ManifestFields> {
     let get_str = |k: &str| -> PyResult<String> {
@@ -76,8 +71,6 @@ fn manifest_fields_from_pydict(d: &Bound<'_, PyDict>) -> PyResult<ManifestFields
     })
 }
 
-// ---- Set extraction ----
-
 fn extract_str_set(s: &Bound<'_, PyFrozenSet>) -> PyResult<BTreeSet<String>> {
     let mut out: BTreeSet<String> = BTreeSet::new();
     for item in s.iter() {
@@ -85,9 +78,6 @@ fn extract_str_set(s: &Bound<'_, PyFrozenSet>) -> PyResult<BTreeSet<String>> {
     }
     Ok(out)
 }
-
-// ---- PyAny → serde_json (self-contained; lib.rs's py_to_json_value is
-// private to that module so we don't reach for it here) ----
 
 fn py_to_json(obj: &Bound<'_, PyAny>) -> PyResult<serde_json::Value> {
     use pyo3::types::{PyBool, PyDict as PyDictT, PyFloat, PyInt, PyList as PyListT, PyString};
@@ -144,8 +134,6 @@ fn py_to_json(obj: &Bound<'_, PyAny>) -> PyResult<serde_json::Value> {
     )))
 }
 
-// ---- Rows / ids_lock conversion ----
-
 fn rows_from_pylist_taxa(lst: &Bound<'_, PyList>) -> PyResult<Vec<TaxonRow>> {
     let mut out: Vec<TaxonRow> = Vec::new();
     for item in lst.iter() {
@@ -182,12 +170,7 @@ fn ids_lock_from_opt(obj: Option<&Bound<'_, PyAny>>) -> PyResult<Option<BTreeSet
     }
 }
 
-// ---- DiffOutcome → PyDict ----
-
-fn diff_outcome_to_pydict<'py>(
-    py: Python<'py>,
-    out: &DiffOutcome,
-) -> PyResult<Bound<'py, PyDict>> {
+fn diff_outcome_to_pydict<'py>(py: Python<'py>, out: &DiffOutcome) -> PyResult<Bound<'py, PyDict>> {
     let d = PyDict::new(py);
     d.set_item("identical", out.identical)?;
     d.set_item("taxa_added", out.taxa_added.clone())?;
@@ -230,8 +213,6 @@ fn diff_outcome_to_pydict<'py>(
     Ok(d)
 }
 
-// ---- Adapters ----
-
 #[pyfunction]
 #[pyo3(name = "diff_pack_paths")]
 #[allow(clippy::too_many_arguments)]
@@ -251,28 +232,24 @@ pub fn py_diff_pack_paths<'py>(
     let old_stream = PackStream::open(Path::new(old_path), &old_mf).map_err(err_to_py)?;
     let new_stream = PackStream::open(Path::new(new_path), &new_mf).map_err(err_to_py)?;
 
-    let old_taxa = old_stream.load_taxa().map_err(err_to_py)?;
-    let old_facts = old_stream.load_facts().map_err(err_to_py)?;
-    let new_taxa = new_stream.load_taxa().map_err(err_to_py)?;
-    let new_facts = new_stream.load_facts().map_err(err_to_py)?;
-
     let cfg = DiffConfig {
         acceptable_fields: extract_str_set(acceptable_fields)?,
         violation_fields: extract_str_set(violation_fields)?,
         protected_statuses: extract_str_set(protected_statuses)?,
     };
 
-    let out = diff_rows(
-        &old_taxa,
-        &new_taxa,
-        &old_facts,
-        &new_facts,
+    let out = stream_diff_rows_from_iterators(
+        old_stream.open_taxa_producer().map_err(err_to_py)?,
+        new_stream.open_taxa_producer().map_err(err_to_py)?,
+        old_stream.open_facts_producer().map_err(err_to_py)?,
+        new_stream.open_facts_producer().map_err(err_to_py)?,
         None,
         None,
         &cfg,
-    );
+    )
+    .map_err(err_to_py)?;
 
-    let d = diff_outcome_to_pydict<'py>(py, &out)?;
+    let d = diff_outcome_to_pydict(py, &out)?;
     d.set_item("old_pack_hash", &old_stream.pack_hash)?;
     d.set_item("new_pack_hash", &new_stream.pack_hash)?;
     Ok(d)
@@ -319,7 +296,7 @@ pub fn py_diff_loaded<'py>(
         &cfg,
     );
 
-    let d = diff_outcome_to_pydict<'py>(py, &out)?;
+    let d = diff_outcome_to_pydict(py, &out)?;
     d.set_item("old_pack_hash", old_pack_hash)?;
     d.set_item("new_pack_hash", new_pack_hash)?;
     Ok(d)

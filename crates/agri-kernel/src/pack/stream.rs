@@ -335,6 +335,14 @@ impl<T> Iterator for ProducerIter<T> {
     }
 }
 
+impl<T> Drop for ProducerIter<T> {
+    fn drop(&mut self) {
+        if let Some(h) = self.handle.take() {
+            let _ = h.join();
+        }
+    }
+}
+
 fn open_conn_from_bytes(bytes: &[u8]) -> Result<Connection, PackError> {
     let mut conn = Connection::open_in_memory()
         .map_err(|e| PackError::pack_invalid(format!("open in-memory sqlite: {e}")))?;

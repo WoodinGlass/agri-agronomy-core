@@ -1,5 +1,7 @@
 use pyo3::prelude::*;
 
+#[cfg(feature = "exp-diff")]
+mod diff_bridge;
 mod pack;
 
 const MAX_JSON_DEPTH: usize = 1000;
@@ -172,6 +174,10 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(pack::py_normalize_name, m)?)?;
     m.add_function(wrap_pyfunction!(pack::py_normalize_scope_value, m)?)?;
     m.add_function(wrap_pyfunction!(pack::py_unicode_version, m)?)?;
+    #[cfg(feature = "exp-diff")]
+    m.add_function(wrap_pyfunction!(diff_bridge::py_diff_pack_paths, m)?)?;
+    #[cfg(feature = "exp-diff")]
+    m.add_function(wrap_pyfunction!(diff_bridge::py_diff_loaded, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 }
