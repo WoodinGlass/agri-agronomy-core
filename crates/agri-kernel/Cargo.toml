@@ -24,3 +24,6 @@ icu_casemap.workspace = true
 icu_normalizer.workspace = true
 # D4 (Phase G extension): property-based testing (idempotence, expansion bound).
 proptest.workspace = true
+
+[features]
+exp-diff = []
