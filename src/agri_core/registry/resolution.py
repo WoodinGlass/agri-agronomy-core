@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from agri_core.pack.knowledge_set import KnowledgeSet
 
 __all__ = [
+    "DEFAULT_BACKENDS",
     "FactOutcome",
     "FactOutcomeAdapter",
     "FactResolved",
@@ -65,6 +66,24 @@ _MAX_INPUT_LENGTH = 200
 ``NameRow.name`` / ``TaxonRow.scientific_name`` ``max_length=200``. The
 check runs on the raw caller string **before** normalization — NFKC
 expansion can double length, and the caller did not cause that."""
+
+
+DEFAULT_BACKENDS: dict[str, str] = {
+    "hash_pack_files": "python",  # stop-loss Phase B (SHA-256 crate)
+    "build_pack": "python",  # stop-loss Phase C/D
+    "load_knowledge_set": "python",  # stop-loss Phase G4-4 (5.54x)
+    "validate_pack": "python",  # stop-loss Phase C/D
+    "diff_packs": "python",  # flip after E.5 perf gate
+    "derive_all_tiers": "python",
+}
+"""Declared baseline backend per function.
+
+Runtime truth comes from ``meta().backends`` which applies
+per-function detectors (``_hash_pack_files_backend``,
+``_load_knowledge_set_backend``, ``_diff_packs_backend``). Tests
+that want to survive a flip should assert against this table
+rather than a literal string.
+"""
 
 
 class TaxonOk(BaseModel):
@@ -756,6 +775,23 @@ def _load_knowledge_set_backend() -> str:
     return "native" if _NATIVE_LOAD_AVAILABLE else "python"
 
 
+def _diff_packs_backend() -> str:
+    """Report the backend the public ``diff_pack_paths`` wrapper uses.
+
+    ADR-019 Phase E: ``diff_pack_paths`` dispatches to native when
+    the extension was built with the ``exp-diff`` Cargo feature and
+    both paths are built packs (``pack.sqlite`` present). Detection
+    is compile-time: ``agri_core.pack.diff._DIFF_NATIVE`` is set at
+    import via ``hasattr(_native, "diff_pack_paths")``, never via
+    ``os.environ`` (N16). ``diff_packs(old, new)`` on KnowledgeSet
+    objects is unchanged (pure Python, eager). The wheel ships with
+    ``exp-diff`` off until E.5 perf gate flips ``DEFAULT_BACKENDS``.
+    """
+    from agri_core.pack.diff import _DIFF_NATIVE
+
+    return "native" if _DIFF_NATIVE else "python"
+
+
 def _unicode_version() -> str:
     """Return the native Unicode pin (ADR-019 §11.1).
 
@@ -796,12 +832,11 @@ def meta(pack: KnowledgeSet) -> MetaInfo:
         backends={
             # Phase B/C/D/E/F/G flip individual entries to "native"
             # once the native implementation passes its perf gate.
-            # Phase B: hash_pack_files detects native at import time.
             "hash_pack_files": _hash_pack_files_backend(),
             "build_pack": "python",
             "load_knowledge_set": _load_knowledge_set_backend(),
             "validate_pack": "python",
-            "diff_packs": "python",
+            "diff_packs": _diff_packs_backend(),
             "derive_all_tiers": "python",
         },
     )

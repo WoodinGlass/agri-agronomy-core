@@ -8,6 +8,7 @@ from agri_core.pack.diff import (
     FactChange,
     FactChangeClass,
     TaxaDiff,
+    diff_pack_paths,
     diff_packs,
 )
 from agri_core.pack.errors import (
@@ -119,6 +120,7 @@ __all__ = [
     "compute_pack_hash",
     "derive_all_tiers",
     "derive_tier",
+    "diff_pack_paths",
     "diff_packs",
     "hash_pack_files",
     "load_knowledge_set",

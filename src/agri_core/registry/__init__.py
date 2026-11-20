@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from agri_core.registry.resolution import (
+    DEFAULT_BACKENDS,
     FactOutcome,
     FactOutcomeAdapter,
     FactResolved,
@@ -28,6 +29,7 @@ from agri_core.registry.sources import (
 
 __all__ = [
     "CSV_HEADER",
+    "DEFAULT_BACKENDS",
     "CommercialUse",
     "FactOutcome",
     "FactOutcomeAdapter",

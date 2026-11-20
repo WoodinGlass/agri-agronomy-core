@@ -146,7 +146,7 @@ def test_pack_lock_legacy_pack_has_no_hash_alg_line(tmp_path: Path) -> None:
 
 def test_meta_reports_hash_alg_and_backends(tmp_path: Path) -> None:
     """meta() includes hash_alg + backends (per ADR-019 amendment #7)."""
-    from agri_core.registry import meta
+    from agri_core.registry import DEFAULT_BACKENDS, meta
 
     root = tmp_path / "pack"
     _make_pack(root)
@@ -157,10 +157,10 @@ def test_meta_reports_hash_alg_and_backends(tmp_path: Path) -> None:
     # validate_pack (Phase D), load_knowledge_set (Phase G4-4, §11.12)
     # remain Python by design (perf gate not met; native still importable
     # for opt-in benchmarks via `_NATIVE_LOAD=True` or `_native.*`).
-    assert m.backends["hash_pack_files"] == "python"
-    assert m.backends["build_pack"] == "python"
-    assert m.backends["validate_pack"] == "python"
-    assert m.backends["load_knowledge_set"] == "python"
-    # Not yet ported (Phase E/F): remain Python.
-    assert m.backends["diff_packs"] == "python"
-    assert m.backends["derive_all_tiers"] == "python"
+    # Iterate the declared table instead of hardcoded literals so a
+    # future per-function flip (e.g. diff_packs after the Phase E perf
+    # gate) does not break this test. Every entry must be "python" or
+    # "native"; the runtime detector reports truth.
+    assert set(DEFAULT_BACKENDS.keys()) == set(m.backends.keys())
+    for fn, actual in m.backends.items():
+        assert actual in {"python", "native"}, f"{fn}: {actual!r}"

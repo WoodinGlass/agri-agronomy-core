@@ -6,6 +6,7 @@
 
 pub mod build;
 pub mod dict_info;
+pub mod diff;
 pub mod errors;
 pub mod knowledge_set;
 pub mod loader;
@@ -13,6 +14,8 @@ pub mod name_index;
 pub mod normalize;
 pub mod row_types;
 pub mod rules;
+#[cfg(feature = "exp-diff")]
+pub mod stream;
 pub mod tables;
 pub mod unicode_pin;
 pub mod validate;

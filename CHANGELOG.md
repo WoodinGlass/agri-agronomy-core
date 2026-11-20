@@ -166,6 +166,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tornado==6.6.1` (PR #193); this closes the floor-vs-lock gap
   for installs that resolve from `pyproject.toml` without the
   lockfile.
+### Added
+
+- **Native `diff` infrastructure (Phase E, M21).** New Rust core
+  `agri-kernel::pack::diff::diff_rows` behind Cargo feature
+  `exp-diff`. Two adapters: `_native.diff_pack_paths(old, new,
+  manifests)` (path-based, streaming via `query_only=ON` SQLite
+  cursors + merge-join, O(1) row memory) and
+  `_native.diff_loaded(rows_*)` (in-memory rows, for
+  `RustKnowledgeSet` / `InMemoryKnowledgeSet` consumers). Both
+  return structured `DiffOutcome`; violation messages are rendered
+  on the Python side by `_render_violation` (N17).
+  `agri_core.pack.diff.diff_packs(old, new)` and the `DiffReport`
+  contract are unchanged. `diff_pack_paths(Path, Path)` dispatches
+  to native when the extension is built with `exp-diff`, falls
+  back to `diff_packs` otherwise (compile-time feature, no
+  `os.environ`). `MAX_DIFF_ROWS = 10_000_000` (row cap),
+  `MAX_FIELD_BYTES = 16 KiB` (per-field cap), both enforced before
+  allocation.
+  `tests/perf/test_diff_native_perf.py` measures 3 variants
+  (self, mutated-1pct, added-removed-0.1pct) with per-variant
+  isolated subprocesses; RSS is `VmHWM` read inside the child
+  (peak-since-process-start, no reset). Numbers and gate outcomes
+  are recorded in the ADR-019 Phase E spike and measured-result
+  amendments (2026-11-20).
+
+- **Phase E meta-tests close the Rust-diff-extension contract.**
+  `test_diff_row_equality_parity.py` sweeps every `FactRow` /
+  `TaxonRow` `model_fields`; adding a Pydantic field without a
+  Rust bucket flips the test red. `test_diff_constants_parity.py`
+  guards the three frozensets. `test_diff_mutation_hypothesis.py`
+  (200 examples PR) uses base-pack + N mutations, not two
+  independent packs. `test_diff_across_schema.py` exercises the
+  official `pack migrate` path. `test_diff.py` gains
+  `test_diff_cli_uses_path_based_dispatch`. CI gains
+  `test-exp-diff` (3-OS cargo test with feature) and
+  `diff-parity` (ubuntu, PyO3 with feature, assert attrs present,
+  run four diff files). Nightly
+  `.github/workflows/diff-perf-nightly.yml` uploads
+  `bench-*.json` as artifact (retention 30 days, if: always()).
+
+### Note
+
+- **`exp-diff` feature result: floor gates pass, aspirational
+  not met, no stop-loss.** On the 10k reference pack (10k taxa,
+  320k facts, 91 MiB SQLite): self-diff t_ratio=0.241
+  rss_ratio=0.370 (identical=True); mutated-1pct 0.230/0.369
+  (identical=False); added-removed-0.1pct 0.227/0.370
+  (identical=False). Floor t_ratio<=0.5 and
+  rss_ratio<=2.0 pass with 2.0x-5.4x margin. Aspirational
+  t_ratio<=0.2 not met at the CLI level (0.227-0.241),
+  includes ~2-3 s interpreter startup identical to both backends;
+  residual ~0.16-0.19 is inference, not measurement (no profiling
+  done in M21). Tracked as M21.5 follow-up, not stop-loss.
+  `meta().backends["diff_packs"]` reports "native" when the wheel
+  is built with exp-diff, "python" otherwise; shipped wheels keep
+  the feature off (N18). `diff_packs(old, new)` on KnowledgeSet
+  objects is unchanged and pure Python.
+
+- **`pack migrate` v1->v2 leaves rows untouched by design.**
+  The `diff` implementation treats `schema_version` and `hash_alg`
+  as manifest metadata only, not as content.
+  `diff(v1, migrate(v1))` is identical=True with zero violations;
+  asserted in `tests/contract/test_diff_across_schema.py`. No
+  production code change; this is contract documentation,
+  consistent with ADR-020 and the ADR-019 Phase E measured-result
+  amendment.
 
 ## [0.1.6] - 2026-11-14
 

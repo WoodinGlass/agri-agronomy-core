@@ -579,6 +579,37 @@ jobs:
           print("wheel members match:", len(members_a), "files")
           PY
 
+  diff-parity:
+    name: Diff parity (exp-diff)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@1.100.0
+      - uses: Swatinem/rust-cache@v2
+      - name: Install with exp-diff feature
+        env:
+          MATURIN_PEP517_ARGS: "--features exp-diff"
+        run: pip install -e ".[dev]"
+      - name: Assert exp-diff extension present
+        run: |
+          python -c "import agri_core._native as _n; assert hasattr(_n, 'diff_loaded')"
+          python -c "import agri_core._native as _n; assert hasattr(_n, 'diff_pack_paths')"
+          python -c "print('OK exp-diff extension loaded')"
+      - name: Run diff parity tests
+        run: |
+          pytest \
+            tests/contract/test_diff_row_equality_parity.py \
+            tests/contract/test_diff_constants_parity.py \
+            tests/contract/test_diff_mutation_hypothesis.py \
+            tests/contract/test_diff_across_schema.py \
+            -p no:nbmake -W ignore::DeprecationWarning --no-cov -q
+
   native:
     name: Native (Rust)
     uses: ./.github/workflows/rust.yml

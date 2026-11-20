@@ -216,7 +216,7 @@ pub fn fact_value_from_json(v: &Value) -> Result<FactValue, ConvertError> {
 
 // ---- Row structs ----
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TaxonRow {
     pub taxon_id: String,
     pub rank: String,
@@ -244,7 +244,7 @@ pub struct NameRow {
     pub dataset_id: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FactRow {
     pub fact_id: String,
     pub taxon_id: String,

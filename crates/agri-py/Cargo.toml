@@ -14,3 +14,6 @@ crate-type = ["cdylib"]
 agri-kernel = { path = "../agri-kernel" }
 pyo3.workspace = true
 serde_json.workspace = true
+
+[features]
+exp-diff = ["agri-kernel/exp-diff"]

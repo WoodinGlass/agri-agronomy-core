@@ -21,7 +21,8 @@ exit 1 for CI; violations are always exit 1.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any, Literal
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, computed_field
 
@@ -29,12 +30,29 @@ from agri_core.models.fact import FactRow
 from agri_core.models.taxon import TaxonRow
 from agri_core.pack.knowledge_set import KnowledgeSet
 
+if TYPE_CHECKING:
+    from agri_core.pack.manifest import PackManifest
+
+
+def _detect_native_diff() -> Any:
+    """Return the native diff adapter if the extension was built with exp-diff."""
+    try:
+        from agri_core import _native as _native_mod
+    except ImportError:
+        return None
+    return getattr(_native_mod, "diff_pack_paths", None)
+
+
+_native_diff_pack_paths: Any = _detect_native_diff()
+_DIFF_NATIVE: bool = _native_diff_pack_paths is not None
+
 __all__ = [
     "DiffReport",
     "DiffViolation",
     "FactChange",
     "FactChangeClass",
     "TaxaDiff",
+    "diff_pack_paths",
     "diff_packs",
 ]
 
@@ -141,6 +159,59 @@ class DiffReport(BaseModel):
     def ok(self) -> bool:
         """True when there are no violations (differences may still exist)."""
         return not self.violations
+
+
+def _diff_config_args() -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
+    """Pass field-set constants to native adapters (HP#6)."""
+    return _ACCEPTABLE_FIELDS, _VIOLATION_FIELDS, _REVIEWED_STATUSES
+
+
+def _render_fact_change(fc: dict[str, Any]) -> FactChange:
+    """Translate a native FactChange payload to the Python contract."""
+    return FactChange(
+        fact_id=fc["fact_id"],
+        fields_changed=tuple(fc["fields_changed"]),
+        classification=FactChangeClass(fc["classification"]),
+        old_status=fc["old_status"],
+        new_status=fc["new_status"],
+    )
+
+
+def _render_violation(v: dict[str, Any]) -> DiffViolation:
+    """Translate a native ViolationMeta payload to DiffViolation (N17)."""
+    kind = v["kind"]
+    entity_id = v["entity_id"]
+    meta = v.get("meta")
+    if kind == "fact_id_reused":
+        fields = list(meta["fields_changed"]) if meta else []
+        message = f"fact {entity_id} changed {fields}; create a new fact_id and set superseded_by"
+    elif kind == "taxon_removed":
+        message = f"taxon {entity_id} removed; taxon_ids are never reused"
+    elif kind == "fact_removed":
+        message = f"fact {entity_id} removed; set superseded_by instead"
+    elif kind == "id_removed_from_ledger":
+        message = f"taxon ID {entity_id!r} removed from ids.lock; append-only (ADR-011)"
+    else:
+        raise ValueError(f"unknown violation kind: {kind!r}")
+    return DiffViolation(kind=kind, entity_id=entity_id, message=message)
+
+
+def _render_diff_payload(payload: dict[str, Any]) -> DiffReport:
+    """Translate the native DiffOutcome dict into the Python contract."""
+    return DiffReport(
+        old_pack_hash=payload["old_pack_hash"],
+        new_pack_hash=payload["new_pack_hash"],
+        identical=payload["identical"],
+        taxa=TaxaDiff(
+            added=tuple(payload["taxa_added"]),
+            removed=tuple(payload["taxa_removed"]),
+            changed=tuple(payload["taxa_changed"]),
+        ),
+        facts_added=tuple(payload["facts_added"]),
+        facts_removed=tuple(payload["facts_removed"]),
+        facts_changed=tuple(_render_fact_change(fc) for fc in payload["facts_changed"]),
+        violations=tuple(_render_violation(v) for v in payload["violations"]),
+    )
 
 
 def _get(row: FactRow, name: str) -> Any:
@@ -259,4 +330,44 @@ def diff_packs(old: KnowledgeSet, new: KnowledgeSet) -> DiffReport:
         facts_removed=facts_removed,
         facts_changed=tuple(facts_changed),
         violations=tuple(sorted(violations, key=lambda v: (v.kind, v.entity_id))),
+    )
+
+
+def diff_pack_paths(
+    old_path: Path,
+    new_path: Path,
+    *,
+    old_manifest: PackManifest,
+    new_manifest: PackManifest,
+) -> DiffReport:
+    """Diff two packs by path when the native adapter is present.
+
+    Native path requires ``exp-diff`` at build time (detected via
+    ``_DIFF_NATIVE``) and a ``pack.sqlite`` in both directories.
+    Otherwise falls back to :func:`diff_packs`.
+    """
+    old_sqlite = old_path / "pack.sqlite"
+    new_sqlite = new_path / "pack.sqlite"
+    if (
+        _DIFF_NATIVE
+        and _native_diff_pack_paths is not None
+        and old_sqlite.is_file()
+        and new_sqlite.is_file()
+    ):
+        acceptable, violation, protected = _diff_config_args()
+        raw = _native_diff_pack_paths(
+            str(old_sqlite),
+            old_manifest.model_dump(mode="json"),
+            str(new_sqlite),
+            new_manifest.model_dump(mode="json"),
+            acceptable,
+            violation,
+            protected,
+        )
+        return _render_diff_payload(raw)
+    from agri_core.pack import load_knowledge_set as _load
+
+    return diff_packs(
+        _load(old_path, allow_synthetic=True),
+        _load(new_path, allow_synthetic=True),
     )
