@@ -722,3 +722,111 @@ trigger here is the load perf gate.
 **Follow-up.** M21.5 or M22 must either (a) meet §11.9 (<=1400 ms and
 <=0.5x on 10k) or (b) record permanent stop-loss here. Until then,
 `meta().backends["load_knowledge_set"]` reports `"python"`.
+
+## Amendment 2026-11-20: Phase E spike result
+
+Numbers from the 30-minute spike (Colab, sample pack extended to
+10k taxa via `_gen_pack.generate_perf_pack`). Purpose: decide path
+architecture from measured cost, not prediction.
+
+| Measurement | Value |
+|---|---|
+| Python `load_knowledge_set(built)` (10k) | 1 349 ms |
+| Python `list(ks.taxa())` (10k) | 181 ms |
+| Python `list(ks.facts())` (320k) | 16 396 ms |
+| Python `model_dump(mode="json")` taxa (10k) | 91 ms |
+| Python `model_dump(mode="json")` facts (320k) | 6 188 ms |
+| `agri-core diff --old X --new X --json` | 47 040 ms |
+| Raw SQLite `SELECT ... FROM taxa ORDER BY taxon_id` | 31 ms |
+| Raw SQLite `SELECT ... FROM facts ORDER BY fact_id` | 1 332 ms |
+
+**Decision (three-tier):**
+
+1. **Rows-based adapter** (Python eager -> PyO3): `model_dump` taxa +
+   facts = 6 279 ms, above the 500 ms budget -> **deferred to M22**.
+   Rows-based adapter is implemented (`_native.diff_loaded`) but is
+   not the CLI path; it exists for in-memory `KnowledgeSet` consumers.
+2. **Path-based adapter** (SQLite cursors + merge-join in Rust):
+   streaming cost = 31 ms (taxa) + 1 332 ms (facts) = 1 364 ms,
+   35x below the Python 47 s baseline -> **shipped**.
+3. **Stop-loss fallback**: none required by the spike. RSS and perf
+   gates are validated in the measured-result amendment below.
+
+The path-based adapter eliminates eager `KnowledgeSet` construction
+on both sides (2 x 320k Pydantic rows), which dominated the Phase G
+baseline and drives most of the Python 47 s wall time.
+
+## Amendment 2026-11-20: Phase E measured result
+
+Numbers from `tests/perf/test_diff_native_perf.py` on the 10k
+reference pack (10k taxa, 320k facts, 91 MiB SQLite), Colab-class
+CPU (2 vCPU), Ubuntu Linux. Each measurement runs in its own
+subprocess; RSS is `VmHWM` read from `/proc/self/status` **inside**
+the child (peak-since-process-start, no reset). Reason: on Colab
+Jupyter the parent's `ru_maxrss` is inherited by the child, so
+`ru_maxrss` cannot distinguish per-variant peaks.
+
+| Variant | Python ms | Native ms | `t_ratio` | Python VmHWM (kB) | Native VmHWM (kB) | `rss_ratio` | identical |
+|---|---|---|---|---|---|---|---|
+| self | 37 130 | 8 938 | **0.241** | 1 633 512 | 604 388 | **0.370** | True |
+| mut1 | 33 527 | 7 708 | **0.230** | 1 639 064 | 604 700 | **0.369** | False |
+| ard  | 34 159 | 7 756 | **0.227** | 1 636 948 | 605 092 | **0.370** | False |
+
+**Gates (ADR-019 section 4):**
+
+- Floor `t_ratio <= 0.5x`: **pass** with 2.0x-2.2x margin (native
+  is 4.2x-4.4x faster than Python on the same workload).
+- Floor `rss_ratio <= 2.0x`: **pass** with 5.4x margin (native
+  peaks at 37% of Python's peak memory; 2.7x smaller).
+- Parity `identical` flag: **pass** for all three variants.
+
+**Aspirational `t_ratio <= 0.2x`: not met directly.** Measured 0.227-
+0.241 includes ~2-3 s of Python interpreter startup identical to
+both backends. Subtracting the estimated startup gives a residual
+`t_ratio ~0.16-0.19`, but **no profiling has been done in M21** to
+confirm the split; the residual is an inference, not a measurement.
+Tracking: M21.5 follow-up, not a stop-loss.
+
+**Feature wiring.** `meta().backends["diff_packs"]` reports
+`"native"` when the extension was built with `--features exp-diff`
+(detected at import time via `hasattr(_native, "diff_pack_paths")`,
+no `os.environ`), `"python"` otherwise. Shipped wheels default the
+feature off (N18); the public `diff_packs(old, new)` wrapper on
+`KnowledgeSet` objects remains pure Python and eager.
+
+**Reproduce:** install with `MATURIN_PEP517_ARGS="--features exp-diff"`
+`pip install -e ".[dev]"`, then `pytest -m perf --no-cov
+tests/perf/test_diff_native_perf.py`. Benchmark JSON is written to
+`${AGRI_BENCH_DIR:-/tmp/agri-bench}/bench-<variant>.json` and
+uploaded nightly (.github/workflows/diff-perf-nightly.yml).
+
+## Amendment 2026-11-20: Diff contract gaps (M22/M23 follow-ups)
+
+The Phase E port keeps the exact Python `DiffReport` contract. It
+does **not** widen it. Recorded here so the gap is not silently
+forgotten:
+
+1. `sources.csv` (license rows) - a license change, revocation or
+   commercial_use flip is not currently reported by `diff`. It
+   changes the license gate's next evaluation but not the current
+   `DiffReport`.
+2. `datasets.csv` (referenced dataset records) - same, unreported.
+3. `hazards.csv` (legal / safety hazard flags) - hazards are not
+   diffed; adding or removing a hazard flag is unreported. Legal
+   and safety content must eventually be diffable for a
+   "return a citation for every legal flag" audit trail; M22/M23.
+4. `names.csv` (multilingual names, aliases) - a name added,
+   removed or re-languaged is not reported. Affects `resolve_taxon`
+   behavior across pack versions; M22 addresses it alongside the
+   name index port.
+5. `hash_alg` (manifest field) - not surfaced in `DiffReport`.
+   A `pre-rfc8785 -> rfc8785` cutover changes the `content_hash`
+   value without changing rows; the current contract treats this
+   as a manifest change, not a report field.
+6. `dictionary_version` / `schema_version` / `engine_min` - same,
+   not in the report. Manifest-only changes require the caller to
+   read `meta()`.
+
+Each fix, when it lands, will require an ADR-019 amendment and a
+`dictionary` or `DiffReport` contract change (MAJOR or MINOR bump
+per `classify_change`). Not scoped to M21.
