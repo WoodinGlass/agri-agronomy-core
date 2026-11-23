@@ -15,7 +15,7 @@ sha2 = "0.11"
 toml = "0.8"
 pyo3 = { version = "0.30", features = ["abi3-py311", "extension-module"] }
 # M21 Phase C/D (A1b, stop-loss prep): SQLite build + CSV parse
-rusqlite = { version = "0.42", features = ["bundled", "serialize"] }
+rusqlite = { version = "0.43", features = ["bundled", "serialize"] }
 csv = "1"
 # M21 G4-2: Unicode normalization (pinned per ADR-019 §11.1)
 unicode-normalization = "=0.1.26"
